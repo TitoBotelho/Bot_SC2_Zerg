@@ -1,0 +1,62 @@
+# This file is optional and here as an example of how to activate the build runner
+# FEEL FREE TO DELETE!!
+
+# Save the game opening and result to disk?
+# Setting to `True` allows Ares to select a new opening after defeat
+UseData: True
+# How should we choose a build? Cycle is the only option for now
+BuildSelection: Cycle
+# For each Race / Opponent ID choose a build selection
+BuildChoices:
+    # test_123 is active if Debug: True (set via a `config.yml` file)
+    test_123:
+        BotName: Test
+        Cycle:
+            - BurrowRoachRush
+
+    Protoss:
+        BotName: ProtossRace
+        Cycle:
+            - BurrowRoachRush
+
+    Random:
+        BotName: RandomRace
+        Cycle:
+            - BurrowRoachRush
+
+    Terran:
+        BotName: TerranRace
+        Cycle:
+            - BurrowRoachRush
+
+    Zerg:
+        BotName: ZergRace
+        Cycle:
+            - BurrowRoachRush
+
+    # Can also use specific opponent ids (overrides race options above)
+    a_bot_opponent_id_from_aiarena:
+        BotName: QueenBot
+        Cycle:
+            - DummyOpening
+
+Builds:
+    BurrowRoachRush:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 drone
+            - 13 drone
+            - 14 spawningpool
+            - 13 gas
+            - 12 drone
+            - 13 drone
+            - 14 overlord
+            - 14 drone
+            - 15 roachwarren
+            - 14 queen
+            - 14 drone
+            - 15 drone
+            - 15 overlord
+
