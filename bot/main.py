@@ -37,15 +37,9 @@ from sc2.units import Units
 
 # this will be used for ares SpawnController behavior
 ARMY_COMPS: dict[Race, dict] = {
-    Race.Protoss: {
-        UnitID.STALKER: {"proportion": 1.0, "priority": 0},
-    },
-    Race.Terran: {
-        UnitID.MARINE: {"proportion": 1.0, "priority": 0},
-    },
     Race.Zerg: {
-        UnitID.ROACH: {"proportion": 1.0, "priority": 0},
-    },
+        UnitID.ROACH: {"proportion": 1.0, "priority": 0}
+    }
     # Example if using more than one unit
     # proportion's add up to 1.0 with 0 being highest priority and 10 lowest
     # Race.Zerg: {
@@ -113,7 +107,7 @@ class MyBot(AresBot):
         self.expansions_generator = cycle(
             [pos for pos in self.expansion_locations_list]
         )
-        self._begin_attack_at_supply = 3.0 if self.race == Race.Terran else 6.0
+        self._begin_attack_at_supply = 6.0
 
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
@@ -167,9 +161,6 @@ class MyBot(AresBot):
         # see also `ProductionController` for ongoing generic production, not needed here
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/macro_behaviors.html#ares.behaviors.macro.spawn_controller.ProductionController
 
-        self._protoss_specific_macro()
-
-        self._terran_specific_macro()
 
         self._zerg_specific_macro()
 
@@ -241,14 +232,6 @@ class MyBot(AresBot):
 
                 enemy_target: Unit = cy_pick_enemy_target(all_close)
 
-                # low shield, keep protoss units safe
-                if self.race == Race.Protoss and unit.shield_percentage < 0.3:
-                    attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
-
-                else:
-                    attacking_maneuver.add(
-                        StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
-                    )
 
             # no enemy around, path to the attack target
             else:
@@ -275,33 +258,6 @@ class MyBot(AresBot):
 
         return burrow_maneuver
 
-    def _protoss_specific_macro(self):
-        # chrono gateways
-        for th in self.townhalls:
-            if th.energy >= 50:
-                if gateways := [
-                    g
-                    for g in self.mediator.get_own_structures_dict[UnitID.GATEWAY]
-                    if g.build_progress >= 1.0 and not g.is_idle
-                ]:
-                    th(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, gateways[0])
-
-    def _terran_specific_macro(self):
-        # use mules
-        oc_id: UnitID = UnitID.ORBITALCOMMAND
-        structures_dict: dict[
-            UnitID, list[Unit]
-        ] = self.mediator.get_own_structures_dict
-        for oc in [s for s in structures_dict[oc_id] if s.energy >= 50]:
-            mfs: Units = self.mineral_field.closer_than(10, oc)
-            if mfs:
-                mf: Unit = max(mfs, key=lambda x: x.mineral_contents)
-                oc(AbilityId.CALLDOWNMULE_CALLDOWNMULE, mf)
-
-        # lower depots
-        for depot in self.mediator.get_own_structures_dict[UnitID.SUPPLYDEPOT]:
-            if depot.type_id == UnitID.SUPPLYDEPOT:
-                depot(AbilityId.MORPH_SUPPLYDEPOT_LOWER)
 
     def _zerg_specific_macro(self) -> None:
         if (
