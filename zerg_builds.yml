@@ -49,15 +49,27 @@ Builds:
             - 12 drone
             - 13 drone
             - 14 spawningpool
-            - 13 gas
-            - 12 drone
             - 13 drone
-            - 14 overlord
+            - 14 hatchery
+            - 13 overlord
+            - 13 drone
             - 14 drone
-            - 15 roachwarren
-            - 14 queen
+            - 16 queen
+            - 16 gas
+            - 14 drone
             - 14 drone
             - 15 drone
+            - 15 drone
+            - 15 drone
+            - 15 drone
             - 15 overlord
-            - 15 hatchery
+            - 15 roachwarren
+            - 15 gas
+            - 15 drone
+            - 15 drone
+            - 15 drone
+            - 15 drone
+            - 15 drone
+
+
 
