@@ -25,7 +25,7 @@ from ares.behaviors.combat.individual import (
     UseAbility,
 )
 from ares.behaviors.macro import AutoSupply, Mining, SpawnController
-from ares.consts import ALL_STRUCTURES, WORKER_TYPES, UnitRole, UnitTreeQueryType
+from ares.consts import ALL_STRUCTURES, WORKER_TYPES, UnitRole, UnitTreeQueryType, BuildingPurpose
 from cython_extensions import cy_closest_to, cy_in_attack_range, cy_pick_enemy_target
 from sc2.data import Race
 from sc2.ids.ability_id import AbilityId
@@ -34,6 +34,7 @@ from sc2.ids.upgrade_id import UpgradeId
 from sc2.position import Point2
 from sc2.unit import Unit
 from sc2.units import Units
+import time
 
 # this will be used for ares SpawnController behavior
 ARMY_COMPS: dict[Race, dict] = {
@@ -71,8 +72,12 @@ class MyBot(AresBot):
     _begin_attack_at_supply: float
     BURROW_AT_HEALTH_PERC: float = 0.3
     UNBURROW_AT_HEALTH_PERC: float = 0.9
+    last_debug_time = 0
+
 
     def __init__(self, game_step_override: Optional[int] = None):
+        
+
         """Initiate custom bot
 
         Parameters
@@ -82,8 +87,12 @@ class MyBot(AresBot):
             specified elsewhere
         """
         super().__init__(game_step_override)
+        self.tag_worker_build_2nd_base = 0    
 
         self._commenced_attack: bool = False
+
+
+        
 
     @property
     def attack_target(self) -> Point2:
@@ -109,11 +118,13 @@ class MyBot(AresBot):
         """
         await super(MyBot, self).on_start()
 
+        self.RacaInimigo = self.enemy_race  # Agora RacaInimigo é um atributo da classe
+
         self.current_base_target = self.enemy_start_locations[0]
         self.expansions_generator = cycle(
             [pos for pos in self.expansion_locations_list]
         )
-        self._begin_attack_at_supply = 3.0 if self.race == Race.Terran else 6.0
+        self._begin_attack_at_supply = 3.0 if self.race == Race.Terran else 14.0
 
         # Send Overlord to scout on the second base
         await self.send_overlord_to_scout()
@@ -134,8 +145,14 @@ class MyBot(AresBot):
         # Send the Overlord to the new position
         self.do(overlord.move(overlord_position))
 
+#_______________________________________________________________________________________________________________________
+#          ON STEP
+#_______________________________________________________________________________________________________________________
+
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
+
+        await self.debug_tool()
 
         self._macro()
 
@@ -148,6 +165,34 @@ class MyBot(AresBot):
 
         elif self.get_total_supply(forces) >= self._begin_attack_at_supply:
             self._commenced_attack = True
+    
+        #if 300 minerals are available, build a new base
+        if self.can_afford(UnitID.HATCHERY):
+            target = self.mediator.get_own_nat
+            if self.tag_worker_build_2nd_base == 0:
+                if worker := self.mediator.select_worker(target_position=target):                
+                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                    self.tag_worker_build_2nd_base = worker
+                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                    self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+#_______________________________________________________________________________________________________________________
+#          DEBUG TOOL
+#_______________________________________________________________________________________________________________________
+
+    async def debug_tool(self):
+        current_time = time.time()
+        if current_time - self.last_debug_time >= 1:  # Se passou mais de um segundo
+            print("Teste")
+            print(self.mediator.get_all_enemy)
+            print(self.RacaInimigo)
+            #print("Overlords: ", self.should_build_overlords)
+            #print("RallyPointSet: ", self.rally_point_set)
+            #print("FirstBase: ", self.first_base)
+            #print("SecondBase: ", self.second_base)
+            self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
+
+
 
     async def on_unit_created(self, unit: Unit) -> None:
         """
