@@ -110,6 +110,10 @@ class MyBot(AresBot):
                 self.current_base_target = next(self.expansions_generator)
 
             return self.current_base_target
+        
+#_______________________________________________________________________________________________________________________
+#          ON START
+#_______________________________________________________________________________________________________________________
 
     async def on_start(self) -> None:
         """
@@ -119,6 +123,9 @@ class MyBot(AresBot):
         await super(MyBot, self).on_start()
 
         self.RacaInimigo = self.enemy_race  # Agora RacaInimigo é um atributo da classe
+        self.rally_point_set = False
+        self.first_base = self.townhalls.first
+        self.second_base = None
 
         self.current_base_target = self.enemy_start_locations[0]
         self.expansions_generator = cycle(
@@ -176,6 +183,9 @@ class MyBot(AresBot):
                     #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                     self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
+
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -186,6 +196,7 @@ class MyBot(AresBot):
             print("Teste")
             print(self.mediator.get_all_enemy)
             print(self.RacaInimigo)
+            print(f"Before build_rally_point: second_base={self.second_base}, rally_point_set={self.rally_point_set}")
             #print("Overlords: ", self.should_build_overlords)
             #print("RallyPointSet: ", self.rally_point_set)
             #print("FirstBase: ", self.first_base)
@@ -201,6 +212,7 @@ class MyBot(AresBot):
         """
         await super(MyBot, self).on_unit_created(unit)
 
+
         # assign our forces ATTACKING by default
         if unit.type_id not in WORKER_TYPES and unit.type_id not in {
             UnitID.QUEEN,
@@ -210,6 +222,30 @@ class MyBot(AresBot):
             # here we are making a request to an ares manager via the mediator
             # See https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html
             self.mediator.assign_role(tag=unit.tag, role=UnitRole.ATTACKING)
+
+    async def on_building_construction_complete(self, unit: Unit) -> None:
+        await super(MyBot, self).on_building_construction_complete(unit)
+
+
+        #when the second base is built, set the rally point to the second base
+        if unit.type_id == UnitID.HATCHERY:
+            self.rally_point_set = True  
+            bases = self.structures(UnitID.HATCHERY).ready
+            if bases.amount == 2:
+                for base in bases:
+                    if base.tag != self.first_base.tag:
+                        self.second_base = base
+                        break
+
+            if self.second_base is not None:         
+                rally_point = self.second_base.position.towards(self.game_info.map_center, 6)                          
+
+                for hatcherys in self.structures(UnitID.HATCHERY).ready:
+                    self.do(hatcherys(AbilityId.RALLY_HATCHERY_UNITS, rally_point))
+
+#_______________________________________________________________________________________________________________________
+#          DEF MACRO
+#_______________________________________________________________________________________________________________________
 
     def _macro(self) -> None:
         # MINE
@@ -389,9 +425,7 @@ class MyBot(AresBot):
     #
     #     # custom on_end logic here ...
     #
-    # async def on_building_construction_complete(self, unit: Unit) -> None:
-    #     await super(MyBot, self).on_building_construction_complete(unit)
-    #
+
     #     # custom on_building_construction_complete logic here ...
     #
     # async def on_unit_destroyed(self, unit_tag: int) -> None:
