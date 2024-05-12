@@ -73,7 +73,7 @@ class MyBot(AresBot):
     BURROW_AT_HEALTH_PERC: float = 0.3
     UNBURROW_AT_HEALTH_PERC: float = 0.9
     last_debug_time = 0
-
+    
 
     def __init__(self, game_step_override: Optional[int] = None):
         
@@ -126,12 +126,18 @@ class MyBot(AresBot):
         self.rally_point_set = False
         self.first_base = self.townhalls.first
         self.second_base = None
+        self.guess_strategy = "No strategy detected"
 
         self.current_base_target = self.enemy_start_locations[0]
         self.expansions_generator = cycle(
             [pos for pos in self.expansion_locations_list]
         )
-        self._begin_attack_at_supply = 3.0 if self.race == Race.Terran else 14.0
+
+        if self.RacaInimigo == Race.Terran:
+            self._begin_attack_at_supply = 40
+        
+        else:
+            self._begin_attack_at_supply = 14
 
         # Send Overlord to scout on the second base
         await self.send_overlord_to_scout()
@@ -159,9 +165,10 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
         self._macro()
+
 
         # https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html#ares.managers.manager_mediator.ManagerMediator.get_units_from_role
         # see `self.on_unit_created` where we originally assigned units ATTACKING role
@@ -173,9 +180,36 @@ class MyBot(AresBot):
         elif self.get_total_supply(forces) >= self._begin_attack_at_supply:
             self._commenced_attack = True
     
-        #if 300 minerals are available, build a new base
-        if self.can_afford(UnitID.HATCHERY):
-            target = self.mediator.get_own_nat
+        if self.RacaInimigo == Race.Terran:
+            await self.build_queens()
+            await self.build_zerglings()
+            await self.build_next_base()
+
+    async def build_queens(self):
+        # Loop over each townhall (Hatchery, Lair, or Hive)
+        for th in self.townhalls.ready:
+            # Check if there's already a queen for this townhall
+            queens = self.units(UnitID.QUEEN).closer_than(5, th)
+            # Check if the townhall is currently training a queen
+            is_training_queen = len(th.orders) > 0
+            if not queens.exists and not is_training_queen:
+                # If there's no queen and not currently training one, check if we can afford one and have enough supply
+                if self.can_afford(UnitID.QUEEN) and self.supply_left > 2:
+                    # If we can, train a queen
+                    self.do(th.train(UnitID.QUEEN))
+
+    async def build_zerglings(self):
+        if self.vespene < 25 and self.minerals > 1500:
+            if self.larva.exists:
+                for larva in self.units(UnitID.LARVA):
+                    # Check if we can afford a Zergling and have enough supply
+                    if self.can_afford(UnitID.ZERGLING) and self.supply_left > 0:
+                        # If we can, train a Zergling
+                        self.do(larva.train(UnitID.ZERGLING))
+
+    async def build_next_base(self):
+        if self.minerals > 1000:
+            target = await self.get_next_expansion()
             if self.tag_worker_build_2nd_base == 0:
                 if worker := self.mediator.select_worker(target_position=target):                
                     self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
@@ -193,16 +227,18 @@ class MyBot(AresBot):
     async def debug_tool(self):
         current_time = time.time()
         if current_time - self.last_debug_time >= 1:  # Se passou mais de um segundo
-            print("Teste")
             print(self.mediator.get_all_enemy)
-            print(self.RacaInimigo)
-            print(f"Before build_rally_point: second_base={self.second_base}, rally_point_set={self.rally_point_set}")
-            #print("Overlords: ", self.should_build_overlords)
+            print("Enemy Race: ", self.RacaInimigo)
+            print("Second Base: ", self.second_base)
+            print("Guess Strategy: ", self.guess_strategy)
             #print("RallyPointSet: ", self.rally_point_set)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
 
+#_______________________________________________________________________________________________________________________
+#          ON UNIT CREATED
+#_______________________________________________________________________________________________________________________
 
 
     async def on_unit_created(self, unit: Unit) -> None:
@@ -222,6 +258,11 @@ class MyBot(AresBot):
             # here we are making a request to an ares manager via the mediator
             # See https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html
             self.mediator.assign_role(tag=unit.tag, role=UnitRole.ATTACKING)
+
+#_______________________________________________________________________________________________________________________
+#          ON BUILDING CONSTRUCTION COMPLETE
+#_______________________________________________________________________________________________________________________
+
 
     async def on_building_construction_complete(self, unit: Unit) -> None:
         await super(MyBot, self).on_building_construction_complete(unit)
@@ -437,3 +478,14 @@ class MyBot(AresBot):
     #     await super(MyBot, self).on_unit_took_damage(unit, amount_damage_taken)
     #
     #     # custom on_unit_took_damage logic here ...
+
+
+    '''
+    async def build_zerglings(self):
+        if (self.minerals/ self.vespene + 1) > 5 and self.minerals > 1000:
+            for larva in self.units(UnitID.LARVA):
+                # Check if we can afford a Zergling and have enough supply
+                if self.can_afford(UnitID.ZERGLING) and self.supply_left > 0:
+                    # If we can, train a Zergling
+                    self.do(larva.train(UnitID.ZERGLING))
+    '''
