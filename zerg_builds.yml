@@ -27,7 +27,7 @@ BuildChoices:
     Terran:
         BotName: TerranRace
         Cycle:
-            - BurrowRoachRush
+            - ZergMacro
 
     Zerg:
         BotName: ZergRace
@@ -70,6 +70,69 @@ Builds:
             - 15 drone
             - 15 drone
             - 15 drone
+
+    ZergMacro:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 overlord
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 hatchery
+            - 15 spawningpool
+            - 14 drone
+            - 15 gas
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 18 drone
+            - 19 drone
+            - 20 roachwarren
+            - 19 drone
+            - 20 hatchery
+            - 20 overlord
+            - 20 drone
+            - 20 drone
+            - 20 overlord
+            - 20 drone
+            - 20 drone
+            - 20 overlord
+            - 20 drone
+            - 20 drone
+            - 20 drone
+            - 20 overlord
+            - 20 drone
+            - 20 drone
+            - 20 gas
+            - 20 overlord
+            - 20 drone
+            - 20 drone
+            - 20 overlord
+            - 20 drone
+            - 20 drone
+            - 20 drone
+            - 20 overlord
+            - 20 drone
+            - 20 drone
+            - 20 overlord
+            - 20 drone
+            - 20 drone
+            - 20 overlord
+            - 20 gas
+            - 20 overlord
+            - 20 drone
+            - 20 drone
+            - 20 overlord
+            - 20 drone
+            - 20 drone
+            - 20 drone
+            - 20 overlord
+        
+
 
 
 
