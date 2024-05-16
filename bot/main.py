@@ -1,11 +1,9 @@
 """
 ---------------------------
-Ares-sc2 Random Example Bot
+BOT CLICADINHA
 ---------------------------
 
-All the logic is encapsulated within this single file to enhance clarity.
-For more sophisticated projects, additional consideration in terms of
-software engineering principles may be necessary.
+Made of with Ares Random Example Bot
 
 """
 
@@ -126,6 +124,7 @@ class MyBot(AresBot):
         self.rally_point_set = False
         self.first_base = self.townhalls.first
         self.second_base = None
+        self.worker_scout_tag = 0
         self.guess_strategy = "No strategy detected"
 
         self.current_base_target = self.enemy_start_locations[0]
@@ -142,21 +141,24 @@ class MyBot(AresBot):
         # Send Overlord to scout on the second base
         await self.send_overlord_to_scout()
 
+#_______________________________________________________________________________________________________________________
+#          SEND OVERLORD TO SCOUT
+#_______________________________________________________________________________________________________________________
+
+
     async def send_overlord_to_scout(self):
         # Select the first Overlord
         overlord = self.units(UnitID.OVERLORD).first
-
-        # Get the enemy's start location
+    
         enemy_natural_location = self.mediator.get_enemy_nat
-
-        # Get the enemy's first base location
-        enemy_first_base = self.enemy_start_locations[0]
-
-        # Calculate the new position 10 units further from the enemy's start location
-        overlord_position = enemy_natural_location.towards(enemy_first_base, -12)
-
+    
+        # Get the enemy's start location
+        #enemy_natural_location = self.mediator.get_enemy_nat
+        target = self.mediator.get_closest_overlord_spot(from_pos=enemy_natural_location)
+    
         # Send the Overlord to the new position
-        self.do(overlord.move(overlord_position))
+        self.do(overlord.move(target))
+
 
 #_______________________________________________________________________________________________________________________
 #          ON STEP
