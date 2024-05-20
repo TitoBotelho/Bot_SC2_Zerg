@@ -91,7 +91,7 @@ Builds:
             - 17 drone
             - 18 drone
             - 19 drone
-            - 20 roachwarren
+            - 20 overlord
             - 19 drone
             - 20 hatchery
             - 20 overlord
@@ -107,13 +107,6 @@ Builds:
             - 20 overlord
             - 20 drone
             - 20 drone
-            - 20 gas
-            - 20 overlord
-            - 20 drone
-            - 20 drone
-            - 20 overlord
-            - 20 drone
-            - 20 drone
             - 20 drone
             - 20 overlord
             - 20 drone
@@ -121,17 +114,20 @@ Builds:
             - 20 overlord
             - 20 drone
             - 20 drone
-            - 20 overlord
-            - 20 gas
-            - 20 overlord
-            - 20 drone
             - 20 drone
             - 20 overlord
             - 20 drone
+            - 20 drone
+            - 20 overlord
             - 20 drone
             - 20 drone
             - 20 overlord
             - 20 gas
+            - 20 overlord
+            - 20 drone
+            - 20 overlord
+            - 20 overlord
+
         
 
 
