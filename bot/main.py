@@ -34,17 +34,29 @@ from sc2.unit import Unit
 from sc2.units import Units
 import time
 
+
+#_______________________________________________________________________________________________________________________
+#          ARMY COMPOSITION
+#_______________________________________________________________________________________________________________________
+
+
+ARMY_COMP_VS_TERRAN: dict[Race, dict] = {
+    Race.Zerg: {
+        UnitID.ZERGLING: {"proportion": 0.2, "priority": 0},
+        UnitID.HYDRALISK: {"proportion": 0.8, "priority": 0},
+    }
+}
 # this will be used for ares SpawnController behavior
-ARMY_COMPS: dict[Race, dict] = {
-    Race.Protoss: {
-        UnitID.STALKER: {"proportion": 1.0, "priority": 0},
-    },
-    Race.Terran: {
-        UnitID.MARINE: {"proportion": 1.0, "priority": 0},
-    },
+ARMY_COMP: dict[Race, dict] = {
     Race.Zerg: {
         UnitID.ROACH: {"proportion": 1.0, "priority": 0},
-    },
+    }
+}
+
+
+
+
+
     # Example if using more than one unit
     # proportion's add up to 1.0 with 0 being highest priority and 10 lowest
     # Race.Zerg: {
@@ -52,7 +64,8 @@ ARMY_COMPS: dict[Race, dict] = {
     #     UnitID.ROACH: {"proportion": 0.8, "priority": 1},
     #     UnitID.ZERGLING: {"proportion": 0.05, "priority": 2},
     # },
-}
+
+
 
 COMMON_UNIT_IGNORE_TYPES: set[UnitID] = {
     UnitID.EGG,
@@ -120,7 +133,7 @@ class MyBot(AresBot):
         """
         await super(MyBot, self).on_start()
 
-        self.RacaInimigo = self.enemy_race  # Agora RacaInimigo é um atributo da classe
+        self.EnemyRace = self.enemy_race  
         self.rally_point_set = False
         self.first_base = self.townhalls.first
         self.second_base = None
@@ -132,7 +145,7 @@ class MyBot(AresBot):
             [pos for pos in self.expansion_locations_list]
         )
 
-        if self.RacaInimigo == Race.Terran:
+        if self.EnemyRace == Race.Terran:
             self._begin_attack_at_supply = 40
         
         else:
@@ -170,7 +183,7 @@ class MyBot(AresBot):
         #await self.debug_tool()
 
         self._macro()
-
+        await self.inject_larva()
 
         # https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html#ares.managers.manager_mediator.ManagerMediator.get_units_from_role
         # see `self.on_unit_created` where we originally assigned units ATTACKING role
@@ -182,7 +195,7 @@ class MyBot(AresBot):
         elif self.get_total_supply(forces) >= self._begin_attack_at_supply:
             self._commenced_attack = True
     
-        if self.RacaInimigo == Race.Terran:
+        if self.EnemyRace == Race.Terran:
             await self.build_queens()
             await self.build_zerglings()
             await self.build_next_base()
@@ -220,6 +233,13 @@ class MyBot(AresBot):
                     self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
 
+    async def inject_larva(self):
+        for queen in self.units(UnitID.QUEEN).ready:
+            abilities = await self.get_available_abilities(queen)
+            if AbilityId.EFFECT_INJECTLARVA in abilities and queen.energy >= 25:
+                hatchery = self.townhalls.closest_to(queen.position)
+                if queen.distance_to(hatchery) < 10:
+                    self.do(queen(AbilityId.EFFECT_INJECTLARVA, hatchery))
 
 
 #_______________________________________________________________________________________________________________________
@@ -230,7 +250,7 @@ class MyBot(AresBot):
         current_time = time.time()
         if current_time - self.last_debug_time >= 1:  # Se passou mais de um segundo
             print(self.mediator.get_all_enemy)
-            print("Enemy Race: ", self.RacaInimigo)
+            print("Enemy Race: ", self.EnemyRace)
             print("Second Base: ", self.second_base)
             print("Guess Strategy: ", self.guess_strategy)
             #print("RallyPointSet: ", self.rally_point_set)
@@ -304,8 +324,13 @@ class MyBot(AresBot):
 
         # BUILD ARMY
         # ares-sc2 SpawnController
-        # https://aressc2.github.io/ares-sc2/api_reference/behaviors/macro_behaviors.html#ares.behaviors.macro.spawn_controller.SpawnController
-        self.register_behavior(SpawnController(ARMY_COMPS[self.race]))
+
+        if self.EnemyRace == Race.Terran:
+            self.register_behavior(SpawnController(ARMY_COMP_VS_TERRAN[self.race]))
+
+        else:
+            self.register_behavior(SpawnController(ARMY_COMP[self.race]))
+
 
         # see also `ProductionController` for ongoing generic production, not needed here
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/macro_behaviors.html#ares.behaviors.macro.spawn_controller.ProductionController
@@ -445,24 +470,31 @@ class MyBot(AresBot):
         for depot in self.mediator.get_own_structures_dict[UnitID.SUPPLYDEPOT]:
             if depot.type_id == UnitID.SUPPLYDEPOT:
                 depot(AbilityId.MORPH_SUPPLYDEPOT_LOWER)
+#_______________________________________________________________________________________________________________________
+#          ZERG MACRO
+#_______________________________________________________________________________________________________________________
+
 
     def _zerg_specific_macro(self) -> None:
-        if (
-            not self.already_pending_upgrade(UpgradeId.BURROW)
-            and self.townhalls.idle
-            and self.build_order_runner.build_completed
-            and self.can_afford(UpgradeId.BURROW)
-        ):
-            self.research(UpgradeId.BURROW)
-
+        if self.EnemyRace == Race.Terran:
+            if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
+                self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
+        else:        
+            if (
+                not self.already_pending_upgrade(UpgradeId.BURROW)
+                and self.townhalls.idle
+                and self.build_order_runner.build_completed
+                and self.can_afford(UpgradeId.BURROW)
+            ):
+                self.research(UpgradeId.BURROW)
+    """
         for queen in self.mediator.get_own_army_dict[UnitID.QUEEN]:
             if queen.energy >= 25 and self.townhalls:
                 queen(AbilityId.EFFECT_INJECTLARVA, self.townhalls[0])
 
-    """
     Can use `python-sc2` hooks as usual, but make a call the inherited method in the superclass
     Examples:
-    """
+
     # async def on_end(self, game_result: Result) -> None:
     #     await super(MyBot, self).on_end(game_result)
     #
@@ -482,7 +514,6 @@ class MyBot(AresBot):
     #     # custom on_unit_took_damage logic here ...
 
 
-    '''
     async def build_zerglings(self):
         if (self.minerals/ self.vespene + 1) > 5 and self.minerals > 1000:
             for larva in self.units(UnitID.LARVA):
@@ -490,4 +521,4 @@ class MyBot(AresBot):
                 if self.can_afford(UnitID.ZERGLING) and self.supply_left > 0:
                     # If we can, train a Zergling
                     self.do(larva.train(UnitID.ZERGLING))
-    '''
+    """
