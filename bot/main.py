@@ -197,7 +197,6 @@ class MyBot(AresBot):
     
         if self.EnemyRace == Race.Terran:
             await self.build_queens()
-            await self.build_zerglings()
             await self.build_next_base()
 
     async def build_queens(self):
@@ -213,17 +212,9 @@ class MyBot(AresBot):
                     # If we can, train a queen
                     self.do(th.train(UnitID.QUEEN))
 
-    async def build_zerglings(self):
-        if self.vespene < 25 and self.minerals > 1500:
-            if self.larva.exists:
-                for larva in self.units(UnitID.LARVA):
-                    # Check if we can afford a Zergling and have enough supply
-                    if self.can_afford(UnitID.ZERGLING) and self.supply_left > 0:
-                        # If we can, train a Zergling
-                        self.do(larva.train(UnitID.ZERGLING))
 
     async def build_next_base(self):
-        if self.minerals > 1000:
+        if self.minerals > 500:
             target = await self.get_next_expansion()
             if self.tag_worker_build_2nd_base == 0:
                 if worker := self.mediator.select_worker(target_position=target):                
@@ -335,10 +326,6 @@ class MyBot(AresBot):
         # see also `ProductionController` for ongoing generic production, not needed here
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/macro_behaviors.html#ares.behaviors.macro.spawn_controller.ProductionController
 
-        self._protoss_specific_macro()
-
-        self._terran_specific_macro()
-
         self._zerg_specific_macro()
 
     def _micro(self, forces: Units) -> None:
@@ -443,33 +430,8 @@ class MyBot(AresBot):
 
         return burrow_maneuver
 
-    def _protoss_specific_macro(self):
-        # chrono gateways
-        for th in self.townhalls:
-            if th.energy >= 50:
-                if gateways := [
-                    g
-                    for g in self.mediator.get_own_structures_dict[UnitID.GATEWAY]
-                    if g.build_progress >= 1.0 and not g.is_idle
-                ]:
-                    th(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, gateways[0])
 
-    def _terran_specific_macro(self):
-        # use mules
-        oc_id: UnitID = UnitID.ORBITALCOMMAND
-        structures_dict: dict[
-            UnitID, list[Unit]
-        ] = self.mediator.get_own_structures_dict
-        for oc in [s for s in structures_dict[oc_id] if s.energy >= 50]:
-            mfs: Units = self.mineral_field.closer_than(10, oc)
-            if mfs:
-                mf: Unit = max(mfs, key=lambda x: x.mineral_contents)
-                oc(AbilityId.CALLDOWNMULE_CALLDOWNMULE, mf)
 
-        # lower depots
-        for depot in self.mediator.get_own_structures_dict[UnitID.SUPPLYDEPOT]:
-            if depot.type_id == UnitID.SUPPLYDEPOT:
-                depot(AbilityId.MORPH_SUPPLYDEPOT_LOWER)
 #_______________________________________________________________________________________________________________________
 #          ZERG MACRO
 #_______________________________________________________________________________________________________________________
