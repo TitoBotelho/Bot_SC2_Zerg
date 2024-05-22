@@ -54,26 +54,12 @@ ARMY_COMP: dict[Race, dict] = {
 }
 
 
-
-
-
-    # Example if using more than one unit
-    # proportion's add up to 1.0 with 0 being highest priority and 10 lowest
-    # Race.Zerg: {
-    #     UnitID.HYDRALISK: {"proportion": 0.15, "priority": 0},
-    #     UnitID.ROACH: {"proportion": 0.8, "priority": 1},
-    #     UnitID.ZERGLING: {"proportion": 0.05, "priority": 2},
-    # },
-
-
-
 COMMON_UNIT_IGNORE_TYPES: set[UnitID] = {
     UnitID.EGG,
     UnitID.LARVA,
     UnitID.CREEPTUMORBURROWED,
     UnitID.CREEPTUMORQUEEN,
     UnitID.CREEPTUMOR,
-    UnitID.MULE,
 }
 
 
@@ -198,6 +184,10 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Terran:
             await self.build_queens()
             await self.build_next_base()
+
+            # If we don't have enough army, stop attacking and build more units
+            if self.get_total_supply(forces) <= self._begin_attack_at_supply:
+                self._commenced_attack = False
 
     async def build_queens(self):
         # Loop over each townhall (Hatchery, Lair, or Hive)
