@@ -132,7 +132,7 @@ class MyBot(AresBot):
         )
 
         if self.EnemyRace == Race.Terran:
-            self._begin_attack_at_supply = 40
+            self._begin_attack_at_supply = 20
         
         else:
             self._begin_attack_at_supply = 14
@@ -318,6 +318,10 @@ class MyBot(AresBot):
 
         self._zerg_specific_macro()
 
+#_______________________________________________________________________________________________________________________
+#          DEF MICRO
+#_______________________________________________________________________________________________________________________
+
     def _micro(self, forces: Units) -> None:
         # make a fast batch distance query to enemy units for all our units
         # key: unit tag, value: units in range of that unit tag
@@ -372,29 +376,34 @@ class MyBot(AresBot):
 
                 # idea here is to attack anything in range if weapon is ready
                 # check for enemy units first
-                if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
-                    # `ShootTargetInRange` will check weapon is ready
-                    # otherwise it will not execute
-                    attacking_maneuver.add(
-                        ShootTargetInRange(unit=unit, targets=in_attack_range)
-                    )
-                # then enemy structures
-                elif in_attack_range := cy_in_attack_range(unit, all_close):
-                    attacking_maneuver.add(
-                        ShootTargetInRange(unit=unit, targets=in_attack_range)
-                    )
+                if unit.type_id == UnitID.ROACH:
+                    if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
+                        # `ShootTargetInRange` will check weapon is ready
+                        # otherwise it will not execute
+                        attacking_maneuver.add(
+                            ShootTargetInRange(unit=unit, targets=in_attack_range)
+                        )
+                    # then enemy structures
+                    elif in_attack_range := cy_in_attack_range(unit, all_close):
+                        attacking_maneuver.add(
+                            ShootTargetInRange(unit=unit, targets=in_attack_range)
+                        )
 
-                enemy_target: Unit = cy_pick_enemy_target(all_close)
+                    enemy_target: Unit = cy_pick_enemy_target(all_close)
 
-                # low shield, keep protoss units safe
-                if self.race == Race.Protoss and unit.shield_percentage < 0.3:
-                    attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
+                    # low shield, keep protoss units safe
+                    if self.race == Race.Protoss and unit.shield_percentage < 0.3:
+                        attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
+
+                    else:
+                        attacking_maneuver.add(
+                            StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
+                        )
 
                 else:
-                    attacking_maneuver.add(
-                        StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
-                    )
+                    attacking_maneuver.add(AMove(unit=unit, target=target))
 
+                    
             # no enemy around, path to the attack target
             else:
                 attacking_maneuver.add(
