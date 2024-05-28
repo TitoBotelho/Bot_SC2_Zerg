@@ -134,6 +134,9 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Terran:
             self._begin_attack_at_supply = 20
         
+        if self.EnemyRace == Race.Protoss:
+            self._begin_attack_at_supply = 4
+        
         else:
             self._begin_attack_at_supply = 14
 
@@ -182,6 +185,10 @@ class MyBot(AresBot):
             self._commenced_attack = True
     
         if self.EnemyRace == Race.Terran:
+            await self.build_queens()
+            await self.build_next_base()
+
+        if self.EnemyRace == Race.Protoss:
             await self.build_queens()
             await self.build_next_base()
 
