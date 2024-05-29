@@ -17,7 +17,7 @@ BuildChoices:
     Protoss:
         BotName: ProtossRace
         Cycle:
-            - AgressiveVsProtoss
+            - HatcheryFirst
 
     Random:
         BotName: RandomRace
@@ -131,22 +131,42 @@ Builds:
         
 
 
-    AgressiveVsProtoss:
+    HatcheryFirst:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
         ConstantWorkerProductionTill: 0
         OpeningBuildOrder:
             - 12 drone
             - 13 drone
-            - 14 spawningpool
-            - 13 gas
-            - 12 drone
+            - 13 hatchery
+            - 13 overlord
             - 13 drone
-            - 14 overlord
+            - 13 spawningpool
+            - 13 drone
             - 14 drone
-            - 15 roachwarren
-            - 14 queen
+            - 14 gas
             - 14 drone
             - 15 drone
-            - 15 overlord
-
+            - 16 overlord
+            - 16 drone
+            - 16 roachwarren
+            - 16 drone
+            - 17 drone
+            - 20 drone
+            - 21 drone
+            - 22 drone
+            - 23 drone
+            - 19 drone
+            - 20 drone
+            - 23 gas
+            - 20 drone
+            - 20 drone
+            - 20 drone
+            - 20 overlord
+            - 20 drone
+            - 20 drone
+            - 20 drone
+            - 20 overlord
+            - 20 drone
+            - 20 drone
+ 
