@@ -4,3 +4,6 @@
 [submodule "cython-extensions-sc2"]
 	path = cython-extensions-sc2
 	url = https://github.com/AresSC2/cython-extensions-sc2
+[submodule "queens-sc2"]
+	path = queens-sc2
+	url = https://github.com/raspersc2/queens-sc2
