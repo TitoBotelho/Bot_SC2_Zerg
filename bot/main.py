@@ -34,6 +34,7 @@ from sc2.unit import Unit
 from sc2.units import Units
 import time
 
+from queens_sc2.queens import Queens
 
 #_______________________________________________________________________________________________________________________
 #          ARMY COMPOSITION
@@ -71,6 +72,8 @@ class MyBot(AresBot):
     UNBURROW_AT_HEALTH_PERC: float = 0.9
     last_debug_time = 0
     
+    # instance of the queens class
+    queens: Queens
 
     def __init__(self, game_step_override: Optional[int] = None):
         
@@ -88,7 +91,18 @@ class MyBot(AresBot):
 
         self._commenced_attack: bool = False
 
+        self.creep_queen_tags: Set[int] = set()
+        self.max_creep_queens: int = 4
 
+
+        self.creep_queen_policy: Dict = {
+            "creep_queens": {
+                "active": True,
+                "max": self.max_creep_queens,
+            },
+            "inject_queens": {"active": False},
+            "defence_queens": {"active": False},
+        }
         
 
     @property
@@ -140,6 +154,12 @@ class MyBot(AresBot):
         else:
             self._begin_attack_at_supply = 14
 
+        # Initialize the queens class
+        self.queens = Queens(
+            self, queen_policy=self.creep_queen_policy
+        )
+
+
         # Send Overlord to scout on the second base
         await self.send_overlord_to_scout()
 
@@ -172,7 +192,7 @@ class MyBot(AresBot):
         #await self.debug_tool()
 
         self._macro()
-        await self.inject_larva()
+
 
         # https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html#ares.managers.manager_mediator.ManagerMediator.get_units_from_role
         # see `self.on_unit_created` where we originally assigned units ATTACKING role
@@ -196,19 +216,34 @@ class MyBot(AresBot):
             if self.get_total_supply(forces) <= self._begin_attack_at_supply:
                 self._commenced_attack = False
 
-    async def build_queens(self):
-        # Loop over each townhall (Hatchery, Lair, or Hive)
-        for th in self.townhalls.ready:
-            # Check if there's already a queen for this townhall
-            queens = self.units(UnitID.QUEEN).closer_than(5, th)
-            # Check if the townhall is currently training a queen
-            is_training_queen = len(th.orders) > 0
-            if not queens.exists and not is_training_queen:
-                # If there's no queen and not currently training one, check if we can afford one and have enough supply
-                if self.can_afford(UnitID.QUEEN) and self.supply_left > 2:
-                    # If we can, train a queen
-                    self.do(th.train(UnitID.QUEEN))
 
+#queens
+        queens: Units = self.units(UnitID.QUEEN)
+        # work out if more creep queen_control are required
+        if queens and len(self.creep_queen_tags) < self.max_creep_queens:
+            queens_needed: int = self.max_creep_queens - len(self.creep_queen_tags)
+            new_creep_queens: Units = queens.take(queens_needed)
+            for queen in new_creep_queens:
+                self.creep_queen_tags.add(queen.tag)
+
+        # separate the queen units selection
+        creep_queens: Units = queens.tags_in(self.creep_queen_tags)
+        other_queens: Units = queens.tags_not_in(self.creep_queen_tags)
+        # call the queen library to handle our creep queen_control
+        await self.queens.manage_queens(iteration, creep_queens)
+
+        # we have full control of the other queen_control
+        for queen in other_queens:
+            if queen.distance_to(self.game_info.map_center) > 12:
+                queen.attack(self.game_info.map_center)
+
+    async def build_queens(self):
+        # Check if the number of queens is less than the number of townhalls
+        if len(self.units(UnitID.QUEEN)) < len(self.townhalls.ready):
+            # Check if we're not already training a queen
+            if not self.already_pending(UnitID.QUEEN):
+                # If we're not, train a queen
+                self.do(self.townhalls.ready.first.train(UnitID.QUEEN))
 
     async def build_next_base(self):
         if self.minerals > 500:
@@ -221,13 +256,6 @@ class MyBot(AresBot):
                     self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
 
-    async def inject_larva(self):
-        for queen in self.units(UnitID.QUEEN).ready:
-            abilities = await self.get_available_abilities(queen)
-            if AbilityId.EFFECT_INJECTLARVA in abilities and queen.energy >= 25:
-                hatchery = self.townhalls.closest_to(queen.position)
-                if queen.distance_to(hatchery) < 10:
-                    self.do(queen(AbilityId.EFFECT_INJECTLARVA, hatchery))
 
 
 #_______________________________________________________________________________________________________________________
