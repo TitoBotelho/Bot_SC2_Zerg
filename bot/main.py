@@ -36,6 +36,8 @@ import time
 
 from queens_sc2.queens import Queens
 
+
+
 #_______________________________________________________________________________________________________________________
 #          ARMY COMPOSITION
 #_______________________________________________________________________________________________________________________
@@ -92,7 +94,7 @@ class MyBot(AresBot):
         self._commenced_attack: bool = False
 
         self.creep_queen_tags: Set[int] = set()
-        self.max_creep_queens: int = 4
+        self.max_creep_queens: int = 0
 
 
         self.creep_queen_policy: Dict = {
@@ -100,7 +102,7 @@ class MyBot(AresBot):
                 "active": True,
                 "max": self.max_creep_queens,
             },
-            "inject_queens": {"active": False},
+            "inject_queens": {"active": True},
             "defence_queens": {"active": False},
         }
         
@@ -216,8 +218,10 @@ class MyBot(AresBot):
             if self.get_total_supply(forces) <= self._begin_attack_at_supply:
                 self._commenced_attack = False
 
+#_______________________________________________________________________________________________________________________
+#          QUEENS
+#_______________________________________________________________________________________________________________________
 
-#queens
         queens: Units = self.units(UnitID.QUEEN)
         # work out if more creep queen_control are required
         if queens and len(self.creep_queen_tags) < self.max_creep_queens:
@@ -226,6 +230,9 @@ class MyBot(AresBot):
             for queen in new_creep_queens:
                 self.creep_queen_tags.add(queen.tag)
 
+
+
+
         # separate the queen units selection
         creep_queens: Units = queens.tags_in(self.creep_queen_tags)
         other_queens: Units = queens.tags_not_in(self.creep_queen_tags)
@@ -233,17 +240,21 @@ class MyBot(AresBot):
         await self.queens.manage_queens(iteration, creep_queens)
 
         # we have full control of the other queen_control
-        for queen in other_queens:
-            if queen.distance_to(self.game_info.map_center) > 12:
-                queen.attack(self.game_info.map_center)
+        #for queen in other_queens:
+            #if queen.distance_to(self.game_info.map_center) > 12:
+                #queen.attack(self.game_info.map_center)
+
+
+
 
     async def build_queens(self):
-        # Check if the number of queens is less than the number of townhalls
-        if len(self.units(UnitID.QUEEN)) < len(self.townhalls.ready):
-            # Check if we're not already training a queen
-            if not self.already_pending(UnitID.QUEEN):
-                # If we're not, train a queen
-                self.do(self.townhalls.ready.first.train(UnitID.QUEEN))
+        for th in self.townhalls.ready:
+            # Check if the number of queens is less than the number of townhalls
+            if len(self.units(UnitID.QUEEN)) <= len(self.townhalls.ready):
+                # Check if we're not already training a queen
+                if not self.already_pending(UnitID.QUEEN):
+                    # If we're not, train a queen
+                    self.do(th.train(UnitID.QUEEN))
 
     async def build_next_base(self):
         if self.minerals > 500:
@@ -266,9 +277,11 @@ class MyBot(AresBot):
         current_time = time.time()
         if current_time - self.last_debug_time >= 1:  # Se passou mais de um segundo
             print(self.mediator.get_all_enemy)
-            print("Enemy Race: ", self.EnemyRace)
-            print("Second Base: ", self.second_base)
-            print("Guess Strategy: ", self.guess_strategy)
+            #print("Enemy Race: ", self.EnemyRace)
+            #print("Second Base: ", self.second_base)
+            #print("Guess Strategy: ", self.guess_strategy)
+            print("Creep Queens: ", self.creep_queen_tags)
+            print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
