@@ -151,7 +151,7 @@ class MyBot(AresBot):
             self._begin_attack_at_supply = 20
         
         if self.EnemyRace == Race.Protoss:
-            self._begin_attack_at_supply = 4
+            self._begin_attack_at_supply = 8
         
         else:
             self._begin_attack_at_supply = 14
@@ -209,6 +209,8 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Terran:
             await self.build_queens()
             await self.build_next_base()
+            await self.build_mellee_upgrades()
+            await self.build_armor_upgrades()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -266,8 +268,34 @@ class MyBot(AresBot):
                     #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                     self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
+    async def build_mellee_upgrades(self):
+        if self.structures(UnitID.EVOLUTIONCHAMBER).ready:
+            if self.structures(UnitID.SPAWNINGPOOL).ready:
+                if not self.already_pending_upgrade(UpgradeId.ZERGLINGATTACKSPEED):
+                    if self.can_afford(UpgradeId.ZERGLINGATTACKSPEED):
+                        self.research(UpgradeId.ZERGLINGATTACKSPEED)
+                if not self.already_pending_upgrade(UpgradeId.ZERGMELEEWEAPONSLEVEL1):
+                    if self.can_afford(UpgradeId.ZERGMELEEWEAPONSLEVEL1):
+                        self.research(UpgradeId.ZERGMELEEWEAPONSLEVEL1)
+                if not self.already_pending_upgrade(UpgradeId.ZERGMELEEWEAPONSLEVEL2):
+                    if self.can_afford(UpgradeId.ZERGMELEEWEAPONSLEVEL2):
+                        self.research(UpgradeId.ZERGMELEEWEAPONSLEVEL2)
+                if not self.already_pending_upgrade(UpgradeId.ZERGMELEEWEAPONSLEVEL3):
+                    if self.can_afford(UpgradeId.ZERGMELEEWEAPONSLEVEL3):
+                        self.research(UpgradeId.ZERGMELEEWEAPONSLEVEL3)
 
-
+    async def build_armor_upgrades(self):
+        if self.structures(UnitID.EVOLUTIONCHAMBER).ready:
+            if self.structures(UnitID.SPAWNINGPOOL).ready:
+                if not self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL1):
+                    if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL1):
+                        self.research(UpgradeId.ZERGGROUNDARMORSLEVEL1)
+                if not self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL2):
+                    if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL2):
+                        self.research(UpgradeId.ZERGGROUNDARMORSLEVEL2)
+                if not self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL3):
+                    if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL3):
+                        self.research(UpgradeId.ZERGGROUNDARMORSLEVEL3)
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
