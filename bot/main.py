@@ -5,6 +5,13 @@ BOT CLICADINHA
 
 Made of with Ares Random Example Bot
 
+https://github.com/AresSC2/ares-random-example
+
+
+Using the Queens framework
+
+https://github.com/raspersc2/queens-sc2
+
 """
 
 
@@ -42,14 +49,17 @@ from queens_sc2.queens import Queens
 #          ARMY COMPOSITION
 #_______________________________________________________________________________________________________________________
 
+# this will be used for ares SpawnController behavior
 
+# against Terran
 ARMY_COMP_VS_TERRAN: dict[Race, dict] = {
     Race.Zerg: {
         UnitID.ZERGLING: {"proportion": 0.2, "priority": 0},
         UnitID.HYDRALISK: {"proportion": 0.8, "priority": 0},
     }
 }
-# this will be used for ares SpawnController behavior
+
+# against other races
 ARMY_COMP: dict[Race, dict] = {
     Race.Zerg: {
         UnitID.ROACH: {"proportion": 1.0, "priority": 0},
@@ -205,20 +215,23 @@ class MyBot(AresBot):
 
         elif self.get_total_supply(forces) >= self._begin_attack_at_supply:
             self._commenced_attack = True
+
+        # If we don't have enough army, stop attacking and build more units
+        if self.get_total_supply(forces) <= self._begin_attack_at_supply:
+            self._commenced_attack = False
+
     
         if self.EnemyRace == Race.Terran:
             await self.build_queens()
             await self.build_next_base()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
+            await self.build_lair()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
             await self.build_next_base()
 
-            # If we don't have enough army, stop attacking and build more units
-            if self.get_total_supply(forces) <= self._begin_attack_at_supply:
-                self._commenced_attack = False
 
 #_______________________________________________________________________________________________________________________
 #          QUEENS
@@ -297,6 +310,11 @@ class MyBot(AresBot):
                     if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL3):
                         self.research(UpgradeId.ZERGGROUNDARMORSLEVEL3)
 
+    async def build_lair(self):
+        if not self.structures(UnitID.LAIR):
+            if self.can_afford(UnitID.LAIR):
+                th: Unit = self.first_base
+                th(AbilityId.UPGRADETOLAIR_LAIR)
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
