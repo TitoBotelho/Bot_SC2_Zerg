@@ -356,6 +356,19 @@ class MyBot(AresBot):
             # See https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html
             self.mediator.assign_role(tag=unit.tag, role=UnitRole.ATTACKING)
 
+
+
+        # Send the second Overlord to scout on the second base
+        if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 2:
+            my_base_location = self.mediator.get_own_nat
+
+            # Get the enemy's start location
+            #enemy_natural_location = self.mediator.get_enemy_nat
+            target = self.mediator.get_closest_overlord_spot(from_pos=my_base_location)
+        
+            # Send the Overlord to the new position
+            self.do(unit.move(target))
+
 #_______________________________________________________________________________________________________________________
 #          ON BUILDING CONSTRUCTION COMPLETE
 #_______________________________________________________________________________________________________________________
