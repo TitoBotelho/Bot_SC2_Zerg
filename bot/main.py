@@ -54,8 +54,8 @@ from queens_sc2.queens import Queens
 # against Terran
 ARMY_COMP_VS_TERRAN: dict[Race, dict] = {
     Race.Zerg: {
-        UnitID.ZERGLING: {"proportion": 0.2, "priority": 0},
-        UnitID.HYDRALISK: {"proportion": 0.8, "priority": 0},
+        UnitID.ZERGLING: {"proportion": 0.9, "priority": 0},
+        UnitID.HYDRALISK: {"proportion": 0.1, "priority": 1},
     }
 }
 
@@ -99,12 +99,13 @@ class MyBot(AresBot):
             specified elsewhere
         """
         super().__init__(game_step_override)
-        self.tag_worker_build_2nd_base = 0    
+        self.tag_worker_build_2nd_base = 0
+        self.tag_worker_build_hydra_den = 0    
 
         self._commenced_attack: bool = False
 
         self.creep_queen_tags: Set[int] = set()
-        self.max_creep_queens: int = 0
+        self.max_creep_queens: int = 1
 
 
         self.creep_queen_policy: Dict = {
@@ -158,7 +159,7 @@ class MyBot(AresBot):
         )
 
         if self.EnemyRace == Race.Terran:
-            self._begin_attack_at_supply = 20
+            self._begin_attack_at_supply = 28
         
         if self.EnemyRace == Race.Protoss:
             self._begin_attack_at_supply = 8
@@ -227,6 +228,7 @@ class MyBot(AresBot):
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
             await self.build_lair()
+            await self.build_hydra_den()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -315,6 +317,23 @@ class MyBot(AresBot):
             if self.can_afford(UnitID.LAIR):
                 th: Unit = self.first_base
                 th(AbilityId.UPGRADETOLAIR_LAIR)
+
+    async def build_hydra_den(self):
+        if self.structures(UnitID.LAIR).ready:
+            if self.structures(UnitID.HYDRALISKDEN).amount == 0 and not self.already_pending(UnitID.HYDRALISKDEN):
+                if self.tag_worker_build_hydra_den == 0:
+                    if self.can_afford(UnitID.HYDRALISKDEN):
+                        target = self.first_base.position.towards(self.second_base.position, 5)
+                        #await self.build(UnitID.HYDRALISKDEN, near=target)
+                        if worker := self.mediator.select_worker(target_position=target):                
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_build_hydra_den = worker
+                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_hydra_den, structure_type=UnitID.HYDRALISKDEN, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
