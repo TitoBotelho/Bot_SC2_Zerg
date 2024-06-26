@@ -150,7 +150,6 @@ Builds:
             - 15 drone
             - 16 overlord
             - 16 drone
-            - 16 roachwarren
             - 16 drone
             - 17 drone
             - 20 drone
@@ -158,16 +157,6 @@ Builds:
             - 22 drone
             - 23 drone
             - 19 drone
-            - 20 drone
-            - 23 gas
-            - 20 drone
-            - 20 drone
-            - 20 drone
-            - 20 overlord
-            - 20 drone
-            - 20 drone
-            - 20 drone
-            - 20 overlord
-            - 20 drone
-            - 20 drone
+            - 20 evolutionchamber
+
  

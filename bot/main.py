@@ -59,6 +59,13 @@ ARMY_COMP_VS_TERRAN: dict[Race, dict] = {
     }
 }
 
+# against Protoss
+ARMY_COMP_VS_PROTOSS: dict[Race, dict] = {
+    Race.Zerg: {
+        UnitID.ZERGLING: {"proportion": 1.0, "priority": 0},
+    }
+}
+
 # against other races
 ARMY_COMP: dict[Race, dict] = {
     Race.Zerg: {
@@ -162,7 +169,7 @@ class MyBot(AresBot):
             self._begin_attack_at_supply = 28
         
         if self.EnemyRace == Race.Protoss:
-            self._begin_attack_at_supply = 8
+            self._begin_attack_at_supply = 10
         
         else:
             self._begin_attack_at_supply = 14
@@ -233,6 +240,8 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
             await self.build_next_base()
+            await self.build_mellee_upgrades()
+            await self.build_armor_upgrades()
 
 
 #_______________________________________________________________________________________________________________________
@@ -435,6 +444,9 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Terran:
             self.register_behavior(SpawnController(ARMY_COMP_VS_TERRAN[self.race]))
 
+        if self.EnemyRace == Race.Protoss:
+            self.register_behavior(SpawnController(ARMY_COMP_VS_PROTOSS[self.race]))
+
         else:
             self.register_behavior(SpawnController(ARMY_COMP[self.race]))
 
@@ -566,6 +578,10 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Terran:
             if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
                 self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
+
+        if self.EnemyRace == Race.Protoss:
+            if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
+                self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)       
         else:        
             if (
                 not self.already_pending_upgrade(UpgradeId.BURROW)
