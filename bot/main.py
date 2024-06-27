@@ -397,6 +397,12 @@ class MyBot(AresBot):
             # Send the Overlord to the new position
             self.do(unit.move(target))
 
+        # For the third Overlord and beyond, send them behind the first base
+        elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
+
+            target = self.first_base.position.towards(self.game_info.map_center, -15)  # Get a position behind of the first base
+            self.do(unit.move(target))
+
 #_______________________________________________________________________________________________________________________
 #          ON BUILDING CONSTRUCTION COMPLETE
 #_______________________________________________________________________________________________________________________
