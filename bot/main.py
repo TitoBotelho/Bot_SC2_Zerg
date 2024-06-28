@@ -166,8 +166,12 @@ class MyBot(AresBot):
         )
 
         if self.EnemyRace == Race.Terran:
-            self._begin_attack_at_supply = 28
-        
+            if self.time < 290:
+                self._begin_attack_at_supply = 28
+            else:
+                additional_supply = ((self.time - 290) // 4)
+                self._begin_attack_at_supply = 28 + additional_supply
+
         if self.EnemyRace == Race.Protoss:
             self._begin_attack_at_supply = 10
         
@@ -520,7 +524,7 @@ class MyBot(AresBot):
 
                 # idea here is to attack anything in range if weapon is ready
                 # check for enemy units first
-                if unit.type_id == UnitID.ROACH:
+                if unit.type_id in [UnitID.ROACH, UnitID.HYDRALISK]:
                     if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
                         # `ShootTargetInRange` will check weapon is ready
                         # otherwise it will not execute
