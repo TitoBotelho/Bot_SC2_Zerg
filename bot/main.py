@@ -231,8 +231,17 @@ class MyBot(AresBot):
         # If we don't have enough army, stop attacking and build more units
         if self.get_total_supply(forces) <= self._begin_attack_at_supply:
             self._commenced_attack = False
+            # If the army is not atacking and is far form the base, move it to the base
+            for unit in forces:
+                # In the file where distance_math_hypot is called, ensure the arguments are not None
+                if unit.position_tuple is not None and self.mediator.get_own_nat.towards(self.game_info.map_center, 6) is not None:
+                    if unit.distance_to(self.mediator.get_own_nat) > 10:
+                        unit.move(self.mediator.get_own_nat.towards(self.game_info.map_center, 6))
+                else:
+                    # Handle the case where one of the positions is None, e.g., log a warning or take alternative action
+                    print("Warning: One of the positions is None")
 
-    
+
         if self.EnemyRace == Race.Terran:
             await self.build_queens()
             await self.build_next_base()
