@@ -176,7 +176,7 @@ class MyBot(AresBot):
             self._begin_attack_at_supply = 10
         
         else:
-            self._begin_attack_at_supply = 14
+            self._begin_attack_at_supply = 16
 
         # Initialize the queens class
         self.queens = Queens(
@@ -256,6 +256,12 @@ class MyBot(AresBot):
             await self.build_next_base()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
+
+        if self.EnemyRace == Race.Zerg:
+            await self.build_queens()
+        
+        if self.EnemyRace == Race.Random:
+            await self.build_queens()
 
 
 #_______________________________________________________________________________________________________________________
