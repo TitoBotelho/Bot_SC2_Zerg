@@ -235,8 +235,9 @@ class MyBot(AresBot):
             for unit in forces:
                 # In the file where distance_math_hypot is called, ensure the arguments are not None
                 if unit.position_tuple is not None and self.mediator.get_own_nat.towards(self.game_info.map_center, 6) is not None:
-                    if unit.distance_to(self.mediator.get_own_nat) > 10:
-                        unit.move(self.mediator.get_own_nat.towards(self.game_info.map_center, 6))
+                    if unit.distance_to(self.mediator.get_own_nat) > 30:
+                        if not unit.is_attacking:
+                            unit.move(self.mediator.get_own_nat.towards(self.game_info.map_center, 6))
                 else:
                     # Handle the case where one of the positions is None, e.g., log a warning or take alternative action
                     print("Warning: One of the positions is None")
