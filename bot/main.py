@@ -528,8 +528,8 @@ class MyBot(AresBot):
                 lambda u: u.type_id not in ALL_STRUCTURES
             )
 
-            if self.race == Race.Zerg:
-                # you can add a CombatManeuver to another CombatManeuver!!!
+            if unit.type_id == UnitID.ROACH:
+                # only roaches can burrow
                 burrow_behavior: CombatManeuver = self.burrow_behavior(unit)
                 attacking_maneuver.add(burrow_behavior)
 
