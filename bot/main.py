@@ -381,6 +381,21 @@ class MyBot(AresBot):
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
 
+
+#_______________________________________________________________________________________________________________________
+#          ON UNIT TOOK DAMAGE
+#_______________________________________________________________________________________________________________________
+
+    # If the building is attacked and is not complete, cancel the construction
+
+    async def on_unit_took_damage(self, unit: Unit, amount_damage_taken: float) -> None:
+        await super(MyBot, self).on_unit_took_damage(unit, amount_damage_taken)
+
+        compare_health: float = max(50.0, unit.health_max * 0.09)
+        if unit.health < compare_health and unit.is_structure:
+            unit(AbilityId.CANCEL_BUILDINPROGRESS)
+
+
 #_______________________________________________________________________________________________________________________
 #          ON UNIT CREATED
 #_______________________________________________________________________________________________________________________
