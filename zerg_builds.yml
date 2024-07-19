@@ -35,10 +35,15 @@ BuildChoices:
             - BurrowRoachRush
 
     # Can also use specific opponent ids (overrides race options above)
+    #a_bot_opponent_id_from_aiarena:
+    #    BotName: QueenBot
+    #    Cycle:
+    #        - DummyOpening
+
     a_bot_opponent_id_from_aiarena:
-        BotName: QueenBot
+        BotName: Apidae
         Cycle:
-            - DummyOpening
+            - TwelvePool
 
 Builds:
     BurrowRoachRush:
@@ -159,4 +164,14 @@ Builds:
             - 19 drone
             - 20 evolutionchamber
 
- 
+    TwelvePool:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 spawningpool
+            - 11 drone
+            - 12 drone
+            - 13 overlord
+            - 13 drone
+
