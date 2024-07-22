@@ -115,6 +115,8 @@ class MyBot(AresBot):
         self.max_creep_queens: int = 1
 
 
+
+
         self.creep_queen_policy: Dict = {
             "creep_queens": {
                 "active": True,
@@ -164,6 +166,14 @@ class MyBot(AresBot):
         self.expansions_generator = cycle(
             [pos for pos in self.expansion_locations_list]
         )
+
+
+        #find the ID of the opponent    
+        self.opponent = self.opponent_id
+        if self.opponent_id is not None:
+            await self.chat_send(self.opponent_id)
+        else:
+            print("Warning: opponent_id is None, cannot send chat message.")
 
         if self.EnemyRace == Race.Terran:
             if self.time < 290:
