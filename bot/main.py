@@ -172,6 +172,8 @@ class MyBot(AresBot):
         self.opponent = self.opponent_id
         if self.opponent_id is not None:
             await self.chat_send(self.opponent_id)
+            print("The opponent ID is: ")
+            print(self.opponent_id)
         else:
             print("Warning: opponent_id is None, cannot send chat message.")
 
