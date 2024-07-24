@@ -41,7 +41,7 @@ BuildChoices:
     #        - DummyOpening
 
     a_bot_opponent_id_from_aiarena:
-        BotName: Apidae
+        BotName: c033a97a-667d-42e3-91e8-13528ac191ed
         Cycle:
             - TwelvePool
 
