@@ -177,18 +177,30 @@ class MyBot(AresBot):
         else:
             print("Warning: opponent_id is None, cannot send chat message.")
 
-        if self.EnemyRace == Race.Terran:
-            if self.time < 290:
-                self._begin_attack_at_supply = 28
-            else:
-                additional_supply = ((self.time - 290) // 4)
-                self._begin_attack_at_supply = 28 + additional_supply
-
-        if self.EnemyRace == Race.Protoss:
-            self._begin_attack_at_supply = 10
+        #Apidae
+        if self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
+            self._begin_attack_at_supply = 1
         
         else:
-            self._begin_attack_at_supply = 16
+
+            if self.EnemyRace == Race.Terran:
+                if self.time < 290:
+                    self._begin_attack_at_supply = 28
+                else:
+                    additional_supply = ((self.time - 290) // 4)
+                    self._begin_attack_at_supply = 28 + additional_supply
+
+            if self.EnemyRace == Race.Protoss:
+                self._begin_attack_at_supply = 10
+            
+            
+            if self.EnemyRace == Race.Zerg:
+                self._begin_attack_at_supply = 16
+
+
+            if self.EnemyRace == Race.Random:
+                self._begin_attack_at_supply = 16
+
 
         # Initialize the queens class
         self.queens = Queens(
