@@ -451,7 +451,7 @@ class MyBot(AresBot):
 
             # Get the enemy's start location
             #enemy_natural_location = self.mediator.get_enemy_nat
-            target = self.mediator.get_closest_overlord_spot(from_pos=my_base_location)
+            target = my_base_location.position.towards(self.game_info.map_center, 5)
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
