@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - BurrowRoachRush
+            - OppeningVsLingRush
 
     Protoss:
         BotName: ProtossRace
@@ -44,6 +44,12 @@ BuildChoices:
         BotName: Apidae
         Cycle:
             - TwelvePool
+
+    4a491758-76ff-40de-996c-018d49b6237f:
+        BotName: 12PoolBot
+        Cycle:
+            - OppeningVsLingRush
+
 
 Builds:
     BurrowRoachRush:
@@ -175,3 +181,22 @@ Builds:
             - 13 overlord
             - 13 drone
 
+
+    OppeningVsLingRush:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 spawningpool
+            - 11 drone
+            - 12 drone
+            - 13 overlord
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 17 spinecrawler
+            - 17 spinecrawler
+            - 17 gas
+            - 17 roachwarren
