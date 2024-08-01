@@ -449,8 +449,8 @@ class MyBot(AresBot):
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 2:
             my_base_location = self.mediator.get_own_nat
 
-            # Get the enemy's start location
-            #enemy_natural_location = self.mediator.get_enemy_nat
+ 
+            # Send the second Overlord in front of second base to scout
             target = my_base_location.position.towards(self.game_info.map_center, 5)
         
             # Send the Overlord to the new position
@@ -567,7 +567,7 @@ class MyBot(AresBot):
                 lambda u: u.type_id not in ALL_STRUCTURES
             )
 
-            if unit.type_id == UnitID.ROACH:
+            if unit.type_id in [UnitID.ROACH, UnitID.ROACHBURROWED]:
                 # only roaches can burrow
                 burrow_behavior: CombatManeuver = self.burrow_behavior(unit)
                 attacking_maneuver.add(burrow_behavior)
