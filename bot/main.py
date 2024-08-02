@@ -505,15 +505,19 @@ class MyBot(AresBot):
 
         # BUILD ARMY
         # ares-sc2 SpawnController
-
-        if self.EnemyRace == Race.Terran:
-            self.register_behavior(SpawnController(ARMY_COMP_VS_TERRAN[self.race]))
-
-        if self.EnemyRace == Race.Protoss:
-            self.register_behavior(SpawnController(ARMY_COMP_VS_PROTOSS[self.race]))
+                #Zozo
+        if self.opponent_id == "7e234d60-12cf-46e0-ac7a-72e87f6edc53":
+            self.register_behavior(SpawnController(ARMY_COMP[self.race]))
 
         else:
-            self.register_behavior(SpawnController(ARMY_COMP[self.race]))
+            if self.EnemyRace == Race.Terran:
+                self.register_behavior(SpawnController(ARMY_COMP_VS_TERRAN[self.race]))
+
+            if self.EnemyRace == Race.Protoss:
+                self.register_behavior(SpawnController(ARMY_COMP_VS_PROTOSS[self.race]))
+
+            else:
+                self.register_behavior(SpawnController(ARMY_COMP[self.race]))
 
 
         # see also `ProductionController` for ongoing generic production, not needed here
@@ -640,14 +644,7 @@ class MyBot(AresBot):
 
 
     def _zerg_specific_macro(self) -> None:
-        if self.EnemyRace == Race.Terran:
-            if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
-                self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
-
-        if self.EnemyRace == Race.Protoss:
-            if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
-                self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)       
-        else:        
+        if self.opponent_id == "7e234d60-12cf-46e0-ac7a-72e87f6edc53":
             if (
                 not self.already_pending_upgrade(UpgradeId.BURROW)
                 and self.townhalls.idle
@@ -655,6 +652,23 @@ class MyBot(AresBot):
                 and self.can_afford(UpgradeId.BURROW)
             ):
                 self.research(UpgradeId.BURROW)
+        else:
+
+            if self.EnemyRace == Race.Terran:
+                if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
+                    self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
+
+            if self.EnemyRace == Race.Protoss:
+                if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
+                    self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)       
+            else:        
+                if (
+                    not self.already_pending_upgrade(UpgradeId.BURROW)
+                    and self.townhalls.idle
+                    and self.build_order_runner.build_completed
+                    and self.can_afford(UpgradeId.BURROW)
+                ):
+                    self.research(UpgradeId.BURROW)
     """
         for queen in self.mediator.get_own_army_dict[UnitID.QUEEN]:
             if queen.energy >= 25 and self.townhalls:
