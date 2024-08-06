@@ -50,11 +50,6 @@ BuildChoices:
         Cycle:
             - OppeningVsLingRush
 
-    7e234d60-12cf-46e0-ac7a-72e87f6edc53:
-        BotName: Zozo
-        Cycle:
-            - OppeningVsLingRush
-
 
 Builds:
     BurrowRoachRush:
@@ -201,7 +196,8 @@ Builds:
             - 15 drone
             - 16 drone
             - 17 drone
-            - 17 spinecrawler @ ramp
-            - 17 spinecrawler @ ramp
+            - 17 spinecrawler
+            - 17 spinecrawler
             - 17 gas
+            - 17 drone
             - 17 roachwarren

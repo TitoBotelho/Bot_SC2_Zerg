@@ -107,6 +107,7 @@ class MyBot(AresBot):
         """
         super().__init__(game_step_override)
         self.tag_worker_build_2nd_base = 0
+        self.tag_worker_build_roach_warren = 0
         self.tag_worker_build_hydra_den = 0    
 
         self._commenced_attack: bool = False
@@ -252,20 +253,26 @@ class MyBot(AresBot):
         elif self.get_total_supply(forces) >= self._begin_attack_at_supply:
             self._commenced_attack = True
 
-        # If we don't have enough army, stop attacking and build more units
-        if self.get_total_supply(forces) <= self._begin_attack_at_supply:
-            self._commenced_attack = False
-            # If the army is not atacking and is far form the base, move it to the base
-            for unit in forces:
-                # In the file where distance_math_hypot is called, ensure the arguments are not None
-                if unit.position_tuple is not None and self.mediator.get_own_nat.towards(self.game_info.map_center, 6) is not None:
-                    if unit.distance_to(self.mediator.get_own_nat) > 30:
-                        if not unit.is_attacking:
-                            unit.move(self.mediator.get_own_nat.towards(self.game_info.map_center, 6))
-                else:
-                    # Handle the case where one of the positions is None, e.g., log a warning or take alternative action
-                    print("Warning: One of the positions is None")
+        if self._commenced_attack == True:
+            # If we don't have enough army, stop attacking and build more units
 
+            #RETURN TO BASE
+            if self.get_total_supply(forces) <= self._begin_attack_at_supply:
+                self._commenced_attack = False
+                # If the army is not atacking and is far form the base, move it to the base
+                for unit in forces:
+                    bases = self.structures(UnitID.HATCHERY).ready
+                    if bases.amount >= 2:
+                        # In the file where distance_math_hypot is called, ensure the arguments are not None
+                        if unit.position_tuple is not None and self.mediator.get_own_nat.towards(self.game_info.map_center, 6) is not None:
+                            if unit.distance_to(self.mediator.get_own_nat) > 30:
+                                if not unit.is_attacking:
+                                    unit.move(self.mediator.get_own_nat.towards(self.game_info.map_center, 6))
+                        else:
+                            # Handle the case where one of the positions is None, e.g., log a warning or take alternative action
+                            print("Warning: One of the positions is None")
+                    else:
+                        unit.move(self.first_base.position.towards(self.game_info.map_center, 3))
 
         if self.EnemyRace == Race.Terran:
             await self.build_queens()
@@ -283,6 +290,7 @@ class MyBot(AresBot):
 
         if self.EnemyRace == Race.Zerg:
             await self.build_queens()
+
         
         if self.EnemyRace == Race.Random:
             await self.build_queens()
@@ -505,19 +513,15 @@ class MyBot(AresBot):
 
         # BUILD ARMY
         # ares-sc2 SpawnController
-                #Zozo
-        if self.opponent_id == "7e234d60-12cf-46e0-ac7a-72e87f6edc53":
-            self.register_behavior(SpawnController(ARMY_COMP[self.race]))
+
+        if self.EnemyRace == Race.Terran:
+            self.register_behavior(SpawnController(ARMY_COMP_VS_TERRAN[self.race]))
+
+        if self.EnemyRace == Race.Protoss:
+            self.register_behavior(SpawnController(ARMY_COMP_VS_PROTOSS[self.race]))
 
         else:
-            if self.EnemyRace == Race.Terran:
-                self.register_behavior(SpawnController(ARMY_COMP_VS_TERRAN[self.race]))
-
-            if self.EnemyRace == Race.Protoss:
-                self.register_behavior(SpawnController(ARMY_COMP_VS_PROTOSS[self.race]))
-
-            else:
-                self.register_behavior(SpawnController(ARMY_COMP[self.race]))
+            self.register_behavior(SpawnController(ARMY_COMP[self.race]))
 
 
         # see also `ProductionController` for ongoing generic production, not needed here
@@ -644,7 +648,14 @@ class MyBot(AresBot):
 
 
     def _zerg_specific_macro(self) -> None:
-        if self.opponent_id == "7e234d60-12cf-46e0-ac7a-72e87f6edc53":
+        if self.EnemyRace == Race.Terran:
+            if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
+                self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
+
+        if self.EnemyRace == Race.Protoss:
+            if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
+                self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)       
+        else:        
             if (
                 not self.already_pending_upgrade(UpgradeId.BURROW)
                 and self.townhalls.idle
@@ -652,23 +663,6 @@ class MyBot(AresBot):
                 and self.can_afford(UpgradeId.BURROW)
             ):
                 self.research(UpgradeId.BURROW)
-        else:
-
-            if self.EnemyRace == Race.Terran:
-                if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
-                    self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
-
-            if self.EnemyRace == Race.Protoss:
-                if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
-                    self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)       
-            else:        
-                if (
-                    not self.already_pending_upgrade(UpgradeId.BURROW)
-                    and self.townhalls.idle
-                    and self.build_order_runner.build_completed
-                    and self.can_afford(UpgradeId.BURROW)
-                ):
-                    self.research(UpgradeId.BURROW)
     """
         for queen in self.mediator.get_own_army_dict[UnitID.QUEEN]:
             if queen.energy >= 25 and self.townhalls:
