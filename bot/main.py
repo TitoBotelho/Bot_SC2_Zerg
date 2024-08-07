@@ -200,7 +200,7 @@ class MyBot(AresBot):
 
 
             if self.EnemyRace == Race.Random:
-                self._begin_attack_at_supply = 16
+                self._begin_attack_at_supply = 6
 
 
         # Initialize the queens class
@@ -257,7 +257,7 @@ class MyBot(AresBot):
             # If we don't have enough army, stop attacking and build more units
 
             #RETURN TO BASE
-            if self.get_total_supply(forces) <= self._begin_attack_at_supply:
+            if self.get_total_supply(forces) < self._begin_attack_at_supply:
                 self._commenced_attack = False
                 # If the army is not atacking and is far form the base, move it to the base
                 for unit in forces:

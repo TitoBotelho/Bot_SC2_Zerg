@@ -22,7 +22,7 @@ BuildChoices:
     Random:
         BotName: RandomRace
         Cycle:
-            - BurrowRoachRush
+            - AgressiveRoach
 
     Terran:
         BotName: TerranRace
@@ -201,3 +201,24 @@ Builds:
             - 17 gas
             - 17 drone
             - 17 roachwarren
+
+
+    AgressiveRoach:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 drone
+            - 13 drone
+            - 14 spawningpool
+            - 13 gas
+            - 12 drone
+            - 13 drone
+            - 14 overlord
+            - 14 drone
+            - 15 roachwarren
+            - 14 queen
+            - 14 drone
+            - 15 drone
+            - 15 overlord
+            - 15 hatchery
