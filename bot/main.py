@@ -229,6 +229,7 @@ class MyBot(AresBot):
     
         # Send the Overlord to the new position
         self.do(overlord.move(target))
+        await self.chat_send("tag: test_tag")
 
 
 #_______________________________________________________________________________________________________________________
@@ -239,6 +240,8 @@ class MyBot(AresBot):
         await super(MyBot, self).on_step(iteration)
 
         #await self.debug_tool()
+
+
 
         self._macro()
 
