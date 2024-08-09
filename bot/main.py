@@ -229,7 +229,8 @@ class MyBot(AresBot):
     
         # Send the Overlord to the new position
         self.do(overlord.move(target))
-        await self.chat_send("tag: test_tag")
+        await self.chat_send("tag:test_tag")
+        self.chat_send("tag:test_tag2")
 
 
 #_______________________________________________________________________________________________________________________
@@ -466,7 +467,8 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-
+            await self.chat_send("tag:test_tag3")
+            
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
 
