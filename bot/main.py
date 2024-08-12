@@ -229,8 +229,7 @@ class MyBot(AresBot):
     
         # Send the Overlord to the new position
         self.do(overlord.move(target))
-        await self.chat_send("tag:test_tag")
-        self.chat_send("tag:test_tag2")
+
 
 
 #_______________________________________________________________________________________________________________________
@@ -240,7 +239,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
 
@@ -298,6 +297,7 @@ class MyBot(AresBot):
         
         if self.EnemyRace == Race.Random:
             await self.build_queens()
+            await self.discover_race()
 
 
 #_______________________________________________________________________________________________________________________
@@ -396,8 +396,18 @@ class MyBot(AresBot):
                             #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_hydra_den, structure_type=UnitID.HYDRALISKDEN, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
-
-
+    async def discover_race(self):
+        if self.time == 50:
+            for unit in self.enemy_structures:
+                if unit.name == 'Nexus':
+                    await self.chat_send("Tag: Random Protoss")
+                    break
+                elif unit.name == 'CommandCenter':
+                    await self.chat_send("Tag: Random Terran")
+                    break
+                elif unit.name == 'Hatchery':
+                    await self.chat_send("Tag: Random Zerg")
+                    break
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -406,13 +416,14 @@ class MyBot(AresBot):
     async def debug_tool(self):
         current_time = time.time()
         if current_time - self.last_debug_time >= 1:  # Se passou mais de um segundo
-            print(self.mediator.get_all_enemy)
+            #print(self.mediator.get_all_enemy)
             #print("Enemy Race: ", self.EnemyRace)
             #print("Second Base: ", self.second_base)
             #print("Guess Strategy: ", self.guess_strategy)
-            print("Creep Queens: ", self.creep_queen_tags)
-            print("Creep Queen Policy: ", self.creep_queen_policy)
+            #print("Creep Queens: ", self.creep_queen_tags)
+            #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
+            print("Enemy Structures: ", self.enemy_structures)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
@@ -467,8 +478,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: test_tag3")
-            await self.chat_send('Tag:test_tag4')
+            await self.chat_send("Tag: Version: 240812")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:

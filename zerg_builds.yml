@@ -208,6 +208,7 @@ Builds:
         # Turning this off here for a bit more precision in build
         ConstantWorkerProductionTill: 0
         OpeningBuildOrder:
+            - 12 worker_scout
             - 12 drone
             - 13 drone
             - 14 spawningpool
