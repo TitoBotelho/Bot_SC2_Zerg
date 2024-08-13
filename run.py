@@ -14,6 +14,8 @@ sys.path.append("ares-sc2/src")
 sys.path.append("ares-sc2")
 sys.path.append("queens-sc2")
 
+
+
 import yaml
 
 from bot.main import MyBot
@@ -67,7 +69,7 @@ def main():
         #     "HardwireAIE",
         # ]
 
-        random_race = random.choice([Race.Zerg, Race.Terran, Race.Protoss])
+        random_race = random.choice([Race.Random])
         print("Starting local game...")
         run_game(
             maps.get(random.choice(map_list)),
@@ -75,7 +77,7 @@ def main():
                 bot1,
                 Computer(random_race, Difficulty.CheatVision, ai_build=AIBuild.Macro),
             ],
-            realtime=False,
+            realtime=True,
         )
 
 

@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - BurrowRoachRush
+            - OppeningVsLingRush
 
     Protoss:
         BotName: ProtossRace
@@ -22,7 +22,7 @@ BuildChoices:
     Random:
         BotName: RandomRace
         Cycle:
-            - BurrowRoachRush
+            - AgressiveRoach
 
     Terran:
         BotName: TerranRace
@@ -35,10 +35,21 @@ BuildChoices:
             - BurrowRoachRush
 
     # Can also use specific opponent ids (overrides race options above)
-    a_bot_opponent_id_from_aiarena:
-        BotName: QueenBot
+    #a_bot_opponent_id_from_aiarena:
+    #    BotName: QueenBot
+    #    Cycle:
+    #        - DummyOpening
+
+    c033a97a-667d-42e3-91e8-13528ac191ed:
+        BotName: Apidae
         Cycle:
-            - DummyOpening
+            - TwelvePool
+
+    4a491758-76ff-40de-996c-018d49b6237f:
+        BotName: 12PoolBot
+        Cycle:
+            - OppeningVsLingRush
+
 
 Builds:
     BurrowRoachRush:
@@ -93,6 +104,7 @@ Builds:
             - 19 drone
             - 20 overlord
             - 19 drone
+            - 20 evolutionchamber
             - 20 hatchery
             - 20 overlord
             - 20 drone
@@ -149,7 +161,6 @@ Builds:
             - 15 drone
             - 16 overlord
             - 16 drone
-            - 16 roachwarren
             - 16 drone
             - 17 drone
             - 20 drone
@@ -157,16 +168,58 @@ Builds:
             - 22 drone
             - 23 drone
             - 19 drone
-            - 20 drone
-            - 23 gas
-            - 20 drone
-            - 20 drone
-            - 20 drone
-            - 20 overlord
-            - 20 drone
-            - 20 drone
-            - 20 drone
-            - 20 overlord
-            - 20 drone
-            - 20 drone
- 
+            - 20 evolutionchamber
+
+    TwelvePool:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 spawningpool
+            - 11 drone
+            - 12 drone
+            - 13 overlord
+            - 13 drone
+
+
+    OppeningVsLingRush:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 spawningpool
+            - 11 drone
+            - 12 drone
+            - 13 overlord
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 17 spinecrawler
+            - 17 spinecrawler
+            - 17 gas
+            - 17 drone
+            - 17 roachwarren
+
+
+    AgressiveRoach:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 worker_scout
+            - 12 drone
+            - 13 drone
+            - 14 spawningpool
+            - 13 gas
+            - 12 drone
+            - 13 drone
+            - 14 overlord
+            - 14 drone
+            - 15 roachwarren
+            - 14 queen
+            - 14 drone
+            - 15 drone
+            - 15 overlord
+            - 15 hatchery

@@ -5,6 +5,13 @@ BOT CLICADINHA
 
 Made of with Ares Random Example Bot
 
+https://github.com/AresSC2/ares-random-example
+
+
+Using the Queens framework
+
+https://github.com/raspersc2/queens-sc2
+
 """
 
 
@@ -36,18 +43,30 @@ import time
 
 from queens_sc2.queens import Queens
 
+
+
 #_______________________________________________________________________________________________________________________
 #          ARMY COMPOSITION
 #_______________________________________________________________________________________________________________________
 
+# this will be used for ares SpawnController behavior
 
+# against Terran
 ARMY_COMP_VS_TERRAN: dict[Race, dict] = {
     Race.Zerg: {
-        UnitID.ZERGLING: {"proportion": 0.2, "priority": 0},
-        UnitID.HYDRALISK: {"proportion": 0.8, "priority": 0},
+        UnitID.ZERGLING: {"proportion": 0.9, "priority": 0},
+        UnitID.HYDRALISK: {"proportion": 0.1, "priority": 1},
     }
 }
-# this will be used for ares SpawnController behavior
+
+# against Protoss
+ARMY_COMP_VS_PROTOSS: dict[Race, dict] = {
+    Race.Zerg: {
+        UnitID.ZERGLING: {"proportion": 1.0, "priority": 0},
+    }
+}
+
+# against other races
 ARMY_COMP: dict[Race, dict] = {
     Race.Zerg: {
         UnitID.ROACH: {"proportion": 1.0, "priority": 0},
@@ -87,12 +106,16 @@ class MyBot(AresBot):
             specified elsewhere
         """
         super().__init__(game_step_override)
-        self.tag_worker_build_2nd_base = 0    
+        self.tag_worker_build_2nd_base = 0
+        self.tag_worker_build_roach_warren = 0
+        self.tag_worker_build_hydra_den = 0    
 
         self._commenced_attack: bool = False
 
         self.creep_queen_tags: Set[int] = set()
-        self.max_creep_queens: int = 4
+        self.max_creep_queens: int = 1
+
+
 
 
         self.creep_queen_policy: Dict = {
@@ -100,7 +123,7 @@ class MyBot(AresBot):
                 "active": True,
                 "max": self.max_creep_queens,
             },
-            "inject_queens": {"active": False},
+            "inject_queens": {"active": True},
             "defence_queens": {"active": False},
         }
         
@@ -145,14 +168,40 @@ class MyBot(AresBot):
             [pos for pos in self.expansion_locations_list]
         )
 
-        if self.EnemyRace == Race.Terran:
-            self._begin_attack_at_supply = 20
-        
-        if self.EnemyRace == Race.Protoss:
-            self._begin_attack_at_supply = 4
+
+        #find the ID of the opponent    
+        self.opponent = self.opponent_id
+        if self.opponent_id is not None:
+            await self.chat_send(self.opponent_id)
+            print("The opponent ID is: ")
+            print(self.opponent_id)
+        else:
+            print("Warning: opponent_id is None, cannot send chat message.")
+
+        #Apidae
+        if self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
+            self._begin_attack_at_supply = 1
         
         else:
-            self._begin_attack_at_supply = 14
+
+            if self.EnemyRace == Race.Terran:
+                if self.time < 290:
+                    self._begin_attack_at_supply = 28
+                else:
+                    additional_supply = ((self.time - 290) // 4)
+                    self._begin_attack_at_supply = 28 + additional_supply
+
+            if self.EnemyRace == Race.Protoss:
+                self._begin_attack_at_supply = 10
+            
+            
+            if self.EnemyRace == Race.Zerg:
+                self._begin_attack_at_supply = 16
+
+
+            if self.EnemyRace == Race.Random:
+                self._begin_attack_at_supply = 6
+
 
         # Initialize the queens class
         self.queens = Queens(
@@ -182,6 +231,7 @@ class MyBot(AresBot):
         self.do(overlord.move(target))
 
 
+
 #_______________________________________________________________________________________________________________________
 #          ON STEP
 #_______________________________________________________________________________________________________________________
@@ -189,7 +239,9 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
+
+
 
         self._macro()
 
@@ -203,21 +255,55 @@ class MyBot(AresBot):
 
         elif self.get_total_supply(forces) >= self._begin_attack_at_supply:
             self._commenced_attack = True
-    
+
+        if self._commenced_attack == True:
+            # If we don't have enough army, stop attacking and build more units
+
+            #RETURN TO BASE
+            if self.get_total_supply(forces) < self._begin_attack_at_supply:
+                self._commenced_attack = False
+                # If the army is not atacking and is far form the base, move it to the base
+                for unit in forces:
+                    bases = self.structures(UnitID.HATCHERY).ready
+                    if bases.amount >= 2:
+                        # In the file where distance_math_hypot is called, ensure the arguments are not None
+                        if unit.position_tuple is not None and self.mediator.get_own_nat.towards(self.game_info.map_center, 6) is not None:
+                            if unit.distance_to(self.mediator.get_own_nat) > 30:
+                                if not unit.is_attacking:
+                                    unit.move(self.mediator.get_own_nat.towards(self.game_info.map_center, 6))
+                        else:
+                            # Handle the case where one of the positions is None, e.g., log a warning or take alternative action
+                            print("Warning: One of the positions is None")
+                    else:
+                        unit.move(self.first_base.position.towards(self.game_info.map_center, 3))
+
         if self.EnemyRace == Race.Terran:
             await self.build_queens()
             await self.build_next_base()
+            await self.build_mellee_upgrades()
+            await self.build_armor_upgrades()
+            await self.build_lair()
+            await self.build_hydra_den()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
             await self.build_next_base()
+            await self.build_mellee_upgrades()
+            await self.build_armor_upgrades()
 
-            # If we don't have enough army, stop attacking and build more units
-            if self.get_total_supply(forces) <= self._begin_attack_at_supply:
-                self._commenced_attack = False
+        if self.EnemyRace == Race.Zerg:
+            await self.build_queens()
+
+        
+        if self.EnemyRace == Race.Random:
+            await self.build_queens()
+            await self.discover_race()
 
 
-#queens
+#_______________________________________________________________________________________________________________________
+#          QUEENS
+#_______________________________________________________________________________________________________________________
+
         queens: Units = self.units(UnitID.QUEEN)
         # work out if more creep queen_control are required
         if queens and len(self.creep_queen_tags) < self.max_creep_queens:
@@ -226,6 +312,9 @@ class MyBot(AresBot):
             for queen in new_creep_queens:
                 self.creep_queen_tags.add(queen.tag)
 
+
+
+
         # separate the queen units selection
         creep_queens: Units = queens.tags_in(self.creep_queen_tags)
         other_queens: Units = queens.tags_not_in(self.creep_queen_tags)
@@ -233,17 +322,21 @@ class MyBot(AresBot):
         await self.queens.manage_queens(iteration, creep_queens)
 
         # we have full control of the other queen_control
-        for queen in other_queens:
-            if queen.distance_to(self.game_info.map_center) > 12:
-                queen.attack(self.game_info.map_center)
+        #for queen in other_queens:
+            #if queen.distance_to(self.game_info.map_center) > 12:
+                #queen.attack(self.game_info.map_center)
+
+
+
 
     async def build_queens(self):
-        # Check if the number of queens is less than the number of townhalls
-        if len(self.units(UnitID.QUEEN)) < len(self.townhalls.ready):
-            # Check if we're not already training a queen
-            if not self.already_pending(UnitID.QUEEN):
-                # If we're not, train a queen
-                self.do(self.townhalls.ready.first.train(UnitID.QUEEN))
+        for th in self.townhalls.ready:
+            # Check if the number of queens is less than the number of townhalls
+            if len(self.units(UnitID.QUEEN)) <= len(self.townhalls.ready):
+                # Check if we're not already training a queen
+                if not self.already_pending(UnitID.QUEEN):
+                    # If we're not, train a queen
+                    self.do(th.train(UnitID.QUEEN))
 
     async def build_next_base(self):
         if self.minerals > 500:
@@ -255,8 +348,66 @@ class MyBot(AresBot):
                     #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                     self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
+    async def build_mellee_upgrades(self):
+        if self.structures(UnitID.EVOLUTIONCHAMBER).ready:
+            if self.structures(UnitID.SPAWNINGPOOL).ready:
+                if not self.already_pending_upgrade(UpgradeId.ZERGLINGATTACKSPEED):
+                    if self.can_afford(UpgradeId.ZERGLINGATTACKSPEED):
+                        self.research(UpgradeId.ZERGLINGATTACKSPEED)
+                if not self.already_pending_upgrade(UpgradeId.ZERGMELEEWEAPONSLEVEL1):
+                    if self.can_afford(UpgradeId.ZERGMELEEWEAPONSLEVEL1):
+                        self.research(UpgradeId.ZERGMELEEWEAPONSLEVEL1)
+                if not self.already_pending_upgrade(UpgradeId.ZERGMELEEWEAPONSLEVEL2):
+                    if self.can_afford(UpgradeId.ZERGMELEEWEAPONSLEVEL2):
+                        self.research(UpgradeId.ZERGMELEEWEAPONSLEVEL2)
+                if not self.already_pending_upgrade(UpgradeId.ZERGMELEEWEAPONSLEVEL3):
+                    if self.can_afford(UpgradeId.ZERGMELEEWEAPONSLEVEL3):
+                        self.research(UpgradeId.ZERGMELEEWEAPONSLEVEL3)
 
+    async def build_armor_upgrades(self):
+        if self.structures(UnitID.EVOLUTIONCHAMBER).ready:
+            if self.structures(UnitID.SPAWNINGPOOL).ready:
+                if not self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL1):
+                    if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL1):
+                        self.research(UpgradeId.ZERGGROUNDARMORSLEVEL1)
+                if not self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL2):
+                    if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL2):
+                        self.research(UpgradeId.ZERGGROUNDARMORSLEVEL2)
+                if not self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL3):
+                    if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL3):
+                        self.research(UpgradeId.ZERGGROUNDARMORSLEVEL3)
 
+    async def build_lair(self):
+        if not self.structures(UnitID.LAIR):
+            if self.can_afford(UnitID.LAIR):
+                th: Unit = self.first_base
+                th(AbilityId.UPGRADETOLAIR_LAIR)
+
+    async def build_hydra_den(self):
+        if self.structures(UnitID.LAIR).ready:
+            if self.structures(UnitID.HYDRALISKDEN).amount == 0 and not self.already_pending(UnitID.HYDRALISKDEN):
+                if self.tag_worker_build_hydra_den == 0:
+                    if self.can_afford(UnitID.HYDRALISKDEN):
+                        target = self.first_base.position.towards(self.second_base.position, 5)
+                        #await self.build(UnitID.HYDRALISKDEN, near=target)
+                        if worker := self.mediator.select_worker(target_position=target):                
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_build_hydra_den = worker
+                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_hydra_den, structure_type=UnitID.HYDRALISKDEN, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+    async def discover_race(self):
+        if self.time == 50:
+            for unit in self.enemy_structures:
+                if unit.name == 'Nexus':
+                    await self.chat_send("Tag: Random Protoss")
+                    break
+                elif unit.name == 'CommandCenter':
+                    await self.chat_send("Tag: Random Terran")
+                    break
+                elif unit.name == 'Hatchery':
+                    await self.chat_send("Tag: Random Zerg")
+                    break
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -265,14 +416,32 @@ class MyBot(AresBot):
     async def debug_tool(self):
         current_time = time.time()
         if current_time - self.last_debug_time >= 1:  # Se passou mais de um segundo
-            print(self.mediator.get_all_enemy)
-            print("Enemy Race: ", self.EnemyRace)
-            print("Second Base: ", self.second_base)
-            print("Guess Strategy: ", self.guess_strategy)
+            #print(self.mediator.get_all_enemy)
+            #print("Enemy Race: ", self.EnemyRace)
+            #print("Second Base: ", self.second_base)
+            #print("Guess Strategy: ", self.guess_strategy)
+            #print("Creep Queens: ", self.creep_queen_tags)
+            #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
+            print("Enemy Structures: ", self.enemy_structures)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
+
+
+#_______________________________________________________________________________________________________________________
+#          ON UNIT TOOK DAMAGE
+#_______________________________________________________________________________________________________________________
+
+    # If the building is attacked and is not complete, cancel the construction
+
+    async def on_unit_took_damage(self, unit: Unit, amount_damage_taken: float) -> None:
+        await super(MyBot, self).on_unit_took_damage(unit, amount_damage_taken)
+
+        compare_health: float = max(50.0, unit.health_max * 0.09)
+        if unit.health < compare_health and unit.is_structure:
+            unit(AbilityId.CANCEL_BUILDINPROGRESS)
+
 
 #_______________________________________________________________________________________________________________________
 #          ON UNIT CREATED
@@ -296,6 +465,26 @@ class MyBot(AresBot):
             # here we are making a request to an ares manager via the mediator
             # See https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html
             self.mediator.assign_role(tag=unit.tag, role=UnitRole.ATTACKING)
+
+
+
+        # Send the second Overlord to scout on the second base
+        if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 2:
+            my_base_location = self.mediator.get_own_nat
+
+ 
+            # Send the second Overlord in front of second base to scout
+            target = my_base_location.position.towards(self.game_info.map_center, 5)
+        
+            # Send the Overlord to the new position
+            self.do(unit.move(target))
+            await self.chat_send("Tag: Version: 240812")
+            
+        # For the third Overlord and beyond, send them behind the first base
+        elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
+
+            target = self.first_base.position.towards(self.game_info.map_center, -15)  # Get a position behind of the first base
+            self.do(unit.move(target))
 
 #_______________________________________________________________________________________________________________________
 #          ON BUILDING CONSTRUCTION COMPLETE
@@ -343,6 +532,9 @@ class MyBot(AresBot):
 
         if self.EnemyRace == Race.Terran:
             self.register_behavior(SpawnController(ARMY_COMP_VS_TERRAN[self.race]))
+
+        if self.EnemyRace == Race.Protoss:
+            self.register_behavior(SpawnController(ARMY_COMP_VS_PROTOSS[self.race]))
 
         else:
             self.register_behavior(SpawnController(ARMY_COMP[self.race]))
@@ -399,8 +591,8 @@ class MyBot(AresBot):
                 lambda u: u.type_id not in ALL_STRUCTURES
             )
 
-            if self.race == Race.Zerg:
-                # you can add a CombatManeuver to another CombatManeuver!!!
+            if unit.type_id in [UnitID.ROACH, UnitID.ROACHBURROWED]:
+                # only roaches can burrow
                 burrow_behavior: CombatManeuver = self.burrow_behavior(unit)
                 attacking_maneuver.add(burrow_behavior)
 
@@ -411,7 +603,7 @@ class MyBot(AresBot):
 
                 # idea here is to attack anything in range if weapon is ready
                 # check for enemy units first
-                if unit.type_id == UnitID.ROACH:
+                if unit.type_id in [UnitID.ROACH, UnitID.HYDRALISK]:
                     if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
                         # `ShootTargetInRange` will check weapon is ready
                         # otherwise it will not execute
@@ -475,6 +667,10 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Terran:
             if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
                 self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
+
+        if self.EnemyRace == Race.Protoss:
+            if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
+                self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)       
         else:        
             if (
                 not self.already_pending_upgrade(UpgradeId.BURROW)
