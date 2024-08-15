@@ -108,7 +108,8 @@ class MyBot(AresBot):
         super().__init__(game_step_override)
         self.tag_worker_build_2nd_base = 0
         self.tag_worker_build_roach_warren = 0
-        self.tag_worker_build_hydra_den = 0    
+        self.tag_worker_build_hydra_den = 0
+        self.tag_worker_build_spine_crawler = 0 
 
         self._commenced_attack: bool = False
 
@@ -200,7 +201,7 @@ class MyBot(AresBot):
 
 
             if self.EnemyRace == Race.Random:
-                self._begin_attack_at_supply = 6
+                self._begin_attack_at_supply = 10
 
 
         # Initialize the queens class
@@ -239,7 +240,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
 
@@ -298,6 +299,7 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Random:
             await self.build_queens()
             await self.discover_race()
+            await self.build_spine_crawler()
 
 
 #_______________________________________________________________________________________________________________________
@@ -408,6 +410,22 @@ class MyBot(AresBot):
                 elif unit.name == 'Hatchery':
                     await self.chat_send("Tag: Random Zerg")
                     break
+
+    async def build_spine_crawler(self):
+        if self.rally_point_set == True:
+            if self.structures(UnitID.SPINECRAWLER).amount == 0 and not self.already_pending(UnitID.SPINECRAWLER):
+                if self.tag_worker_build_spine_crawler == 0:
+                    if self.can_afford(UnitID.SPINECRAWLER):
+                        my_base_location = self.mediator.get_own_nat
+                        # Send the second Overlord in front of second base to scout
+                        target = my_base_location.position.towards(self.game_info.map_center, 4)                   
+                        #await self.build(UnitID.HYDRALISKDEN, near=target)
+                        if worker := self.mediator.select_worker(target_position=target):                
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_build_spine_crawler = worker
+                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+                            print("build_spine_crawler foi chamada")
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
