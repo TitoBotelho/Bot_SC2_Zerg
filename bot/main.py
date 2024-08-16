@@ -281,6 +281,7 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Terran:
             await self.build_queens()
             await self.build_next_base()
+            await self.is_terran_agressive()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
             await self.build_lair()
@@ -425,8 +426,19 @@ class MyBot(AresBot):
                             self.tag_worker_build_spine_crawler = worker
                             #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-                            print("build_spine_crawler foi chamada")
+                            
 
+
+    async def is_terran_agressive(self):
+        if self.time == 135:
+            found_command_center = False
+            for unit in self.enemy_structures:
+                if unit.name == 'CommandCenter':
+                    found_command_center = True
+                    break  # Sai do loop se encontrar um CommandCenter
+            if not found_command_center:
+                await self.chat_send("Tag: Terran Agressive")
+                await self.build_spine_crawler()
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
