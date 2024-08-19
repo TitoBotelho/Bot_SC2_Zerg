@@ -430,12 +430,13 @@ class MyBot(AresBot):
 
 
     async def is_terran_agressive(self):
+        #verify if the terran opponent has only one base. If so, it is an agressive terran and build a spine crawler
         if self.time == 135:
             found_command_center = False
             for unit in self.enemy_structures:
                 if unit.name == 'CommandCenter':
                     found_command_center = True
-                    break  # Sai do loop se encontrar um CommandCenter
+                    break  # Brake the loop if find the Command Center
             if not found_command_center:
                 await self.chat_send("Tag: Terran Agressive")
                 await self.build_spine_crawler()
@@ -508,7 +509,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version: 240812")
+            await self.chat_send("Tag: Version: 240819")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
