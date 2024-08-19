@@ -50,6 +50,11 @@ BuildChoices:
         Cycle:
             - OppeningVsLingRush
 
+    81654bce-d0ae-4456-b987-2b585fe5a819:
+        BotName: Tartarus
+        Cycle:
+            - OppeningVsLingRush
+
 
 Builds:
     BurrowRoachRush:
