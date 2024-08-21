@@ -55,6 +55,16 @@ BuildChoices:
         Cycle:
             - OppeningVsLingRush
 
+    944bcdff-a18f-4ed0-a5fc-35764399ef05:
+        BotName: Sharkling
+        Cycle:
+            - OppeningVsLingRush
+    
+    a51d7f01-0f4a-4b91-ada8-7bd1eeec2cda:
+        BotName: Krillin
+        Cycle:
+            - OppeningVsLingRush
+
 
 Builds:
     BurrowRoachRush:
