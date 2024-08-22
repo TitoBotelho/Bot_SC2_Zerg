@@ -161,6 +161,7 @@ class MyBot(AresBot):
         self.rally_point_set = False
         self.first_base = self.townhalls.first
         self.second_base = None
+        self.first_overlord = self.units(UnitID.OVERLORD).first
         self.worker_scout_tag = 0
         self.guess_strategy = "No strategy detected"
 
@@ -226,11 +227,14 @@ class MyBot(AresBot):
     
         # Get the enemy's start location
         #enemy_natural_location = self.mediator.get_enemy_nat
-        target = self.mediator.get_closest_overlord_spot(from_pos=enemy_natural_location)
-    
+        #target = self.mediator.get_closest_overlord_spot(from_pos=enemy_natural_location)
+        target = enemy_natural_location.position.towards(self.game_info.map_center, 13)
         # Send the Overlord to the new position
         self.do(overlord.move(target))
-
+        hg_spot = self.mediator.get_closest_overlord_spot(
+            from_pos=enemy_natural_location
+        )
+        overlord.move(hg_spot, queue=True)
 
 
 #_______________________________________________________________________________________________________________________
@@ -241,7 +245,6 @@ class MyBot(AresBot):
         await super(MyBot, self).on_step(iteration)
 
         #await self.debug_tool()
-
 
 
         self._macro()
@@ -278,6 +281,8 @@ class MyBot(AresBot):
                     else:
                         unit.move(self.first_base.position.towards(self.game_info.map_center, 3))
 
+        
+
         if self.EnemyRace == Race.Terran:
             await self.build_queens()
             await self.build_next_base()
@@ -286,6 +291,7 @@ class MyBot(AresBot):
             await self.build_armor_upgrades()
             await self.build_lair()
             await self.build_hydra_den()
+
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -440,6 +446,8 @@ class MyBot(AresBot):
             if not found_command_center:
                 await self.chat_send("Tag: Terran Agressive")
                 await self.build_spine_crawler()
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
