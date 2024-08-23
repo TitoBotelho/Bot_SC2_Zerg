@@ -180,29 +180,24 @@ class MyBot(AresBot):
         else:
             print("Warning: opponent_id is None, cannot send chat message.")
 
-        #Apidae
-        if self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
-            self._begin_attack_at_supply = 1
+
+        if self.EnemyRace == Race.Terran:
+            if self.time < 290:
+                self._begin_attack_at_supply = 14
+            else:
+                additional_supply = ((self.time - 290) // 4)
+                self._begin_attack_at_supply = 14 + additional_supply
+
+        if self.EnemyRace == Race.Protoss:
+            self._begin_attack_at_supply = 10
         
-        else:
-
-            if self.EnemyRace == Race.Terran:
-                if self.time < 290:
-                    self._begin_attack_at_supply = 28
-                else:
-                    additional_supply = ((self.time - 290) // 4)
-                    self._begin_attack_at_supply = 28 + additional_supply
-
-            if self.EnemyRace == Race.Protoss:
-                self._begin_attack_at_supply = 10
-            
-            
-            if self.EnemyRace == Race.Zerg:
-                self._begin_attack_at_supply = 16
+        
+        if self.EnemyRace == Race.Zerg:
+            self._begin_attack_at_supply = 16
 
 
-            if self.EnemyRace == Race.Random:
-                self._begin_attack_at_supply = 10
+        if self.EnemyRace == Race.Random:
+            self._begin_attack_at_supply = 10
 
 
         # Initialize the queens class
@@ -296,6 +291,7 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
             await self.build_next_base()
+            await self.is_protoss_agressive()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
 
@@ -444,9 +440,20 @@ class MyBot(AresBot):
                     found_command_center = True
                     break  # Brake the loop if find the Command Center
             if not found_command_center:
-                await self.chat_send("Tag: Terran Agressive")
+                await self.chat_send("Tag: Terran_Agressive")
                 await self.build_spine_crawler()
 
+    async def is_protoss_agressive(self):
+        #verify if the terran opponent has only one base. If so, it is an agressive terran and build a spine crawler
+        if self.time == 135:
+            found_nexus = False
+            for unit in self.enemy_structures:
+                if unit.name == 'Nexus':
+                    found_nexus = True
+                    break  # Brake the loop if find the Command Center
+            if not found_nexus:
+                await self.chat_send("Tag: Protoss_Agressive")
+                await self.build_spine_crawler()
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
