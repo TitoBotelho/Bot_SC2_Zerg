@@ -109,7 +109,8 @@ class MyBot(AresBot):
         self.tag_worker_build_2nd_base = 0
         self.tag_worker_build_roach_warren = 0
         self.tag_worker_build_hydra_den = 0
-        self.tag_worker_build_spine_crawler = 0 
+        self.tag_worker_build_spine_crawler = 0
+        self.tag_worker_build_2nd_spine_crawler = 0 
 
         self._commenced_attack: bool = False
 
@@ -302,7 +303,7 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Random:
             await self.build_queens()
             await self.discover_race()
-            await self.build_spine_crawler()
+            await self.build_spine_crawlers()
 
 
 #_______________________________________________________________________________________________________________________
@@ -405,16 +406,16 @@ class MyBot(AresBot):
         if self.time == 50:
             for unit in self.enemy_structures:
                 if unit.name == 'Nexus':
-                    await self.chat_send("Tag: Random Protoss")
+                    await self.chat_send("Tag: Random_Protoss")
                     break
                 elif unit.name == 'CommandCenter':
-                    await self.chat_send("Tag: Random Terran")
+                    await self.chat_send("Tag: Random_Terran")
                     break
                 elif unit.name == 'Hatchery':
-                    await self.chat_send("Tag: Random Zerg")
+                    await self.chat_send("Tag: Random_Zerg")
                     break
 
-    async def build_spine_crawler(self):
+    async def build_spine_crawlers(self):
         if self.rally_point_set == True:
             if self.structures(UnitID.SPINECRAWLER).amount == 0 and not self.already_pending(UnitID.SPINECRAWLER):
                 if self.tag_worker_build_spine_crawler == 0:
@@ -428,7 +429,20 @@ class MyBot(AresBot):
                             self.tag_worker_build_spine_crawler = worker
                             #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-                            
+
+            if self.tag_worker_build_2nd_spine_crawler == 0:
+                print("Second Spine Crawler")
+                if self.can_afford(UnitID.SPINECRAWLER):
+                    my_base_location = self.mediator.get_own_nat
+                    # Send the second Overlord in front of second base to scout
+                    target = my_base_location.position.towards(self.game_info.map_center, 6)                   
+                    #await self.build(UnitID.HYDRALISKDEN, near=target)
+                    if worker := self.mediator.select_worker(target_position=target):                
+                        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                        self.tag_worker_build_2nd_spine_crawler = worker
+                        #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                        self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+                    
 
 
     async def is_terran_agressive(self):
@@ -441,7 +455,7 @@ class MyBot(AresBot):
                     break  # Brake the loop if find the Command Center
             if not found_command_center:
                 await self.chat_send("Tag: Terran_Agressive")
-                await self.build_spine_crawler()
+                await self.build_spine_crawlers()
 
     async def is_protoss_agressive(self):
         #verify if the terran opponent has only one base. If so, it is an agressive terran and build a spine crawler
@@ -453,7 +467,7 @@ class MyBot(AresBot):
                     break  # Brake the loop if find the Command Center
             if not found_nexus:
                 await self.chat_send("Tag: Protoss_Agressive")
-                await self.build_spine_crawler()
+                await self.build_spine_crawlers()
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -524,7 +538,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version: 240819")
+            await self.chat_send("Tag: Version_240826")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
