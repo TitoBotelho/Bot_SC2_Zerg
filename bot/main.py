@@ -52,7 +52,7 @@ from queens_sc2.queens import Queens
 # this will be used for ares SpawnController behavior
 
 # against Terran
-ARMY_COMP_VS_TERRAN: dict[Race, dict] = {
+ARMY_COMP_HYDRALING: dict[Race, dict] = {
     Race.Zerg: {
         UnitID.ZERGLING: {"proportion": 0.9, "priority": 0},
         UnitID.HYDRALISK: {"proportion": 0.1, "priority": 1},
@@ -60,14 +60,14 @@ ARMY_COMP_VS_TERRAN: dict[Race, dict] = {
 }
 
 # against Protoss
-ARMY_COMP_VS_PROTOSS: dict[Race, dict] = {
+ARMY_COMP_LING: dict[Race, dict] = {
     Race.Zerg: {
         UnitID.ZERGLING: {"proportion": 1.0, "priority": 0},
     }
 }
 
 # against other races
-ARMY_COMP: dict[Race, dict] = {
+ARMY_COMP_ROACH: dict[Race, dict] = {
     Race.Zerg: {
         UnitID.ROACH: {"proportion": 1.0, "priority": 0},
     }
@@ -447,7 +447,7 @@ class MyBot(AresBot):
 
     async def is_terran_agressive(self):
         #verify if the terran opponent has only one base. If so, it is an agressive terran and build a spine crawler
-        if self.time == 135:
+        if self.time == 140:
             found_command_center = False
             for unit in self.enemy_structures:
                 if unit.name == 'CommandCenter':
@@ -456,10 +456,12 @@ class MyBot(AresBot):
             if not found_command_center:
                 await self.chat_send("Tag: Terran_Agressive")
                 await self.build_spine_crawlers()
+            else:
+                await self.chat_send("Tag: 2_Base_Terran")
 
     async def is_protoss_agressive(self):
         #verify if the terran opponent has only one base. If so, it is an agressive terran and build a spine crawler
-        if self.time == 135:
+        if self.time == 140:
             found_nexus = False
             for unit in self.enemy_structures:
                 if unit.name == 'Nexus':
@@ -468,6 +470,8 @@ class MyBot(AresBot):
             if not found_nexus:
                 await self.chat_send("Tag: Protoss_Agressive")
                 await self.build_spine_crawlers()
+            else:
+                await self.chat_send("Tag: 2_Base_Protoss")
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -591,13 +595,13 @@ class MyBot(AresBot):
         # ares-sc2 SpawnController
 
         if self.EnemyRace == Race.Terran:
-            self.register_behavior(SpawnController(ARMY_COMP_VS_TERRAN[self.race]))
+            self.register_behavior(SpawnController(ARMY_COMP_HYDRALING[self.race]))
 
         if self.EnemyRace == Race.Protoss:
-            self.register_behavior(SpawnController(ARMY_COMP_VS_PROTOSS[self.race]))
+            self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
 
         else:
-            self.register_behavior(SpawnController(ARMY_COMP[self.race]))
+            self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
 
 
         # see also `ProductionController` for ongoing generic production, not needed here
