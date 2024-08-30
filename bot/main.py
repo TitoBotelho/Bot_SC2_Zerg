@@ -52,7 +52,7 @@ from queens_sc2.queens import Queens
 # this will be used for ares SpawnController behavior
 
 # against Terran
-ARMY_COMP_HYDRALING: dict[Race, dict] = {
+ARMY_COMP_VS_TERRAN: dict[Race, dict] = {
     Race.Zerg: {
         UnitID.ZERGLING: {"proportion": 0.9, "priority": 0},
         UnitID.HYDRALISK: {"proportion": 0.1, "priority": 1},
@@ -60,14 +60,14 @@ ARMY_COMP_HYDRALING: dict[Race, dict] = {
 }
 
 # against Protoss
-ARMY_COMP_LING: dict[Race, dict] = {
+ARMY_COMP_VS_PROTOSS: dict[Race, dict] = {
     Race.Zerg: {
         UnitID.ZERGLING: {"proportion": 1.0, "priority": 0},
     }
 }
 
 # against other races
-ARMY_COMP_ROACH: dict[Race, dict] = {
+ARMY_COMP: dict[Race, dict] = {
     Race.Zerg: {
         UnitID.ROACH: {"proportion": 1.0, "priority": 0},
     }
@@ -107,10 +107,7 @@ class MyBot(AresBot):
         """
         super().__init__(game_step_override)
         self.tag_worker_build_2nd_base = 0
-        self.tag_worker_build_roach_warren = 0
-        self.tag_worker_build_hydra_den = 0
-        self.tag_worker_build_spine_crawler = 0
-        self.tag_worker_build_2nd_spine_crawler = 0 
+        self.tag_worker_build_hydra_den = 0    
 
         self._commenced_attack: bool = False
 
@@ -162,7 +159,6 @@ class MyBot(AresBot):
         self.rally_point_set = False
         self.first_base = self.townhalls.first
         self.second_base = None
-        self.first_overlord = self.units(UnitID.OVERLORD).first
         self.worker_scout_tag = 0
         self.guess_strategy = "No strategy detected"
 
@@ -181,24 +177,29 @@ class MyBot(AresBot):
         else:
             print("Warning: opponent_id is None, cannot send chat message.")
 
-
-        if self.EnemyRace == Race.Terran:
-            if self.time < 290:
-                self._begin_attack_at_supply = 14
-            else:
-                additional_supply = ((self.time - 290) // 4)
-                self._begin_attack_at_supply = 14 + additional_supply
-
-        if self.EnemyRace == Race.Protoss:
-            self._begin_attack_at_supply = 10
+        #Apidae
+        if self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
+            self._begin_attack_at_supply = 1
         
-        
-        if self.EnemyRace == Race.Zerg:
-            self._begin_attack_at_supply = 16
+        else:
+
+            if self.EnemyRace == Race.Terran:
+                if self.time < 290:
+                    self._begin_attack_at_supply = 28
+                else:
+                    additional_supply = ((self.time - 290) // 4)
+                    self._begin_attack_at_supply = 28 + additional_supply
+
+            if self.EnemyRace == Race.Protoss:
+                self._begin_attack_at_supply = 10
+            
+            
+            if self.EnemyRace == Race.Zerg:
+                self._begin_attack_at_supply = 16
 
 
-        if self.EnemyRace == Race.Random:
-            self._begin_attack_at_supply = 10
+            if self.EnemyRace == Race.Random:
+                self._begin_attack_at_supply = 16
 
 
         # Initialize the queens class
@@ -223,14 +224,10 @@ class MyBot(AresBot):
     
         # Get the enemy's start location
         #enemy_natural_location = self.mediator.get_enemy_nat
-        #target = self.mediator.get_closest_overlord_spot(from_pos=enemy_natural_location)
-        target = enemy_natural_location.position.towards(self.game_info.map_center, 13)
+        target = self.mediator.get_closest_overlord_spot(from_pos=enemy_natural_location)
+    
         # Send the Overlord to the new position
         self.do(overlord.move(target))
-        hg_spot = self.mediator.get_closest_overlord_spot(
-            from_pos=enemy_natural_location
-        )
-        overlord.move(hg_spot, queue=True)
 
 
 #_______________________________________________________________________________________________________________________
@@ -241,7 +238,6 @@ class MyBot(AresBot):
         await super(MyBot, self).on_step(iteration)
 
         #await self.debug_tool()
-
 
         self._macro()
 
@@ -256,54 +252,40 @@ class MyBot(AresBot):
         elif self.get_total_supply(forces) >= self._begin_attack_at_supply:
             self._commenced_attack = True
 
-        if self._commenced_attack == True:
-            # If we don't have enough army, stop attacking and build more units
+        # If we don't have enough army, stop attacking and build more units
+        if self.get_total_supply(forces) <= self._begin_attack_at_supply:
+            self._commenced_attack = False
+            # If the army is not atacking and is far form the base, move it to the base
+            for unit in forces:
+                # In the file where distance_math_hypot is called, ensure the arguments are not None
+                if unit.position_tuple is not None and self.mediator.get_own_nat.towards(self.game_info.map_center, 6) is not None:
+                    if unit.distance_to(self.mediator.get_own_nat) > 30:
+                        if not unit.is_attacking:
+                            unit.move(self.mediator.get_own_nat.towards(self.game_info.map_center, 6))
+                else:
+                    # Handle the case where one of the positions is None, e.g., log a warning or take alternative action
+                    print("Warning: One of the positions is None")
 
-            #RETURN TO BASE
-            if self.get_total_supply(forces) < self._begin_attack_at_supply:
-                self._commenced_attack = False
-                # If the army is not atacking and is far form the base, move it to the base
-                for unit in forces:
-                    bases = self.structures(UnitID.HATCHERY).ready
-                    if bases.amount >= 2:
-                        # In the file where distance_math_hypot is called, ensure the arguments are not None
-                        if unit.position_tuple is not None and self.mediator.get_own_nat.towards(self.game_info.map_center, 6) is not None:
-                            if unit.distance_to(self.mediator.get_own_nat) > 30:
-                                if not unit.is_attacking:
-                                    unit.move(self.mediator.get_own_nat.towards(self.game_info.map_center, 6))
-                        else:
-                            # Handle the case where one of the positions is None, e.g., log a warning or take alternative action
-                            print("Warning: One of the positions is None")
-                    else:
-                        unit.move(self.first_base.position.towards(self.game_info.map_center, 3))
-
-        
 
         if self.EnemyRace == Race.Terran:
             await self.build_queens()
             await self.build_next_base()
-            await self.is_terran_agressive()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
             await self.build_lair()
             await self.build_hydra_den()
 
-
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
             await self.build_next_base()
-            await self.is_protoss_agressive()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
 
         if self.EnemyRace == Race.Zerg:
             await self.build_queens()
-
         
         if self.EnemyRace == Race.Random:
             await self.build_queens()
-            await self.discover_race()
-            await self.build_spine_crawlers()
 
 
 #_______________________________________________________________________________________________________________________
@@ -402,76 +384,8 @@ class MyBot(AresBot):
                             #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_hydra_den, structure_type=UnitID.HYDRALISKDEN, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
-    async def discover_race(self):
-        if self.time == 50:
-            for unit in self.enemy_structures:
-                if unit.name == 'Nexus':
-                    await self.chat_send("Tag: Random_Protoss")
-                    break
-                elif unit.name == 'CommandCenter':
-                    await self.chat_send("Tag: Random_Terran")
-                    break
-                elif unit.name == 'Hatchery':
-                    await self.chat_send("Tag: Random_Zerg")
-                    break
-
-    async def build_spine_crawlers(self):
-        if self.rally_point_set == True:
-            if self.structures(UnitID.SPINECRAWLER).amount == 0 and not self.already_pending(UnitID.SPINECRAWLER):
-                if self.tag_worker_build_spine_crawler == 0:
-                    if self.can_afford(UnitID.SPINECRAWLER):
-                        my_base_location = self.mediator.get_own_nat
-                        # Send the second Overlord in front of second base to scout
-                        target = my_base_location.position.towards(self.game_info.map_center, 4)                   
-                        #await self.build(UnitID.HYDRALISKDEN, near=target)
-                        if worker := self.mediator.select_worker(target_position=target):                
-                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                            self.tag_worker_build_spine_crawler = worker
-                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-
-            if self.tag_worker_build_2nd_spine_crawler == 0:
-                print("Second Spine Crawler")
-                if self.can_afford(UnitID.SPINECRAWLER):
-                    my_base_location = self.mediator.get_own_nat
-                    # Send the second Overlord in front of second base to scout
-                    target = my_base_location.position.towards(self.game_info.map_center, 6)                   
-                    #await self.build(UnitID.HYDRALISKDEN, near=target)
-                    if worker := self.mediator.select_worker(target_position=target):                
-                        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                        self.tag_worker_build_2nd_spine_crawler = worker
-                        #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                        self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-                    
 
 
-    async def is_terran_agressive(self):
-        #verify if the terran opponent has only one base. If so, it is an agressive terran and build a spine crawler
-        if self.time == 140:
-            found_command_center = False
-            for unit in self.enemy_structures:
-                if unit.name == 'CommandCenter':
-                    found_command_center = True
-                    break  # Brake the loop if find the Command Center
-            if not found_command_center:
-                await self.chat_send("Tag: Terran_Agressive")
-                await self.build_spine_crawlers()
-            else:
-                await self.chat_send("Tag: 2_Base_Terran")
-
-    async def is_protoss_agressive(self):
-        #verify if the terran opponent has only one base. If so, it is an agressive terran and build a spine crawler
-        if self.time == 140:
-            found_nexus = False
-            for unit in self.enemy_structures:
-                if unit.name == 'Nexus':
-                    found_nexus = True
-                    break  # Brake the loop if find the Command Center
-            if not found_nexus:
-                await self.chat_send("Tag: Protoss_Agressive")
-                await self.build_spine_crawlers()
-            else:
-                await self.chat_send("Tag: 2_Base_Protoss")
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -480,14 +394,13 @@ class MyBot(AresBot):
     async def debug_tool(self):
         current_time = time.time()
         if current_time - self.last_debug_time >= 1:  # Se passou mais de um segundo
-            #print(self.mediator.get_all_enemy)
+            print(self.mediator.get_all_enemy)
             #print("Enemy Race: ", self.EnemyRace)
             #print("Second Base: ", self.second_base)
             #print("Guess Strategy: ", self.guess_strategy)
-            #print("Creep Queens: ", self.creep_queen_tags)
-            #print("Creep Queen Policy: ", self.creep_queen_policy)
+            print("Creep Queens: ", self.creep_queen_tags)
+            print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
-            print("Enemy Structures: ", self.enemy_structures)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
@@ -536,14 +449,13 @@ class MyBot(AresBot):
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 2:
             my_base_location = self.mediator.get_own_nat
 
- 
-            # Send the second Overlord in front of second base to scout
-            target = my_base_location.position.towards(self.game_info.map_center, 5)
+            # Get the enemy's start location
+            #enemy_natural_location = self.mediator.get_enemy_nat
+            target = self.mediator.get_closest_overlord_spot(from_pos=my_base_location)
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_240826")
-            
+
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
 
@@ -595,13 +507,13 @@ class MyBot(AresBot):
         # ares-sc2 SpawnController
 
         if self.EnemyRace == Race.Terran:
-            self.register_behavior(SpawnController(ARMY_COMP_HYDRALING[self.race]))
+            self.register_behavior(SpawnController(ARMY_COMP_VS_TERRAN[self.race]))
 
         if self.EnemyRace == Race.Protoss:
-            self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
+            self.register_behavior(SpawnController(ARMY_COMP_VS_PROTOSS[self.race]))
 
         else:
-            self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+            self.register_behavior(SpawnController(ARMY_COMP[self.race]))
 
 
         # see also `ProductionController` for ongoing generic production, not needed here
@@ -655,7 +567,7 @@ class MyBot(AresBot):
                 lambda u: u.type_id not in ALL_STRUCTURES
             )
 
-            if unit.type_id in [UnitID.ROACH, UnitID.ROACHBURROWED]:
+            if unit.type_id == UnitID.ROACH:
                 # only roaches can burrow
                 burrow_behavior: CombatManeuver = self.burrow_behavior(unit)
                 attacking_maneuver.add(burrow_behavior)
