@@ -165,7 +165,7 @@ class MyBot(AresBot):
         self.second_base = None
         self.first_overlord = self.units(UnitID.OVERLORD).first
         self.worker_scout_tag = 0
-        self.guess_strategy = "No strategy detected"
+        self.enemy_strategy = "No strategy detected"
 
         self.current_base_target = self.enemy_start_locations[0]
         self.expansions_generator = cycle(
@@ -483,18 +483,21 @@ class MyBot(AresBot):
                 await self.chat_send("Tag: 2_Base_Terran")
 
     async def is_protoss_agressive(self):
-        #verify if the terran opponent has only one base. If so, it is an agressive terran and build a spine crawler
-        if self.time == 140:
-            found_nexus = False
-            for unit in self.enemy_structures:
-                if unit.name == 'Nexus':
-                    found_nexus = True
-                    break  # Brake the loop if find the Command Center
-            if not found_nexus:
-                await self.chat_send("Tag: Protoss_Agressive")
-                await self.build_spine_crawlers()
-            else:
-                await self.chat_send("Tag: 2_Base_Protoss")
+        if self.enemy_strategy == "No strategy detected":
+        #verify if the protoss opponent has only one base. If so, it is an agressive terran and build a spine crawler
+            if self.time > 142 and self.time < 143:
+                found_nexus = False
+                for unit in self.enemy_structures:
+                    if unit.name == 'Nexus':
+                        found_nexus = True
+                        break  # Breake the loop if find the Nexus
+                if not found_nexus:
+                    await self.chat_send("Tag: Protoss_Agressive")
+                    await self.build_spine_crawlers()
+                    self.enemy_strategy = "Protoss_Agressive"
+                else:
+                    await self.chat_send("Tag: 2_Base_Protoss")
+                    self.enemy_strategy = "2_Base_Protoss"
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
