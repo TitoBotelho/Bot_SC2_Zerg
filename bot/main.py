@@ -300,6 +300,8 @@ class MyBot(AresBot):
             await self.is_protoss_agressive()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
+            if self.enemy_strategy == "Protoss_Agressive":
+                await self.build_spine_crawlers()
 
         if self.EnemyRace == Race.Zerg:
             await self.build_queens()
@@ -493,7 +495,6 @@ class MyBot(AresBot):
                         break  # Breake the loop if find the Nexus
                 if not found_nexus:
                     await self.chat_send("Tag: Protoss_Agressive")
-                    await self.build_spine_crawlers()
                     self.enemy_strategy = "Protoss_Agressive"
                 else:
                     await self.chat_send("Tag: 2_Base_Protoss")
