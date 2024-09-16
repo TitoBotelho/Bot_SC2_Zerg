@@ -292,6 +292,7 @@ class MyBot(AresBot):
             await self.build_armor_upgrades()
             await self.build_lair()
             await self.build_hydra_den()
+            await self.is_bunker_rush()
 
 
         if self.EnemyRace == Race.Protoss:
@@ -500,6 +501,21 @@ class MyBot(AresBot):
                     await self.chat_send("Tag: 2_Base_Protoss")
                     self.enemy_strategy = "2_Base_Protoss"
 
+
+
+    async def is_bunker_rush(self):
+        if self.enemy_strategy == "No strategy detected":
+        #verify if the protoss opponent has only one base. If so, it is an agressive terran and build a spine crawler
+            if self.time > 114 and self.time < 115:
+                found_bunker = False
+                for unit in self.enemy_structures:
+                    if unit.name == 'Bunker':
+                        found_bunker = True
+                        break  # Breake the loop if find the Nexus
+                if found_bunker:
+                    await self.chat_send("Tag: Bunker_Rush")
+                    self.enemy_strategy = "Bunker_Rush"
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -569,7 +585,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_240909")
+            await self.chat_send("Tag: Version_240916")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
