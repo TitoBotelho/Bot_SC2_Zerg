@@ -293,6 +293,9 @@ class MyBot(AresBot):
             await self.build_lair()
             await self.build_hydra_den()
             await self.is_bunker_rush()
+            if self.enemy_strategy == "Bunker_Rush":
+                await self.cancel_second_base()
+                await self.build_roach_warren()
 
 
         if self.EnemyRace == Race.Protoss:
@@ -515,6 +518,31 @@ class MyBot(AresBot):
                 if found_bunker:
                     await self.chat_send("Tag: Bunker_Rush")
                     self.enemy_strategy = "Bunker_Rush"
+
+    async def cancel_second_base(self):
+        # Verifica se há uma segunda base em construção
+        second_base = self.structures(UnitID.HATCHERY).not_ready
+        if second_base:
+            # Cancela a construção da segunda base
+            for hatchery in second_base:
+                hatchery(AbilityId.CANCEL_BUILDINPROGRESS)
+
+
+
+    async def build_roach_warren(self):
+        if self.structures(UnitID.SPAWNINGPOOL).ready:
+            if self.structures(UnitID.ROACHWARREN).amount == 0 and not self.already_pending(UnitID.ROACHWARREN):
+                if self.tag_worker_build_roach_warren == 0:
+                    if self.can_afford(UnitID.ROACHWARREN):
+                        map_center = self.game_info.map_center
+                        position_towards_map_center = self.start_location.towards(map_center, distance=5)
+                        target = await self.find_placement(UnitID.ROACHWARREN, near=position_towards_map_center, placement_step=1)
+                        #await self.build(UnitID.HYDRALISKDEN, near=target)
+                        if worker := self.mediator.select_worker(target_position=target):                
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_build_roach_warren = worker
+                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_roach_warren, structure_type=UnitID.ROACHWARREN, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
