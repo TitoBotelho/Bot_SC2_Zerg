@@ -526,6 +526,7 @@ class MyBot(AresBot):
             # Cancela a construção da segunda base
             for hatchery in second_base:
                 hatchery(AbilityId.CANCEL_BUILDINPROGRESS)
+                self.build_order_runner.set_build_completed()
 
 
 
