@@ -294,7 +294,6 @@ class MyBot(AresBot):
             await self.build_hydra_den()
             await self.is_bunker_rush()
             if self.enemy_strategy == "Bunker_Rush":
-                await self.cancel_second_base()
                 await self.build_roach_warren()
 
 
@@ -519,16 +518,6 @@ class MyBot(AresBot):
                     await self.chat_send("Tag: Bunker_Rush")
                     self.enemy_strategy = "Bunker_Rush"
 
-    async def cancel_second_base(self):
-        # Verifica se há uma segunda base em construção
-        second_base = self.structures(UnitID.HATCHERY).not_ready
-        if second_base:
-            # Cancela a construção da segunda base
-            for hatchery in second_base:
-                hatchery(AbilityId.CANCEL_BUILDINPROGRESS)
-                self.build_order_runner.set_build_completed()
-
-
 
     async def build_roach_warren(self):
         if self.structures(UnitID.SPAWNINGPOOL).ready:
@@ -667,7 +656,10 @@ class MyBot(AresBot):
         # ares-sc2 SpawnController
 
         if self.EnemyRace == Race.Terran:
-            self.register_behavior(SpawnController(ARMY_COMP_HYDRALING[self.race]))
+            if self.enemy_strategy == "Bunker_Rush":
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+            else:
+                self.register_behavior(SpawnController(ARMY_COMP_HYDRALING[self.race]))
 
         if self.EnemyRace == Race.Protoss:
             self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
