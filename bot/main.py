@@ -288,13 +288,14 @@ class MyBot(AresBot):
             await self.build_queens()
             await self.build_next_base()
             await self.is_terran_agressive()
-            await self.build_mellee_upgrades()
-            await self.build_armor_upgrades()
-            await self.build_lair()
-            await self.build_hydra_den()
             await self.is_bunker_rush()
             if self.enemy_strategy == "Bunker_Rush":
                 await self.build_roach_warren()
+            if self.enemy_strategy == "No strategy detected":
+                await self.build_mellee_upgrades()
+                await self.build_armor_upgrades()
+                await self.build_lair()
+                await self.build_hydra_den()
 
 
         if self.EnemyRace == Race.Protoss:
@@ -793,8 +794,12 @@ class MyBot(AresBot):
 
     def _zerg_specific_macro(self) -> None:
         if self.EnemyRace == Race.Terran:
-            if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
-                self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
+            if self.enemy_strategy == "Bunker_Rush":
+                if (not self.already_pending_upgrade(UpgradeId.BURROW)):
+                    self.research(UpgradeId.BURROW)
+            else:
+                if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
+                    self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
 
         if self.EnemyRace == Race.Protoss:
             if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
