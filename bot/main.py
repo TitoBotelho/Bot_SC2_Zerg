@@ -291,6 +291,7 @@ class MyBot(AresBot):
             await self.is_bunker_rush()
             if self.enemy_strategy == "Bunker_Rush":
                 await self.build_roach_warren()
+                await self.research_burrow()
             if self.enemy_strategy == "No strategy detected":
                 await self.build_mellee_upgrades()
                 await self.build_armor_upgrades()
@@ -534,6 +535,12 @@ class MyBot(AresBot):
                             self.tag_worker_build_roach_warren = worker
                             #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_roach_warren, structure_type=UnitID.ROACHWARREN, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+    async def research_burrow(self):
+        if self.structures(UnitID.ROACHWARREN).ready:
+            if not self.already_pending_upgrade(UpgradeId.BURROW):
+                if self.can_afford(UpgradeId.BURROW):
+                    self.research(UpgradeId.BURROW)
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
