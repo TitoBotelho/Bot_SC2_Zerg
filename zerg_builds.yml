@@ -63,8 +63,15 @@ BuildChoices:
         Cycle:
             - OppeningVsLingRush
 
+
     a51d7f01-0f4a-4b91-ada8-7bd1eeec2cda:
         BotName: Krillin
+        Cycle:
+            - OppeningVsLingRush
+
+
+    8ac35b6f-7a16-4a4d-a69e-4f84d92b18c4:
+        BotName: EvilKinGG
         Cycle:
             - OppeningVsLingRush
 
