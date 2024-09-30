@@ -165,7 +165,7 @@ class MyBot(AresBot):
         self.second_base = None
         self.first_overlord = self.units(UnitID.OVERLORD).first
         self.worker_scout_tag = 0
-        self.enemy_strategy = "No strategy detected"
+        self.enemy_strategy = []
 
         self.current_base_target = self.enemy_start_locations[0]
         self.expansions_generator = cycle(
@@ -289,15 +289,16 @@ class MyBot(AresBot):
             await self.build_next_base()
             await self.is_terran_agressive()
             await self.is_bunker_rush()
-            if self.enemy_strategy == "Bunker_Rush":
+            if "Bunker_Rush" in self.enemy_strategy:
                 await self.build_roach_warren()
                 await self.research_burrow()
-            if self.enemy_strategy == "No strategy detected":
+            if "2_Base_Terran" in self.enemy_strategy:
                 await self.build_mellee_upgrades()
                 await self.build_armor_upgrades()
                 await self.build_lair()
                 await self.build_hydra_den()
-
+            if "Terran_Agressive" in self.enemy_strategy:
+                await self.build_spine_crawlers()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -305,7 +306,7 @@ class MyBot(AresBot):
             await self.is_protoss_agressive()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
-            if self.enemy_strategy == "Protoss_Agressive":
+            if "Protoss_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
 
         if self.EnemyRace == Race.Zerg:
@@ -419,12 +420,15 @@ class MyBot(AresBot):
             for unit in self.enemy_structures:
                 if unit.name == 'Nexus':
                     await self.chat_send("Tag: Random_Protoss")
+                    self.enemy_strategy.append("Random_Protoss")
                     break
                 elif unit.name == 'CommandCenter':
                     await self.chat_send("Tag: Random_Terran")
+                    self.enemy_strategy.append("Random_Terran")
                     break
                 elif unit.name == 'Hatchery':
                     await self.chat_send("Tag: Random_Zerg")
+                    self.enemy_strategy.append("Random_Zerg")
                     break
 
     async def build_spine_crawlers(self):
@@ -485,12 +489,14 @@ class MyBot(AresBot):
                     break  # Brake the loop if find the Command Center
             if not found_command_center:
                 await self.chat_send("Tag: Terran_Agressive")
+                self.enemy_strategy.append("Terran_Agressive")
                 await self.build_spine_crawlers()
             else:
                 await self.chat_send("Tag: 2_Base_Terran")
+                self.enemy_strategy.append("2_Base_Terran")
 
     async def is_protoss_agressive(self):
-        if self.enemy_strategy == "No strategy detected":
+        if not self.enemy_strategy:
         #verify if the protoss opponent has only one base. If so, it is an agressive terran and build a spine crawler
             if self.time > 142 and self.time < 143:
                 found_nexus = False
@@ -500,15 +506,15 @@ class MyBot(AresBot):
                         break  # Breake the loop if find the Nexus
                 if not found_nexus:
                     await self.chat_send("Tag: Protoss_Agressive")
-                    self.enemy_strategy = "Protoss_Agressive"
+                    self.enemy_strategy.append("Protoss_Agressive")
                 else:
                     await self.chat_send("Tag: 2_Base_Protoss")
-                    self.enemy_strategy = "2_Base_Protoss"
+                    self.enemy_strategy.append("2_Base_Protoss")
 
 
 
     async def is_bunker_rush(self):
-        if self.enemy_strategy == "No strategy detected":
+        if not self.enemy_strategy:
         #verify if the protoss opponent has only one base. If so, it is an agressive terran and build a spine crawler
             if self.time > 114 and self.time < 115:
                 found_bunker = False
@@ -518,7 +524,7 @@ class MyBot(AresBot):
                         break  # Breake the loop if find the Nexus
                 if found_bunker:
                     await self.chat_send("Tag: Bunker_Rush")
-                    self.enemy_strategy = "Bunker_Rush"
+                    self.enemy_strategy.append("2_Base_Protoss")
 
 
     async def build_roach_warren(self):
@@ -552,7 +558,7 @@ class MyBot(AresBot):
             #print(self.mediator.get_all_enemy)
             #print("Enemy Race: ", self.EnemyRace)
             #print("Second Base: ", self.second_base)
-            #print("Guess Strategy: ", self.guess_strategy)
+            print("Enemy Strategy: ", self.enemy_strategy)
             #print("Creep Queens: ", self.creep_queen_tags)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
@@ -611,7 +617,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_240916")
+            await self.chat_send("Tag: Version_240930")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
@@ -664,7 +670,7 @@ class MyBot(AresBot):
         # ares-sc2 SpawnController
 
         if self.EnemyRace == Race.Terran:
-            if self.enemy_strategy == "Bunker_Rush":
+            if "Bunker_Rush" in self.enemy_strategy:
                 self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
             else:
                 self.register_behavior(SpawnController(ARMY_COMP_HYDRALING[self.race]))
