@@ -299,6 +299,8 @@ class MyBot(AresBot):
                 await self.build_hydra_den()
             if "Terran_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
+                await self.build_roach_warren()
+                await self.research_burrow()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -672,6 +674,8 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Terran:
             if "Bunker_Rush" in self.enemy_strategy:
                 self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+            if "Terran_Agressive" in self.enemy_strategy:
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))               
             else:
                 self.register_behavior(SpawnController(ARMY_COMP_HYDRALING[self.race]))
 
@@ -810,6 +814,9 @@ class MyBot(AresBot):
             if self.enemy_strategy == "Bunker_Rush":
                 if (not self.already_pending_upgrade(UpgradeId.BURROW)):
                     self.research(UpgradeId.BURROW)
+            if self.enemy_strategy == "Terran_Agressive":
+                if (not self.already_pending_upgrade(UpgradeId.BURROW)):
+                    self.research(UpgradeId.BURROW)        
             else:
                 if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
                     self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
