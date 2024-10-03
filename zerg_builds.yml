@@ -112,6 +112,8 @@ Builds:
         ConstantWorkerProductionTill: 0
         OpeningBuildOrder:
             - 12 overlord
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, map_center, enemy_nat]
             - 12 drone
             - 13 drone
             - 14 drone
@@ -158,7 +160,6 @@ Builds:
             - 20 drone
             - 20 drone
             - 20 overlord
-            - 20 hatchery
             - 20 overlord
             - 20 drone
             - 20 overlord

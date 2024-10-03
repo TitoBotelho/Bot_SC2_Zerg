@@ -189,7 +189,7 @@ class MyBot(AresBot):
         else:
             if self.EnemyRace == Race.Terran:
                 if self.time < 290:
-                    self._begin_attack_at_supply = 14
+                    self._begin_attack_at_supply = 18
                 else:
                     additional_supply = ((self.time - 290) // 4)
                     self._begin_attack_at_supply = 14 + additional_supply
@@ -289,6 +289,7 @@ class MyBot(AresBot):
             await self.build_next_base()
             await self.is_terran_agressive()
             await self.is_bunker_rush()
+            await self.search_proxy_barracks()
             if "Bunker_Rush" in self.enemy_strategy:
                 await self.build_roach_warren()
                 await self.research_burrow()
@@ -549,6 +550,22 @@ class MyBot(AresBot):
             if not self.already_pending_upgrade(UpgradeId.BURROW):
                 if self.can_afford(UpgradeId.BURROW):
                     self.research(UpgradeId.BURROW)
+
+
+    async def search_proxy_barracks(self):
+        if not self.enemy_strategy:
+        #verify if the protoss opponent has only one base. If so, it is an agressive terran and build a spine crawler
+            if self.time < 143:
+                found_proxy_barracks = False
+                for unit in self.enemy_structures:
+                    if unit.name == 'Barracks':
+                        found_proxy_barracks = True
+                        break  # Breake the loop if find the Baracks
+                if found_proxy_barracks:
+                    await self.chat_send("Tag: Proxy_Barracks")
+                    self.enemy_strategy.append("Proxy_Barracks")
+
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
