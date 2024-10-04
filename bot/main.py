@@ -112,6 +112,7 @@ class MyBot(AresBot):
         self.tag_worker_build_spine_crawler = 0
         self.tag_worker_build_2nd_spine_crawler = 0
         self.tag_worker_build_3rd_spine_crawler = 0
+        self.tag_worker_second_gas = 0
 
         self._commenced_attack: bool = False
 
@@ -189,10 +190,10 @@ class MyBot(AresBot):
         else:
             if self.EnemyRace == Race.Terran:
                 if self.time < 290:
-                    self._begin_attack_at_supply = 18
+                    self._begin_attack_at_supply = 20
                 else:
-                    additional_supply = ((self.time - 290) // 4)
-                    self._begin_attack_at_supply = 14 + additional_supply
+                    additional_supply = ((self.time - 290) // 3)
+                    self._begin_attack_at_supply = 20 + additional_supply
 
             if self.EnemyRace == Race.Protoss:
                 self._begin_attack_at_supply = 10
@@ -290,6 +291,7 @@ class MyBot(AresBot):
             await self.is_terran_agressive()
             await self.is_bunker_rush()
             await self.search_proxy_barracks()
+
             if "Bunker_Rush" in self.enemy_strategy:
                 await self.build_roach_warren()
                 await self.research_burrow()
@@ -298,10 +300,12 @@ class MyBot(AresBot):
                 await self.build_armor_upgrades()
                 await self.build_lair()
                 await self.build_hydra_den()
+
             if "Terran_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
                 await self.build_roach_warren()
                 await self.research_burrow()
+                await self.build_second_gas()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -564,6 +568,18 @@ class MyBot(AresBot):
                 if found_proxy_barracks:
                     await self.chat_send("Tag: Proxy_Barracks")
                     self.enemy_strategy.append("Proxy_Barracks")
+
+    async def build_second_gas(self):
+        if self.minerals > 500:
+            if self.tag_worker_second_gas == 0:
+                if self.can_afford(UnitID.EXTRACTOR):
+                    target = self.vespene_geyser.closer_than(10, self.first_base)
+                    if target:
+                        target_geyser = target.closest_to(self.first_base)  # Seleciona o geyser mais próximo
+                        if worker := self.mediator.select_worker(target_position=target_geyser.position):                
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_second_gas = worker
+                            self.mediator.build_with_specific_worker(worker=self.tag_worker_second_gas, structure_type=UnitID.EXTRACTOR, pos=target_geyser, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
 
 
