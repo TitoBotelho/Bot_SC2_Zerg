@@ -107,12 +107,14 @@ class MyBot(AresBot):
         """
         super().__init__(game_step_override)
         self.tag_worker_build_2nd_base = 0
+        self.tag_worker_build_3rd_base = 0
         self.tag_worker_build_roach_warren = 0
         self.tag_worker_build_hydra_den = 0
         self.tag_worker_build_spine_crawler = 0
         self.tag_worker_build_2nd_spine_crawler = 0
         self.tag_worker_build_3rd_spine_crawler = 0
         self.tag_worker_second_gas = 0
+
 
         self._commenced_attack: bool = False
 
@@ -287,10 +289,10 @@ class MyBot(AresBot):
 
         if self.EnemyRace == Race.Terran:
             await self.build_queens()
-            await self.build_next_base()
             await self.is_terran_agressive()
             await self.is_bunker_rush()
             await self.search_proxy_barracks()
+
 
             if "Bunker_Rush" in self.enemy_strategy:
                 await self.build_roach_warren()
@@ -300,12 +302,18 @@ class MyBot(AresBot):
                 await self.build_armor_upgrades()
                 await self.build_lair()
                 await self.build_hydra_den()
+                await self.build_next_base()
+                await self.build_next_next_base()
+
+            if not "Proxy_Barracks" in 'self.enemy_strategy':
+                await self.build_next_base()
 
             if "Terran_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
                 await self.build_roach_warren()
                 await self.research_burrow()
                 await self.build_second_gas()
+
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -365,7 +373,7 @@ class MyBot(AresBot):
                     self.do(th.train(UnitID.QUEEN))
 
     async def build_next_base(self):
-        if self.minerals > 500:
+        if self.minerals > 300:
             target = await self.get_next_expansion()
             if self.tag_worker_build_2nd_base == 0:
                 if worker := self.mediator.select_worker(target_position=target):                
@@ -373,6 +381,18 @@ class MyBot(AresBot):
                     self.tag_worker_build_2nd_base = worker
                     #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                     self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+    async def build_next_next_base(self):
+        if len(self.townhalls.ready) == 2:
+            target = await self.get_next_expansion()
+            if self.tag_worker_build_3rd_base == 0:
+                if worker := self.mediator.select_worker(target_position=target):                
+                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                    self.tag_worker_build_3rd_base = worker
+                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                    self.mediator.build_with_specific_worker(worker=self.tag_worker_build_3rd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+
 
     async def build_mellee_upgrades(self):
         if self.structures(UnitID.EVOLUTIONCHAMBER).ready:
@@ -487,20 +507,23 @@ class MyBot(AresBot):
 
 
     async def is_terran_agressive(self):
-        #verify if the terran opponent has only one base. If so, it is an agressive terran and build a spine crawler
-        if self.time == 140:
+        # Verify if the terran opponent has only one base. If so, it is an aggressive terran and build a spine crawler
+        if self.time > 119 and self.time < 120:
             found_command_center = False
             for unit in self.enemy_structures:
                 if unit.name == 'CommandCenter':
                     found_command_center = True
-                    break  # Brake the loop if find the Command Center
+                    break  # Break the loop if find the Command Center
+            
             if not found_command_center:
-                await self.chat_send("Tag: Terran_Agressive")
-                self.enemy_strategy.append("Terran_Agressive")
-                await self.build_spine_crawlers()
+                if "Terran_Agressive" not in self.enemy_strategy:
+                    await self.chat_send("Tag: Terran_Agressive")
+                    self.enemy_strategy.append("Terran_Agressive")
+                    await self.build_spine_crawlers()
             else:
-                await self.chat_send("Tag: 2_Base_Terran")
-                self.enemy_strategy.append("2_Base_Terran")
+                if "2_Base_Terran" not in self.enemy_strategy:
+                    await self.chat_send("Tag: 2_Base_Terran")
+                    self.enemy_strategy.append("2_Base_Terran")
 
     async def is_protoss_agressive(self):
         if not self.enemy_strategy:
@@ -573,15 +596,14 @@ class MyBot(AresBot):
         if self.minerals > 500:
             if self.tag_worker_second_gas == 0:
                 if self.can_afford(UnitID.EXTRACTOR):
-                    target = self.vespene_geyser.closer_than(10, self.first_base)
-                    if target:
-                        target_geyser = target.closest_to(self.first_base)  # Seleciona o geyser mais próximo
-                        if worker := self.mediator.select_worker(target_position=target_geyser.position):                
+                    target_geysers = self.vespene_geyser.closer_than(10, self.first_base)
+                    if target_geysers:
+                        target_geyser = target_geysers[0]  # Select the first geyser
+                        worker = self.mediator.select_worker(target_position=target_geyser.position)
+                        if worker:
                             self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
                             self.tag_worker_second_gas = worker
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_second_gas, structure_type=UnitID.EXTRACTOR, pos=target_geyser, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-
-
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -652,7 +674,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_240930")
+            await self.chat_send("Tag: Version_241014")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
