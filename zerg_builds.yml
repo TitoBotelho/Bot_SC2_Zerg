@@ -27,7 +27,7 @@ BuildChoices:
     Terran:
         BotName: TerranRace
         Cycle:
-            - SafeVsTerran
+            - ZergMacro
 
     Zerg:
         BotName: ZergRace
@@ -63,15 +63,8 @@ BuildChoices:
         Cycle:
             - OppeningVsLingRush
 
-
     a51d7f01-0f4a-4b91-ada8-7bd1eeec2cda:
         BotName: Krillin
-        Cycle:
-            - OppeningVsLingRush
-
-
-    8ac35b6f-7a16-4a4d-a69e-4f84d92b18c4:
-        BotName: EvilKinGG
         Cycle:
             - OppeningVsLingRush
 
@@ -112,8 +105,6 @@ Builds:
         ConstantWorkerProductionTill: 0
         OpeningBuildOrder:
             - 12 overlord
-            - 12 worker_scout:
-                [nat, third, fourth, fifth, sixth, map_center, enemy_nat]
             - 12 drone
             - 13 drone
             - 14 drone
@@ -131,6 +122,7 @@ Builds:
             - 20 overlord
             - 19 drone
             - 20 evolutionchamber
+            - 20 hatchery
             - 20 overlord
             - 20 drone
             - 20 drone
@@ -158,39 +150,14 @@ Builds:
             - 20 overlord
             - 20 drone
             - 20 drone
+            - 20 overlord
+            - 20 hatchery
+            - 20 overlord
+            - 20 drone
+            - 20 overlord
             - 20 overlord
 
         
-
-    SafeVsTerran:
-        # Build constant workers till x supply
-        # Turning this off here for a bit more precision in build
-        ConstantWorkerProductionTill: 0
-        OpeningBuildOrder:
-            - 12 overlord
-            - 12 worker_scout:
-                [nat, third, fourth, fifth, sixth, map_center, enemy_nat]
-            - 12 drone
-            - 13 drone
-            - 13 drone
-            - 13 spawningpool
-            - 13 drone
-            - 14 drone
-            - 14 gas
-            - 14 drone
-            - 15 drone
-            - 16 overlord
-            - 16 drone
-            - 16 drone
-            - 17 drone
-            - 20 drone
-            - 21 drone
-            - 22 drone
-            - 23 drone
-            - 19 drone
-
-
-
 
 
     HatcheryFirst:
