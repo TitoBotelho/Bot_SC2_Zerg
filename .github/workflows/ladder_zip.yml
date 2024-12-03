@@ -17,10 +17,10 @@ jobs:
       - name: Install poetry
         run: pipx install poetry
       # set-up python with cache
-      - name: Setup Python 3.11
+      - name: Setup Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'poetry'
       - name: Update pip
         run: poetry run pip install -U pip
@@ -35,3 +35,8 @@ jobs:
         with:
           name: ladder-zip
           path: out
+      - name: Upload to AIArena
+        env:
+          UPLOAD_API_TOKEN: ${{ secrets.UPLOAD_API_TOKEN }}
+          UPLOAD_BOT_ID: ${{ secrets.UPLOAD_BOT_ID }}
+        run: poetry run python scripts/upload_to_ai_arena.py
