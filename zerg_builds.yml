@@ -22,12 +22,12 @@ BuildChoices:
     Random:
         BotName: RandomRace
         Cycle:
-            - AgressiveRoach
+            - Standard
 
     Terran:
         BotName: TerranRace
         Cycle:
-            - ZergMacro
+            - PoolFirst
 
     Zerg:
         BotName: ZergRace
@@ -40,16 +40,40 @@ BuildChoices:
     #    Cycle:
     #        - DummyOpening
 
+
+
     c033a97a-667d-42e3-91e8-13528ac191ed:
         BotName: Apidae
         Cycle:
             - TwelvePool
+
 
     4a491758-76ff-40de-996c-018d49b6237f:
         BotName: 12PoolBot
         Cycle:
             - OppeningVsLingRush
 
+    81654bce-d0ae-4456-b987-2b585fe5a819:
+        BotName: Tartarus
+        Cycle:
+            - OppeningVsLingRush
+
+
+    a51d7f01-0f4a-4b91-ada8-7bd1eeec2cda:
+        BotName: Krillin
+        Cycle:
+            - OppeningVsLingRush
+
+
+    8ac35b6f-7a16-4a4d-a69e-4f84d92b18c4:
+        BotName: EvilKinGG
+        Cycle:
+            - OppeningVsLingRush
+
+    c121cc44-2b7e-4523-b950-d9fbff506255:
+        BotName: BrazilianLingFloodBot
+        Cycle:
+            - OppeningVsLingRush
 
 Builds:
     BurrowRoachRush:
@@ -88,6 +112,8 @@ Builds:
         ConstantWorkerProductionTill: 0
         OpeningBuildOrder:
             - 12 overlord
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, sixth, map_center, enemy_nat]
             - 12 drone
             - 13 drone
             - 14 drone
@@ -105,7 +131,6 @@ Builds:
             - 20 overlord
             - 19 drone
             - 20 evolutionchamber
-            - 20 hatchery
             - 20 overlord
             - 20 drone
             - 20 drone
@@ -133,14 +158,39 @@ Builds:
             - 20 overlord
             - 20 drone
             - 20 drone
-            - 20 overlord
-            - 20 hatchery
-            - 20 overlord
-            - 20 drone
-            - 20 overlord
             - 20 overlord
 
         
+
+    SafeVsTerran:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 overlord
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, sixth, map_center]
+            - 12 drone
+            - 13 drone
+            - 13 drone
+            - 13 spawningpool
+            - 13 drone
+            - 14 drone
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 overlord
+            - 16 drone
+            - 16 drone
+            - 17 drone
+            - 20 drone
+            - 21 drone
+            - 22 drone
+            - 23 drone
+            - 19 drone
+
+
+
 
 
     HatcheryFirst:
@@ -149,6 +199,8 @@ Builds:
         ConstantWorkerProductionTill: 0
         OpeningBuildOrder:
             - 12 drone
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, sixth, map_center]
             - 13 drone
             - 13 hatchery
             - 13 overlord
@@ -223,3 +275,56 @@ Builds:
             - 15 drone
             - 15 overlord
             - 15 hatchery
+
+
+    Standard:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 worker_scout
+            - 12 overlord
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 13 hatchery
+            - 14 drone
+            - 14 spawningpool
+            - 15 gas
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 roachwarren
+            - 16 zergling
+            - 16 zergling
+
+
+    PoolFirst:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 drone
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, sixth, map_center]
+            - 13 drone
+            - 13 spawningpool
+            - 13 overlord
+            - 13 drone
+            - 13 hatchery
+            - 13 drone
+            - 14 drone
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 overlord
+            - 16 drone
+            - 16 drone
+            - 17 drone
+            - 20 drone
+            - 21 drone
+            - 22 drone
+            - 23 drone
+            - 19 drone
+            - 20 evolutionchamber

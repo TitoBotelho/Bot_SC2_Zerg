@@ -69,7 +69,7 @@ def main():
         #     "HardwireAIE",
         # ]
 
-        random_race = random.choice([Race.Random])
+        random_race = random.choice([Race.Terran])
         print("Starting local game...")
         run_game(
             maps.get(random.choice(map_list)),
@@ -77,7 +77,7 @@ def main():
                 bot1,
                 Computer(random_race, Difficulty.CheatVision, ai_build=AIBuild.Macro),
             ],
-            realtime=True,
+            realtime=False,
         )
 
 
