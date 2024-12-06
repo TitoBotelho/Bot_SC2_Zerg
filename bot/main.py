@@ -586,8 +586,8 @@ class MyBot(AresBot):
 
     async def search_proxy_barracks(self):
         if not self.enemy_strategy:
-        #verify if the protoss opponent has only one base. If so, it is an agressive terran and build a spine crawler
-            if self.time < 135:
+        #search for a proxy barracks.
+            if self.time < 123:
                 found_proxy_barracks = False
                 for unit in self.enemy_structures:
                     if unit.name == 'Barracks':
