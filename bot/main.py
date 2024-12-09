@@ -587,7 +587,7 @@ class MyBot(AresBot):
     async def search_proxy_barracks(self):
         if not self.enemy_strategy:
         #search for a proxy barracks.
-            if self.time < 123:
+            if self.time < 117:
                 found_proxy_barracks = False
                 for unit in self.enemy_structures:
                     if unit.name == 'Barracks':
@@ -696,7 +696,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_241129")
+            await self.chat_send("Tag: Version_241209")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
