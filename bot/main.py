@@ -587,7 +587,7 @@ class MyBot(AresBot):
     async def search_proxy_barracks(self):
         if not self.enemy_strategy:
         #search for a proxy barracks.
-            if self.time < 117:
+            if self.time < 94:
                 found_proxy_barracks = False
                 for unit in self.enemy_structures:
                     if unit.name == 'Barracks':
