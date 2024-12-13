@@ -637,7 +637,7 @@ class MyBot(AresBot):
                 self.spineCrawlerCheeseDetected = True
                 spine_crawler_amount = spine_crawler_amount+1
                 for drone in self.workers:
-                    self.mediator.assign_role(tag = drone.tag, role = UnitRole.DEFENDING)
+                    self.mediator.switch_roles(from_role=UnitRole.GATHERING, to_role=UnitRole.DEFENDING)
                     drone.attack(spinecrawler.position)
         if spine_crawler_amount == 0 and self.spineCrawlerCheeseDetected:
             self.spineCrawlerCheeseDetected = False
