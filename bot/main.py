@@ -115,6 +115,7 @@ class MyBot(AresBot):
         self.tag_worker_build_3rd_spine_crawler = 0
         self.tag_worker_second_gas = 0
         self.overlord_retreated = False
+        self.spineCrawlerCheeseDetected = False
 
 
         self._commenced_attack: bool = False
@@ -329,6 +330,7 @@ class MyBot(AresBot):
 
         if self.EnemyRace == Race.Zerg:
             await self.build_queens()
+            await self.defend_vs_spine_crawler()
 
         
         if self.EnemyRace == Race.Random:
@@ -626,6 +628,22 @@ class MyBot(AresBot):
                 if overlord.distance_to(self.first_base.position) < 20:  # Defina a distância que considera "perto"
                     overlord.move(self.first_base.position)
                     self.overlord_retreated = True
+
+
+    async def defend_vs_spine_crawler(self):
+        spine_crawler_amount = 0
+        for spinecrawler in self.enemy_structures(UnitID.SPINECRAWLER):
+            if spinecrawler.distance_to(self.first_base) < 11:
+                self.spineCrawlerCheeseDetected = True
+                spine_crawler_amount = spine_crawler_amount+1
+                for drone in self.workers:
+                    self.mediator.assign_role(tag = drone.tag, role = UnitRole.DEFENDING)
+                    drone.attack(spinecrawler.position)
+        if spine_crawler_amount == 0 and self.spineCrawlerCheeseDetected:
+            self.spineCrawlerCheeseDetected = False
+            for drone in self.workers:
+                self.mediator.assign_role(tag = drone.tag, role = UnitRole.GATHERING)
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
