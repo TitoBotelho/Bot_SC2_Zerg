@@ -654,12 +654,12 @@ class MyBot(AresBot):
             # Burrow the roaches when they are low health
             for roach in self.units(UnitID.ROACH):
                 if roach.health_percentage <= self.BURROW_AT_HEALTH_PERC:
-                    roach(AbilityId.BURROWDOWN)
+                    roach(AbilityId.BURROWDOWN_ROACH)
 
 
             for burrowed_roach in self.units(UnitID.ROACHBURROWED):
                 if burrowed_roach.health_percentage > self.UNBURROW_AT_HEALTH_PERC:
-                    burrowed_roach(AbilityId.BURROWUP)
+                    burrowed_roach(AbilityId.BURROWUP_ROACH)
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
