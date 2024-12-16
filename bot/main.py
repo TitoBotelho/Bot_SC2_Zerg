@@ -650,16 +650,15 @@ class MyBot(AresBot):
 
 
     async def burrow_roaches(self):
-        if self.research(UpgradeId.BURROW):
-            # Burrow the roaches when they are low health
-            for roach in self.units(UnitID.ROACH):
-                if roach.health_percentage <= self.BURROW_AT_HEALTH_PERC:
-                    roach(AbilityId.BURROWDOWN_ROACH)
+        # Burrow the roaches when they are low health
+        for roach in self.units(UnitID.ROACH):
+            if roach.health_percentage <= self.BURROW_AT_HEALTH_PERC:
+                roach(AbilityId.BURROWDOWN_ROACH)
 
 
-            for burrowed_roach in self.units(UnitID.ROACHBURROWED):
-                if burrowed_roach.health_percentage > self.UNBURROW_AT_HEALTH_PERC:
-                    burrowed_roach(AbilityId.BURROWUP_ROACH)
+        for burrowed_roach in self.units(UnitID.ROACHBURROWED):
+            if burrowed_roach.health_percentage > self.UNBURROW_AT_HEALTH_PERC:
+                burrowed_roach(AbilityId.BURROWUP_ROACH)
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -914,12 +913,12 @@ class MyBot(AresBot):
         """
         burrow_maneuver: CombatManeuver = CombatManeuver()
         if roach.is_burrowed and roach.health_percentage > self.UNBURROW_AT_HEALTH_PERC:
-            burrow_maneuver.add(UseAbility(AbilityId.BURROWUP, roach, None))
+            burrow_maneuver.add(UseAbility(AbilityId.BURROWUP_ROACH, roach, None))
         elif (
             not roach.is_burrowed
             and roach.health_percentage <= self.BURROW_AT_HEALTH_PERC
         ):
-            burrow_maneuver.add(UseAbility(AbilityId.BURROWDOWN, roach, None))
+            burrow_maneuver.add(UseAbility(AbilityId.BURROWDOWN_ROACH, roach, None))
 
         return burrow_maneuver
 
