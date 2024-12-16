@@ -294,6 +294,7 @@ class MyBot(AresBot):
             await self.is_terran_agressive()
             await self.is_bunker_rush()
             await self.search_proxy_barracks()
+            await self.burrow_roaches()
 
 
 
@@ -325,18 +326,21 @@ class MyBot(AresBot):
             await self.is_protoss_agressive()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
+            await self.burrow_roaches()
             if "Protoss_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
 
         if self.EnemyRace == Race.Zerg:
             await self.build_queens()
             await self.defend_vs_spine_crawler()
+            await self.burrow_roaches()
 
         
         if self.EnemyRace == Race.Random:
             await self.build_queens()
             await self.discover_race()
             await self.build_spine_crawlers()
+            await self.burrow_roaches()
 
 
 #_______________________________________________________________________________________________________________________
@@ -644,6 +648,18 @@ class MyBot(AresBot):
             for drone in self.workers:
                 self.mediator.assign_role(tag = drone.tag, role = UnitRole.GATHERING)
 
+
+    async def burrow_roaches(self):
+        if self.research(UpgradeId.BURROW):
+            # Burrow the roaches when they are low health
+            for roach in self.units(UnitID.ROACH):
+                if roach.health_percentage <= self.BURROW_AT_HEALTH_PERC:
+                    roach(AbilityId.BURROWDOWN)
+
+
+            for burrowed_roach in self.units(UnitID.ROACHBURROWED):
+                if burrowed_roach.health_percentage > self.UNBURROW_AT_HEALTH_PERC:
+                    burrowed_roach(AbilityId.BURROWUP)
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
