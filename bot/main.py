@@ -116,6 +116,7 @@ class MyBot(AresBot):
         self.tag_worker_second_gas = 0
         self.overlord_retreated = False
         self.spineCrawlerCheeseDetected = False
+        self.reaperFound = False
 
 
         self._commenced_attack: bool = False
@@ -250,7 +251,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
         self._macro()
@@ -295,6 +296,7 @@ class MyBot(AresBot):
             await self.is_bunker_rush()
             await self.search_proxy_barracks()
             await self.burrow_roaches()
+            await self.findReaper()
 
 
 
@@ -660,6 +662,16 @@ class MyBot(AresBot):
             if burrowed_roach.health_percentage > self.UNBURROW_AT_HEALTH_PERC:
                 burrowed_roach(AbilityId.BURROWUP_ROACH)
 
+
+    async def findReaper(self):
+        if self.reaperFound == False:
+            for unit in self.enemy_units:
+                if unit.name == 'Reaper':
+                    self.reaperFound = True
+                    break
+            if self.reaperFound:
+                await self.chat_send("Tag: Reaper")
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -675,6 +687,7 @@ class MyBot(AresBot):
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
             print("Enemy Structures: ", self.enemy_structures)
+            print("Enemy Units: ", self.enemy_units)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
