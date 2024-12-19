@@ -297,6 +297,7 @@ class MyBot(AresBot):
             await self.search_proxy_barracks()
             await self.burrow_roaches()
             await self.findReaper()
+            await self.atack_reaper()
 
 
 
@@ -671,6 +672,15 @@ class MyBot(AresBot):
                     break
             if self.reaperFound:
                 await self.chat_send("Tag: Reaper")
+
+    async def atack_reaper(self):
+        if self.reaperFound:
+            for unit in self.enemy_units:
+                if unit.name == 'Reaper':
+                    if self.has_creep(unit.position):
+                        for queen in self.units(UnitID.QUEEN):
+                            if queen.energy < 25:
+                                queen.attack(unit.position)
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
