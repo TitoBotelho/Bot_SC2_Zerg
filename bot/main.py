@@ -117,7 +117,8 @@ class MyBot(AresBot):
         self.overlord_retreated = False
         self.spineCrawlerCheeseDetected = False
         self.reaperFound = False
-
+        self.bansheeFound = False
+        self.tag_worker_build_first_spore = 0
 
         self._commenced_attack: bool = False
 
@@ -297,7 +298,8 @@ class MyBot(AresBot):
             await self.search_proxy_barracks()
             await self.burrow_roaches()
             await self.findReaper()
-            await self.atack_reaper()
+            await self.attack_reaper()
+            await self.attack_banshee()
 
 
 
@@ -321,6 +323,9 @@ class MyBot(AresBot):
                 await self.build_roach_warren()
                 await self.research_burrow()
                 await self.build_second_gas()
+
+            if "Banshee" in self.enemy_strategy:
+                await self.make_spores()
 
 
         if self.EnemyRace == Race.Protoss:
@@ -673,7 +678,7 @@ class MyBot(AresBot):
             if self.reaperFound:
                 await self.chat_send("Tag: Reaper")
 
-    async def atack_reaper(self):
+    async def attack_reaper(self):
         if self.reaperFound:
             for unit in self.enemy_units:
                 if unit.name == 'Reaper':
@@ -682,6 +687,37 @@ class MyBot(AresBot):
                             if queen.energy < 25:
                                 queen.attack(unit.position)
 
+    async def attack_banshee(self):
+        if self.bansheeFound == False:
+            for unit in self.enemy_units:
+                if unit.name == 'Banshee':
+                    self.bansheeFound = True
+                    break
+            if self.bansheeFound:
+                await self.chat_send("Tag: Banshee")
+                self.enemy_strategy.append("Banshee")
+
+        if self.bansheeFound:
+            for unit in self.enemy_units:
+                if unit.name == 'Banshee':
+                    if self.has_creep(unit.position):
+                        for queen in self.units(UnitID.QUEEN):
+                            if queen.energy < 25:
+                                queen.attack(unit.position)
+
+
+    async def make_spores(self):
+        if self.structures(UnitID.SPORECRAWLER).amount == 0 and not self.already_pending(UnitID.SPORECRAWLER):
+            if self.tag_worker_build_first_spore == 0:
+                if self.can_afford(UnitID.SPORECRAWLER):
+                    my_base_location = self.first_base
+                    # Send the second Overlord in front of second base to scout
+                    target = my_base_location.position.towards(self.game_info.map_center, -4)                   
+                    if worker := self.mediator.select_worker(target_position=target):                
+                        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                        self.tag_worker_build_first_spore = worker
+                        #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                        self.mediator.build_with_specific_worker(worker=self.tag_worker_build_first_spore, structure_type=UnitID.SPORECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -691,12 +727,12 @@ class MyBot(AresBot):
         if current_time - self.last_debug_time >= 1:  # Se passou mais de um segundo
             #print(self.mediator.get_all_enemy)
             #print("Enemy Race: ", self.EnemyRace)
-            print("Second Base: ", self.second_base)
+            #print("Second Base: ", self.second_base)
             print("Enemy Strategy: ", self.enemy_strategy)
             #print("Creep Queens: ", self.creep_queen_tags)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
-            print("Enemy Structures: ", self.enemy_structures)
+            #print("Enemy Structures: ", self.enemy_structures)
             print("Enemy Units: ", self.enemy_units)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
