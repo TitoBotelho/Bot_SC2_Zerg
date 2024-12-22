@@ -327,6 +327,9 @@ class MyBot(AresBot):
             if "Banshee" in self.enemy_strategy:
                 await self.make_spores()
 
+            if "2_Proxy_Barracks" in self.enemy_strategy:
+                await self.make_spines_on_main()
+
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -611,6 +614,14 @@ class MyBot(AresBot):
                     await self.chat_send("Tag: Proxy_Barracks")
                     self.enemy_strategy.append("Proxy_Barracks")
 
+        # if there more than 1 barracks, add another tag
+            barracks_count = sum(1 for structure in self.enemy_structures if structure.name == "Barracks")
+            if barracks_count > 1:
+                # Adiciona a tag desejada
+                await self.chat_send("Tag: 2 Proxy_Barracks")
+                self.enemy_strategy.append("2_Proxy_Barracks")
+
+
     async def build_second_gas(self):
         if self.minerals > 500:
             if self.tag_worker_second_gas == 0:
@@ -718,6 +729,21 @@ class MyBot(AresBot):
                         self.tag_worker_build_first_spore = worker
                         #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                         self.mediator.build_with_specific_worker(worker=self.tag_worker_build_first_spore, structure_type=UnitID.SPORECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+    async def make_spines_on_main(self):
+        if self.structures(UnitID.SPAWNINGPOOL).ready:
+            if self.structures(UnitID.SPINECRAWLER).amount == 0 and not self.already_pending(UnitID.SPINECRAWLER):
+                if self.tag_worker_build_spine_crawler == 0:
+                    if self.can_afford(UnitID.SPINECRAWLER):
+                        my_base_location = self.first_base
+                        # Send the second Overlord in front of second base to scout
+                        target = my_base_location.position.towards(self.game_info.map_center, 4)                   
+                        if worker := self.mediator.select_worker(target_position=target):                
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_build_spine_crawler = worker
+                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
