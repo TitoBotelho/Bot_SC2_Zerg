@@ -206,7 +206,7 @@ class MyBot(AresBot):
             
             
             if self.EnemyRace == Race.Zerg:
-                self._begin_attack_at_supply = 16
+                self._begin_attack_at_supply = 30
 
 
             if self.EnemyRace == Race.Random:
@@ -342,7 +342,6 @@ class MyBot(AresBot):
                 await self.build_spine_crawlers()
 
         if self.EnemyRace == Race.Zerg:
-            await self.build_queens()
             await self.defend_vs_spine_crawler()
             await self.burrow_roaches()
 
