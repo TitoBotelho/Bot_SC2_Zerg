@@ -252,7 +252,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
         self._macro()
@@ -614,12 +614,12 @@ class MyBot(AresBot):
                     await self.chat_send("Tag: Proxy_Barracks")
                     self.enemy_strategy.append("Proxy_Barracks")
 
-        # if there more than 1 barracks, add another tag
-            barracks_count = sum(1 for structure in self.enemy_structures if structure.name == "Barracks")
-            if barracks_count > 1:
-                # Adiciona a tag desejada
-                await self.chat_send("Tag: 2 Proxy_Barracks")
-                self.enemy_strategy.append("2_Proxy_Barracks")
+            # if there more than 1 barracks, add another tag
+                barracks_count = sum(1 for structure in self.enemy_structures if structure.name == "Barracks")
+                if barracks_count > 1:
+                    # Adiciona a tag desejada
+                    await self.chat_send("Tag: 2 Proxy_Barracks")
+                    self.enemy_strategy.append("2_Proxy_Barracks")
 
 
     async def build_second_gas(self):
@@ -737,7 +737,7 @@ class MyBot(AresBot):
                     if self.can_afford(UnitID.SPINECRAWLER):
                         my_base_location = self.first_base
                         # Send the second Overlord in front of second base to scout
-                        target = my_base_location.position.towards(self.game_info.map_center, 4)                   
+                        target = my_base_location.position.towards(self.game_info.map_center, 5)                   
                         if worker := self.mediator.select_worker(target_position=target):                
                             self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
                             self.tag_worker_build_spine_crawler = worker
