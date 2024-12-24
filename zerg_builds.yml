@@ -32,7 +32,7 @@ BuildChoices:
     Zerg:
         BotName: ZergRace
         Cycle:
-            - BurrowRoachRush
+            - OneOneRoaches
 
     # Can also use specific opponent ids (overrides race options above)
     #a_bot_opponent_id_from_aiarena:
