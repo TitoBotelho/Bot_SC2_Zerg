@@ -119,6 +119,7 @@ class MyBot(AresBot):
         self.reaperFound = False
         self.bansheeFound = False
         self.tag_worker_build_first_spore = 0
+        self.random_race_discovered = False
 
         self._commenced_attack: bool = False
 
@@ -464,20 +465,24 @@ class MyBot(AresBot):
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_hydra_den, structure_type=UnitID.HYDRALISKDEN, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
     async def discover_race(self):
-        if self.time == 50:
-            for unit in self.enemy_structures:
-                if unit.name == 'Nexus':
-                    await self.chat_send("Tag: Random_Protoss")
-                    self.enemy_strategy.append("Random_Protoss")
-                    break
-                elif unit.name == 'CommandCenter':
-                    await self.chat_send("Tag: Random_Terran")
-                    self.enemy_strategy.append("Random_Terran")
-                    break
-                elif unit.name == 'Hatchery':
-                    await self.chat_send("Tag: Random_Zerg")
-                    self.enemy_strategy.append("Random_Zerg")
-                    break
+        if self.random_race_discovered == False:
+            if self.time < 60:
+                for unit in self.enemy_structures:
+                    if unit.name == 'Nexus':
+                        await self.chat_send("Tag: Random_Protoss")
+                        self.enemy_strategy.append("Random_Protoss")
+                        self.random_race_discovered = True
+                        break
+                    elif unit.name == 'CommandCenter':
+                        await self.chat_send("Tag: Random_Terran")
+                        self.enemy_strategy.append("Random_Terran")
+                        self.random_race_discovered = True
+                        break
+                    elif unit.name == 'Hatchery':
+                        await self.chat_send("Tag: Random_Zerg")
+                        self.enemy_strategy.append("Random_Zerg")
+                        self.random_race_discovered = True
+                        break
 
     async def build_spine_crawlers(self):
         if self.rally_point_set == True:
