@@ -120,6 +120,8 @@ class MyBot(AresBot):
         self.bansheeFound = False
         self.tag_worker_build_first_spore = 0
         self.random_race_discovered = False
+        self.one_proxy_barracks_found = False
+        self.two_proxy_barracks_found = False
 
         self._commenced_attack: bool = False
 
@@ -606,24 +608,39 @@ class MyBot(AresBot):
 
 
     async def search_proxy_barracks(self):
-        if not self.enemy_strategy:
-        #search for a proxy barracks.
-            if self.time < 94:
-                found_proxy_barracks = False
+        if self.time < 94:
+            if self.one_proxy_barracks_found == False:
                 for unit in self.enemy_structures:
                     if unit.name == 'Barracks':
-                        found_proxy_barracks = True
-                        break  # Breake the loop if find the Baracks
-                if found_proxy_barracks:
-                    await self.chat_send("Tag: Proxy_Barracks")
-                    self.enemy_strategy.append("Proxy_Barracks")
+                        self.one_proxy_barracks_found = True
+                        await self.chat_send("Tag: Proxy_Barracks")
+                        self.enemy_strategy.append("Proxy_Barracks")
+                        break
 
-            # if there more than 1 barracks, add another tag
+            if self.two_proxy_barracks_found == False:
                 barracks_count = sum(1 for structure in self.enemy_structures if structure.name == "Barracks")
                 if barracks_count > 1:
-                    # Adiciona a tag desejada
                     await self.chat_send("Tag: 2 Proxy_Barracks")
                     self.enemy_strategy.append("2_Proxy_Barracks")
+                    self.two_proxy_barracks_found = True
+
+
+
+#        if not self.enemy_strategy:
+ #       #search for a proxy barracks.
+  #          if self.time < 94:
+   #             found_proxy_barracks = False
+    #            for unit in self.enemy_structures:
+     #               if unit.name == 'Barracks':
+      ##                 break  # Breake the loop if find the Baracks
+        #        if found_proxy_barracks:
+         #           await self.chat_send("Tag: Proxy_Barracks")
+          #          self.enemy_strategy.append("Proxy_Barracks")
+#
+ #           # if there more than 1 barracks, add another tag
+  ###                # Adiciona a tag desejada
+     #               await self.chat_send("Tag: 2 Proxy_Barracks")
+      #              self.enemy_strategy.append("2_Proxy_Barracks")
 
 
     async def build_second_gas(self):
