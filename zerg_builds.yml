@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - OppeningVsLingRush
+            - PoolFirst
 
     Protoss:
         BotName: ProtossRace
@@ -325,6 +325,7 @@ Builds:
             - 16 drone
             - 17 drone
             - 20 drone
+            - 16 overlord
             - 21 drone
             - 22 drone
             - 23 drone
