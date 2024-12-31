@@ -760,6 +760,17 @@ class MyBot(AresBot):
                     self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
 
+        if self.tag_worker_build_2nd_spine_crawler != 0:
+            if self.can_afford(UnitID.SPINECRAWLER):
+                my_ramp = self.main_base_ramp.top_center
+                reference = my_ramp.position.towards(self.first_base, 6)
+                target = reference.towards(self.game_info.map_center, -2)
+                if worker := self.mediator.select_worker(target_position=target):                
+                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                    self.tag_worker_build_3rd_spine_crawler = worker
+                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                    self.mediator.build_with_specific_worker(worker=self.tag_worker_build_3rd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
 
 
 
