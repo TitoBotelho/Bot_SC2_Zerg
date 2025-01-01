@@ -29,7 +29,7 @@ from ares.behaviors.combat.individual import (
     StutterUnitBack,
     UseAbility,
 )
-from ares.behaviors.macro import AutoSupply, Mining, SpawnController
+from ares.behaviors.macro import AutoSupply, Mining, SpawnController, GasBuildingController
 from ares.consts import ALL_STRUCTURES, WORKER_TYPES, UnitRole, UnitTreeQueryType, BuildingPurpose
 from cython_extensions import cy_closest_to, cy_in_attack_range, cy_pick_enemy_target
 from sc2.data import Race
@@ -332,7 +332,6 @@ class MyBot(AresBot):
 
             if "2_Proxy_Barracks" in self.enemy_strategy:
                 await self.make_spines_on_main()
-                await self.build_second_gas()
 
 
         if self.EnemyRace == Race.Protoss:
@@ -627,18 +626,8 @@ class MyBot(AresBot):
 
 
     async def build_second_gas(self):
-        if self.minerals > 500:
-            if self.tag_worker_second_gas == 0:
-                if self.can_afford(UnitID.EXTRACTOR):
-                    target_geysers = self.vespene_geyser.closest_n_units(self.first_base, 4)
-                    if target_geysers:
-                        target_geyser = target_geysers[0]  # Select the first geyser
-                        worker = self.mediator.select_worker(target_position=target_geyser.position)
-                        if worker:
-                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                            self.tag_worker_second_gas = worker
-                            self.mediator.build_with_specific_worker(worker=self.tag_worker_second_gas, structure_type=UnitID.EXTRACTOR, pos=target_geyser, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-
+        if self.minerals > 300:
+            self.register_behavior(GasBuildingController(to_count = 2))
 
     async def cancel_second_base(self):
         hatcheries = self.structures(UnitID.HATCHERY)
