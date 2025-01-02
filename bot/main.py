@@ -626,7 +626,7 @@ class MyBot(AresBot):
 
 
     async def build_second_gas(self):
-        if self.minerals > 300:
+        if self.structures(UnitID.HATCHERY).amount == 2:
             self.register_behavior(GasBuildingController(to_count = 2))
 
     async def cancel_second_base(self):

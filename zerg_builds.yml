@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - PoolFirst
+            - OppeningVsMarineRush
 
     Protoss:
         BotName: ProtossRace
@@ -74,6 +74,15 @@ BuildChoices:
         BotName: BrazilianLingFloodBot
         Cycle:
             - OppeningVsLingRush
+
+    88b7a15a-b346-4426-9103-094a260b873c:
+        BotName: shyguy
+        Cycle:
+            - OppeningVsMarineRush
+
+
+
+
 
 Builds:
     BurrowRoachRush:
@@ -375,3 +384,27 @@ Builds:
             - 36 drone
             - 37 drone
             
+
+
+    OppeningVsMarineRush:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 spawningpool
+            - 11 drone
+            - 12 drone
+            - 13 overlord
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 spinecrawler
+            - 16 spinecrawler
+            - 16 spinecrawler
+            - 16 drone
+            - 17 drone
+            - 17 gas
+            - 17 drone
+            - 13 overlord
+            - 17 roachwarren
+            - 18 BURROW
