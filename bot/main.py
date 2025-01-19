@@ -309,12 +309,8 @@ class MyBot(AresBot):
             if "Bunker_Rush" in self.enemy_strategy:
                 await self.build_roach_warren()
                 await self.research_burrow()
-            if "2_Base_Terran" in self.enemy_strategy:
-                await self.build_mellee_upgrades()
-                await self.build_armor_upgrades()
-                await self.build_lair()
-                await self.build_hydra_den()
-                await self.build_next_next_base()
+            #if "2_Base_Terran" in self.enemy_strategy:
+
 
             if "Proxy_Barracks" in self.enemy_strategy:
                 await self.cancel_second_base()
@@ -323,9 +319,7 @@ class MyBot(AresBot):
 
             if "Terran_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
-                await self.build_roach_warren()
-                await self.research_burrow()
-                await self.build_second_gas()
+
 
             if "Banshee" in self.enemy_strategy:
                 await self.make_spores()
@@ -833,7 +827,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_241209")
+            await self.chat_send("Tag: Version_250119")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
@@ -897,9 +891,7 @@ class MyBot(AresBot):
 
         if self.EnemyRace == Race.Terran:
             if "Bunker_Rush" in self.enemy_strategy:
-                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
-            if "Terran_Agressive" in self.enemy_strategy:
-                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))               
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))             
             else:
                 self.register_behavior(SpawnController(ARMY_COMP_HYDRALING[self.race]))
 

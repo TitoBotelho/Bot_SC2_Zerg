@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - OppeningVsMarineRush
+            - MacroVsTerran
 
     Protoss:
         BotName: ProtossRace
@@ -408,3 +408,55 @@ Builds:
             - 13 overlord
             - 17 roachwarren
             - 18 BURROW
+
+    MacroVsTerran:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 overlord
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 15 hatchery
+            - 14 drone
+            - 15 spawningpool
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 18 overlord
+            - 18 drone
+            - 19 drone
+            - 20 hatchery
+            - 19 drone
+            - 20 drone
+            - 21 drone
+            - 22 drone
+            - 23 drone
+            - 24 drone
+            - 25 drone
+            - 26 overlord
+            - 26 drone
+            - 27 drone
+            - 28 drone
+            - 29 drone
+            - 30 drone
+            - 31 drone
+            - 32 drone
+            - 33 drone
+            - 34 overlord
+            - 34 drone
+            - 35 drone
+            - 36 drone
+            - 37 drone
+            - 37 hatchery
+            - 38 overlord
+            - 38 drone
+            - 39 drone
+            - 40 overlord
+            - 40 drone
+            - 41 drone
+
