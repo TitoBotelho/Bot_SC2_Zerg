@@ -27,7 +27,7 @@ BuildChoices:
     Terran:
         BotName: TerranRace
         Cycle:
-            - PoolFirst
+            - MacroVsTerran
 
     Zerg:
         BotName: ZergRace
