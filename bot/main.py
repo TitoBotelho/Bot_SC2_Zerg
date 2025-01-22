@@ -125,6 +125,7 @@ class MyBot(AresBot):
 
         self._commenced_attack: bool = False
 
+
         self.creep_queen_tags: Set[int] = set()
         self.max_creep_queens: int = 1
 
@@ -303,6 +304,7 @@ class MyBot(AresBot):
             await self.findReaper()
             await self.attack_reaper()
             await self.attack_banshee()
+            await self.defend()
 
 
 
@@ -335,12 +337,15 @@ class MyBot(AresBot):
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
             await self.burrow_roaches()
+            await self.defend()
+
             if "Protoss_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
 
         if self.EnemyRace == Race.Zerg:
             await self.defend_vs_spine_crawler()
             await self.burrow_roaches()
+            await self.defend()
 
         
         if self.EnemyRace == Race.Random:
@@ -348,6 +353,7 @@ class MyBot(AresBot):
             await self.discover_race()
             await self.build_spine_crawlers()
             await self.burrow_roaches()
+            await self.defend()
 
 
 #_______________________________________________________________________________________________________________________
@@ -755,6 +761,14 @@ class MyBot(AresBot):
                     self.mediator.build_with_specific_worker(worker=self.tag_worker_build_3rd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
 
+    async def defend(self):
+        for enemyUnit in self.enemy_units:
+            if self.has_creep(enemyUnit.position):
+                forces: Units = self.mediator.get_units_from_role(role=UnitRole.ATTACKING)
+                for unit in forces:
+                    unit.attack(enemyUnit.position)
+
+
 
 
 #_______________________________________________________________________________________________________________________
@@ -859,15 +873,6 @@ class MyBot(AresBot):
 
                 for hatcherys in self.structures(UnitID.HATCHERY).ready:
                     self.do(hatcherys(AbilityId.RALLY_HATCHERY_UNITS, rally_point))
-
-#_______________________________________________________________________________________________________________________
-#          ON ENEMY UNIT ENTERED VISION
-#_______________________________________________________________________________________________________________________
-
-    async def on_enemy_unit_entered_vision(self, unit):
-        if self.has_creep(unit.position):
-            self.commenced_attack = True
-
 
 
 #_______________________________________________________________________________________________________________________
