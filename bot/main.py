@@ -122,6 +122,7 @@ class MyBot(AresBot):
         self.random_race_discovered = False
         self.one_proxy_barracks_found = False
         self.two_proxy_barracks_found = False
+        self.mutalisksFound = False
 
         self._commenced_attack: bool = False
 
@@ -256,7 +257,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
         self._macro()
@@ -345,7 +346,7 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Zerg:
             await self.defend_vs_spine_crawler()
             await self.burrow_roaches()
-            await self.defend()
+            await self.find_mutalisks()
 
         
         if self.EnemyRace == Race.Random:
@@ -769,6 +770,16 @@ class MyBot(AresBot):
                     unit.attack(enemyUnit.position)
 
 
+
+    async def find_mutalisks(self):
+        if self.mutalisksFound == False:
+            for unit in self.enemy_units:
+                if unit.name == 'Mutalisk':
+                    self.mutalisksFound = True
+                    break
+            if self.mutalisksFound:
+                await self.chat_send("Tag: Mutalisk")
+                self.enemy_strategy.append("Mutalisk")
 
 
 #_______________________________________________________________________________________________________________________
