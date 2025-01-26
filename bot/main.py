@@ -123,6 +123,9 @@ class MyBot(AresBot):
         self.one_proxy_barracks_found = False
         self.two_proxy_barracks_found = False
         self.mutalisksFound = False
+        self.proxy_pylon_found = False        
+        self.one_proxy_gateWay_found = False
+        self.two_proxy_gateWay_found = False
 
         self._commenced_attack: bool = False
 
@@ -339,6 +342,7 @@ class MyBot(AresBot):
             await self.build_armor_upgrades()
             await self.burrow_roaches()
             await self.defend()
+            await self.search_proxy_vs_protoss()
 
             if "Protoss_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
@@ -782,6 +786,31 @@ class MyBot(AresBot):
                 self.enemy_strategy.append("Mutalisk")
 
 
+    async def search_proxy_vs_protoss(self):
+        if self.time < 94:
+            if self.proxy_pylon_found == False:
+                for unit in self.enemy_structures:
+                    if unit.name == 'Pylon':
+                        self.proxy_pylon_found = True
+                        await self.chat_send("Tag: Proxy_Pylon")
+                        self.enemy_strategy.append("Proxy_Pylon")
+                        break
+
+            if self.one_proxy_gateWay_found == False:
+                for unit in self.enemy_structures:
+                    if unit.name == 'Gateway':
+                        self.one_proxy_gateWay_found = True
+                        await self.chat_send("Tag: Proxy_Gateway")
+                        self.enemy_strategy.append("Proxy_Gateway")
+                        break
+
+            if self.two_proxy_gateWay_found == False:
+                gateWays_count = sum(1 for structure in self.enemy_structures if structure.name == "Gateway")
+                if gateWays_count > 1:
+                    await self.chat_send("Tag: 2_Proxy_Gateway")
+                    self.enemy_strategy.append("2_Proxy_Gateway")
+                    self.two_proxy_gateWay_found = True
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -796,7 +825,7 @@ class MyBot(AresBot):
             #print("Creep Queens: ", self.creep_queen_tags)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
-            #print("Enemy Structures: ", self.enemy_structures)
+            print("Enemy Structures: ", self.enemy_structures)
             print("Enemy Units: ", self.enemy_units)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
