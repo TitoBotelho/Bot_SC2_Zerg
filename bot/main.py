@@ -347,6 +347,18 @@ class MyBot(AresBot):
             if "Protoss_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
 
+
+            if "2_Proxy_Gateway" in self.enemy_strategy:
+                await self.cancel_second_base()
+                await self.retreat_overlords()
+                await self.make_spines_on_main()
+                await self.build_roach_warren()
+                await self.research_burrow()
+
+
+
+
+
         if self.EnemyRace == Race.Zerg:
             await self.defend_vs_spine_crawler()
             await self.burrow_roaches()
@@ -881,7 +893,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250119")
+            await self.chat_send("Tag: Version_250127")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
@@ -931,17 +943,35 @@ class MyBot(AresBot):
         if self.build_order_runner.build_completed:
             self.register_behavior(AutoSupply(base_location=self.start_location))
 
+
+
+
+#_______________________________________________________________________________________________________________________
         # BUILD ARMY
         # ares-sc2 SpawnController
+#_______________________________________________________________________________________________________________________
+
+
+
 
         if self.EnemyRace == Race.Terran:
+
+            #Shyguy
+            if self.opponent_id == "88b7a15a-b346-4426-9103-094a260b873c":
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+                
             if "Bunker_Rush" in self.enemy_strategy:
                 self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))             
             else:
                 self.register_behavior(SpawnController(ARMY_COMP_HYDRALING[self.race]))
 
+
+
         if self.EnemyRace == Race.Protoss:
-            self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
+            if "2_Proxy_Gateway" in self.enemy_strategy:
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))                                                        
+            else:                                           
+                self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
 
         else:
             self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
@@ -1072,6 +1102,8 @@ class MyBot(AresBot):
 
     def _zerg_specific_macro(self) -> None:
         if self.EnemyRace == Race.Terran:
+
+
             if self.enemy_strategy == "Bunker_Rush":
                 if (not self.already_pending_upgrade(UpgradeId.BURROW)):
                     self.research(UpgradeId.BURROW)

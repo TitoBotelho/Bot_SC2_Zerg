@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - OneOneRoaches
+            - HatcheryFirst
 
     Protoss:
         BotName: ProtossRace
@@ -79,6 +79,11 @@ BuildChoices:
         BotName: shyguy
         Cycle:
             - OppeningVsMarineRush
+
+    8cad7b11-d554-43b3-a774-2b6f32596f30:
+        BotName: PerilousProtossBot
+        Cycle:
+            - OppeningVs4gatewayZealotRush
 
 
 
@@ -462,3 +467,28 @@ Builds:
             - 40 drone
             - 41 drone
 
+
+    OppeningVs4gatewayZealotRush:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 spawningpool
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
+            - 11 drone
+            - 12 drone
+            - 13 overlord
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 spinecrawler
+            - 16 spinecrawler
+            - 16 spinecrawler
+            - 16 drone
+            - 17 drone
+            - 17 gas
+            - 17 drone
+            - 13 overlord
+            - 17 roachwarren
+            - 18 BURROW
