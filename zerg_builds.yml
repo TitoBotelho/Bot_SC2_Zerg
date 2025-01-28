@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - HatcheryFirst
+            - OppeningVs4gatewayZealotRush
 
     Protoss:
         BotName: ProtossRace
@@ -473,15 +473,16 @@ Builds:
         # Turning this off here for a bit more precision in build
         ConstantWorkerProductionTill: 0
         OpeningBuildOrder:
-            - 12 spawningpool
             - 12 worker_scout:
-                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]        
+            - 12 spawningpool
             - 11 drone
+            - 12 overlord
             - 12 drone
-            - 13 overlord
             - 13 drone
             - 14 drone
             - 15 drone
+            - 16 drone
             - 16 spinecrawler
             - 16 spinecrawler
             - 16 spinecrawler

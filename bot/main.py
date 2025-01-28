@@ -260,7 +260,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
         self._macro()
@@ -351,7 +351,7 @@ class MyBot(AresBot):
             if "2_Proxy_Gateway" in self.enemy_strategy:
                 await self.cancel_second_base()
                 await self.retreat_overlords()
-                await self.make_spines_on_main()
+                #await self.make_spines_on_main()
                 await self.build_roach_warren()
                 await self.research_burrow()
 
