@@ -12,12 +12,12 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - OppeningVs4gatewayZealotRush
+            - PoolFirst
 
     Protoss:
         BotName: ProtossRace
         Cycle:
-            - HatcheryFirst
+            - PoolFirst
 
     Random:
         BotName: RandomRace
@@ -79,12 +79,6 @@ BuildChoices:
         BotName: shyguy
         Cycle:
             - OppeningVsMarineRush
-
-    8cad7b11-d554-43b3-a774-2b6f32596f30:
-        BotName: PerilousProtossBot
-        Cycle:
-            - OppeningVs4gatewayZealotRush
-
 
 
 

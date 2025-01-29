@@ -126,6 +126,7 @@ class MyBot(AresBot):
         self.proxy_pylon_found = False        
         self.one_proxy_gateWay_found = False
         self.two_proxy_gateWay_found = False
+        self.photon_cannon_found = False
 
         self._commenced_attack: bool = False
 
@@ -260,7 +261,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
         self._macro()
@@ -336,7 +337,6 @@ class MyBot(AresBot):
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
-            await self.build_next_base()
             await self.is_protoss_agressive()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
@@ -355,8 +355,13 @@ class MyBot(AresBot):
                 await self.build_roach_warren()
                 await self.research_burrow()
 
+            if "Cannon_Rush" in self.enemy_strategy:
+                await self.cancel_second_base()
+                await self.build_roach_warren()
+                await self.research_burrow()
 
-
+            if "Cannon_Rush" not in self.enemy_strategy:
+                await self.build_next_base()
 
 
         if self.EnemyRace == Race.Zerg:
@@ -823,6 +828,17 @@ class MyBot(AresBot):
                     self.enemy_strategy.append("2_Proxy_Gateway")
                     self.two_proxy_gateWay_found = True
 
+            if self.photon_cannon_found == False:
+                for unit in self.enemy_structures:
+                    if unit.name == 'PhotonCannon':
+                        expansion = self.mediator.get_own_nat
+                        if unit.distance_to(expansion) < 20:
+                            self.photon_cannon_found = True
+                            await self.chat_send("Tag: Cannon_Rush")
+                            self.enemy_strategy.append("Cannon_Rush")
+                            break
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -969,7 +985,12 @@ class MyBot(AresBot):
 
         if self.EnemyRace == Race.Protoss:
             if "2_Proxy_Gateway" in self.enemy_strategy:
-                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))                                                        
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race])) 
+
+            if "Cannon_Rush" in self.enemy_strategy:
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race])) 
+
+
             else:                                           
                 self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
 
