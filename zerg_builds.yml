@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - PoolFirst
+            - BlockingTheBase
 
     Protoss:
         BotName: ProtossRace
@@ -80,7 +80,27 @@ BuildChoices:
         Cycle:
             - OppeningVsMarineRush
 
+    6b075187-e187-40d0-8721-1dc362805db5:
+        BotName: nida
+        Cycle:
+            - BlockingTheBase
 
+    48b23f2e-87ae-44be-bfce-d86386edadf7:
+        BotName: norman
+        Cycle:
+            - BlockingTheBase
+
+
+    7e234d60-12cf-46e0-ac7a-72e87f6edc53:
+        BotName: Zozo
+        Cycle:
+            - BlockingTheBase
+
+
+    6e570722-ceff-41a9-b07c-14041069a3d9:
+        BotName: Dodo
+        Cycle:
+            - OppeningVsLingRush
 
 
 Builds:
@@ -487,3 +507,24 @@ Builds:
             - 13 overlord
             - 17 roachwarren
             - 18 BURROW
+
+
+    BlockingTheBase:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 31
+        OpeningBuildOrder:
+            - 11 hatchery
+            - 14 overlord
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 15 spawningpool
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 queen
+            - 16 queen
+            - 16 overlord

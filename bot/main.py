@@ -261,7 +261,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
         self._macro()
@@ -347,11 +347,13 @@ class MyBot(AresBot):
             if "Protoss_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
 
+            if "Protoss_Agressive" not in self.enemy_strategy:
+                await self.build_next_base()
 
             if "2_Proxy_Gateway" in self.enemy_strategy:
                 await self.cancel_second_base()
                 await self.retreat_overlords()
-                #await self.make_spines_on_main()
+                await self.make_spines_on_main()
                 await self.build_roach_warren()
                 await self.research_burrow()
 
@@ -359,6 +361,7 @@ class MyBot(AresBot):
                 await self.cancel_second_base()
                 await self.build_roach_warren()
                 await self.research_burrow()
+                await self.build_second_gas()
 
             if "Cannon_Rush" not in self.enemy_strategy:
                 await self.build_next_base()
@@ -369,6 +372,8 @@ class MyBot(AresBot):
             await self.burrow_roaches()
             await self.find_mutalisks()
 
+            if "Mutalisk" in self.enemy_strategy:
+                await self.make_spores()
         
         if self.EnemyRace == Race.Random:
             await self.build_queens()
