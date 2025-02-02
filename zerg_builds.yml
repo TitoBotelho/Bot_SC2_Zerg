@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - BlockingTheBase
+            - VsReaperPressure
 
     Protoss:
         BotName: ProtossRace
@@ -101,6 +101,11 @@ BuildChoices:
         BotName: Dodo
         Cycle:
             - OppeningVsLingRush
+
+    2cd4693c-81db-4dcb-850e-b511852996e0:
+        BotName: t-bone
+        Cycle:
+            - VsReaperPressure
 
 
 Builds:
@@ -398,6 +403,7 @@ Builds:
             - 35 overlord
             - 32 drone
             - 33 drone
+            - 33 overlord
             - 34 drone
             - 35 drone
             - 36 drone
@@ -528,3 +534,42 @@ Builds:
             - 17 queen
             - 16 queen
             - 16 overlord
+
+    VsReaperPressure:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 36
+        OpeningBuildOrder:
+            - 12 overlord
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
+            - 12 drone
+            - 13 drone
+            - 14 spawningpool
+            - 13 gas
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 16 hatchery
+            - 15 overlord
+            - 15 zergling
+            - 15 zergling
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 18 drone
+            - 19 drone
+            - 19 overlord
+            - 20 drone
+            - 21 drone
+            - 22 drone
+            - 23 drone
+            - 24 overlord
+            - 25 hatchery
+            - 25 overlord
+            - 24 drone
+            - 25 drone
+            - 26 drone
+            - 27 evolutionchamber
