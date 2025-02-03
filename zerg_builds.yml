@@ -538,7 +538,7 @@ Builds:
     VsReaperPressure:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
-        ConstantWorkerProductionTill: 36
+        ConstantWorkerProductionTill: 38
         OpeningBuildOrder:
             - 12 overlord
             - 12 worker_scout:
@@ -573,3 +573,4 @@ Builds:
             - 25 drone
             - 26 drone
             - 27 evolutionchamber
+            - 26 hatchery

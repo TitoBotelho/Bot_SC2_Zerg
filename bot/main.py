@@ -310,6 +310,8 @@ class MyBot(AresBot):
             await self.attack_reaper()
             await self.attack_banshee()
             await self.defend()
+            await self.build_mellee_upgrades()
+            await self.build_armor_upgrades()
 
 
 
