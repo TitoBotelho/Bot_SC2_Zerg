@@ -201,7 +201,11 @@ class MyBot(AresBot):
         #Apidae
         if self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
             self._begin_attack_at_supply = 1
-        
+
+        #BotKiller
+        if self.opponent_id == "da0fe671-3f51-4c48-8ac2-252cb67ee545":
+            self._begin_attack_at_supply = 1
+
         else:
             if self.EnemyRace == Race.Terran:
                 if self.time < 290:
@@ -361,9 +365,9 @@ class MyBot(AresBot):
 
             if "Cannon_Rush" in self.enemy_strategy:
                 await self.cancel_second_base()
-                await self.build_roach_warren()
-                await self.research_burrow()
-                await self.build_second_gas()
+                #await self.build_roach_warren()
+                #await self.research_burrow()
+                #await self.build_second_gas()
 
             if "Cannon_Rush" not in self.enemy_strategy:
                 await self.build_next_base()

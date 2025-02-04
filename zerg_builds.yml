@@ -47,6 +47,10 @@ BuildChoices:
         Cycle:
             - TwelvePool
 
+    da0fe671-3f51-4c48-8ac2-252cb67ee545:
+        BotName: BotKiller
+        Cycle:
+            - TwelvePool
 
     4a491758-76ff-40de-996c-018d49b6237f:
         BotName: 12PoolBot
