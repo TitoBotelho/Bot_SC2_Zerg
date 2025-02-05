@@ -127,6 +127,7 @@ class MyBot(AresBot):
         self.one_proxy_gateWay_found = False
         self.two_proxy_gateWay_found = False
         self.photon_cannon_found = False
+        self.terran_flying_structures = False
 
         self._commenced_attack: bool = False
 
@@ -265,7 +266,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
         self._macro()
@@ -316,6 +317,7 @@ class MyBot(AresBot):
             await self.defend()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
+            await self.is_structures_flying()
 
 
 
@@ -340,6 +342,10 @@ class MyBot(AresBot):
             if "2_Proxy_Barracks" in self.enemy_strategy:
                 await self.make_spines_on_main()
 
+            if "Flying_Structures" in self.enemy_strategy:
+                await self.build_lair()
+                await self.build_hydra_den()
+                #await self.build_second_gas()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -849,6 +855,17 @@ class MyBot(AresBot):
                             self.enemy_strategy.append("Cannon_Rush")
                             break
 
+
+    async def is_structures_flying(self):
+        #Some terrans, lift their structures when they feel they are about to lose.
+        #This function aims to recognize this situation to make mutaliskas
+        if self.time > 180:
+            if self.terran_flying_structures == False:
+                for unit in self.enemy_structures:
+                    if unit.is_flying:
+                        await self.chat_send("Tag: Flying_Structures")
+                        self.enemy_strategy.append("Flying_Structures")
+                        self.terran_flying_structures = True
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL

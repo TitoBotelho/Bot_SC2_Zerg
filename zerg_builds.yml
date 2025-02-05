@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - VsReaperPressure
+            - MacroVsTerran
 
     Protoss:
         BotName: ProtossRace
@@ -462,6 +462,7 @@ Builds:
             - 18 drone
             - 19 drone
             - 20 hatchery
+            - 20 overlord
             - 19 drone
             - 20 drone
             - 21 drone
