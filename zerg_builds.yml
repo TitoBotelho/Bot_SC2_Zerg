@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - MacroVsTerran
+            - OppeningVsRoachRush
 
     Protoss:
         BotName: ProtossRace
@@ -42,10 +42,6 @@ BuildChoices:
 
 
 
-    c033a97a-667d-42e3-91e8-13528ac191ed:
-        BotName: Apidae
-        Cycle:
-            - TwelvePool
 
     da0fe671-3f51-4c48-8ac2-252cb67ee545:
         BotName: BotKiller
@@ -104,7 +100,7 @@ BuildChoices:
     6e570722-ceff-41a9-b07c-14041069a3d9:
         BotName: Dodo
         Cycle:
-            - OppeningVsLingRush
+            - OppeningVsRoachRush
 
     2cd4693c-81db-4dcb-850e-b511852996e0:
         BotName: t-bone
@@ -269,6 +265,7 @@ Builds:
             - 12 drone
             - 13 overlord
             - 13 drone
+            - 14 overlord
 
 
     OppeningVsLingRush:
@@ -407,6 +404,7 @@ Builds:
             - 35 overlord
             - 32 drone
             - 33 drone
+            - 33 overlord
             - 33 overlord
             - 34 drone
             - 35 drone
@@ -579,3 +577,35 @@ Builds:
             - 26 drone
             - 27 evolutionchamber
             - 26 hatchery
+
+
+    OppeningVsRoachRush:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 11 spawningpool
+            - 11 drone
+            - 12 drone
+            - 13 drone
+            - 13 overlord
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 queen
+            - 17 spinecrawler
+            - 16 spinecrawler
+            - 15 sporecrawler
+            - 14 spinecrawler          
+            - 15 drone
+            - 16 drone
+            - 17 gas
+            - 16 drone
+            - 17 overlord
+            - 17 roachwarren
+            - 17 queen
+            - 16 drone
+            - 17 drone
+            - 18 drone
+            - 19 BURROW
+            - 19 gas

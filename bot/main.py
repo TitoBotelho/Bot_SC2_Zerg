@@ -199,9 +199,7 @@ class MyBot(AresBot):
         else:
             print("Warning: opponent_id is None, cannot send chat message.")
 
-        #Apidae
-        if self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
-            self._begin_attack_at_supply = 1
+
 
         #BotKiller
         if self.opponent_id == "da0fe671-3f51-4c48-8ac2-252cb67ee545":
@@ -266,7 +264,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
         self._macro()
