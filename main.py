@@ -29,7 +29,7 @@ from ares.behaviors.combat.individual import (
     StutterUnitBack,
     UseAbility,
 )
-from ares.behaviors.macro import AutoSupply, Mining, SpawnController
+from ares.behaviors.macro import AutoSupply, Mining, SpawnController, GasBuildingController
 from ares.consts import ALL_STRUCTURES, WORKER_TYPES, UnitRole, UnitTreeQueryType, BuildingPurpose
 from cython_extensions import cy_closest_to, cy_in_attack_range, cy_pick_enemy_target
 from sc2.data import Race
@@ -120,8 +120,18 @@ class MyBot(AresBot):
         self.bansheeFound = False
         self.tag_worker_build_first_spore = 0
         self.random_race_discovered = False
+        self.one_proxy_barracks_found = False
+        self.two_proxy_barracks_found = False
+        self.mutalisksFound = False
+        self.proxy_pylon_found = False        
+        self.one_proxy_gateWay_found = False
+        self.two_proxy_gateWay_found = False
+        self.photon_cannon_found = False
+        self.terran_flying_structures = False
+        self.tag_worker_build_spire = 0
 
         self._commenced_attack: bool = False
+
 
         self.creep_queen_tags: Set[int] = set()
         self.max_creep_queens: int = 1
@@ -190,10 +200,12 @@ class MyBot(AresBot):
         else:
             print("Warning: opponent_id is None, cannot send chat message.")
 
-        #Apidae
-        if self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
+
+
+        #BotKiller
+        if self.opponent_id == "da0fe671-3f51-4c48-8ac2-252cb67ee545":
             self._begin_attack_at_supply = 1
-        
+
         else:
             if self.EnemyRace == Race.Terran:
                 if self.time < 290:
@@ -253,7 +265,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
         self._macro()
@@ -301,18 +313,18 @@ class MyBot(AresBot):
             await self.findReaper()
             await self.attack_reaper()
             await self.attack_banshee()
+            await self.defend()
+            await self.build_mellee_upgrades()
+            await self.build_armor_upgrades()
+            await self.is_structures_flying()
 
 
 
             if "Bunker_Rush" in self.enemy_strategy:
                 await self.build_roach_warren()
                 await self.research_burrow()
-            if "2_Base_Terran" in self.enemy_strategy:
-                await self.build_mellee_upgrades()
-                await self.build_armor_upgrades()
-                await self.build_lair()
-                await self.build_hydra_den()
-                await self.build_next_next_base()
+            #if "2_Base_Terran" in self.enemy_strategy:
+
 
             if "Proxy_Barracks" in self.enemy_strategy:
                 await self.cancel_second_base()
@@ -321,9 +333,7 @@ class MyBot(AresBot):
 
             if "Terran_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
-                await self.build_roach_warren()
-                await self.research_burrow()
-                await self.build_second_gas()
+
 
             if "Banshee" in self.enemy_strategy:
                 await self.make_spores()
@@ -331,27 +341,58 @@ class MyBot(AresBot):
             if "2_Proxy_Barracks" in self.enemy_strategy:
                 await self.make_spines_on_main()
 
+            if "Flying_Structures" in self.enemy_strategy:
+                await self.build_lair()
+                await self.build_hydra_den()
+                #await self.build_spire()
+                #await self.build_second_gas()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
-            await self.build_next_base()
             await self.is_protoss_agressive()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
             await self.burrow_roaches()
+            await self.defend()
+            await self.search_proxy_vs_protoss()
+
             if "Protoss_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
+
+            if "Protoss_Agressive" not in self.enemy_strategy:
+                await self.build_next_base()
+
+            if "2_Proxy_Gateway" in self.enemy_strategy:
+                await self.cancel_second_base()
+                await self.retreat_overlords()
+                await self.make_spines_on_main()
+                await self.build_roach_warren()
+                await self.research_burrow()
+
+            if "Cannon_Rush" in self.enemy_strategy:
+                await self.cancel_second_base()
+                #await self.build_roach_warren()
+                #await self.research_burrow()
+                #await self.build_second_gas()
+
+            if "Cannon_Rush" not in self.enemy_strategy:
+                await self.build_next_base()
+
 
         if self.EnemyRace == Race.Zerg:
             await self.defend_vs_spine_crawler()
             await self.burrow_roaches()
+            await self.find_mutalisks()
 
+            if "Mutalisk" in self.enemy_strategy:
+                await self.make_spores()
         
         if self.EnemyRace == Race.Random:
             await self.build_queens()
             await self.discover_race()
             await self.build_spine_crawlers()
             await self.burrow_roaches()
+            await self.defend()
 
 
 #_______________________________________________________________________________________________________________________
@@ -456,7 +497,11 @@ class MyBot(AresBot):
             if self.structures(UnitID.HYDRALISKDEN).amount == 0 and not self.already_pending(UnitID.HYDRALISKDEN):
                 if self.tag_worker_build_hydra_den == 0:
                     if self.can_afford(UnitID.HYDRALISKDEN):
-                        target = self.first_base.position.towards(self.second_base.position, 5)
+                        positions = self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position)
+                        reference = positions[1] if positions else None
+                        target = reference.towards(self.first_base, -1)
+
+
                         #await self.build(UnitID.HYDRALISKDEN, near=target)
                         if worker := self.mediator.select_worker(target_position=target):                
                             self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
@@ -606,39 +651,26 @@ class MyBot(AresBot):
 
 
     async def search_proxy_barracks(self):
-        if not self.enemy_strategy:
-        #search for a proxy barracks.
-            if self.time < 94:
-                found_proxy_barracks = False
+        if self.time < 94:
+            if self.one_proxy_barracks_found == False:
                 for unit in self.enemy_structures:
                     if unit.name == 'Barracks':
-                        found_proxy_barracks = True
-                        break  # Breake the loop if find the Baracks
-                if found_proxy_barracks:
-                    await self.chat_send("Tag: Proxy_Barracks")
-                    self.enemy_strategy.append("Proxy_Barracks")
+                        self.one_proxy_barracks_found = True
+                        await self.chat_send("Tag: Proxy_Barracks")
+                        self.enemy_strategy.append("Proxy_Barracks")
+                        break
 
-            # if there more than 1 barracks, add another tag
+            if self.two_proxy_barracks_found == False:
                 barracks_count = sum(1 for structure in self.enemy_structures if structure.name == "Barracks")
                 if barracks_count > 1:
-                    # Adiciona a tag desejada
                     await self.chat_send("Tag: 2 Proxy_Barracks")
                     self.enemy_strategy.append("2_Proxy_Barracks")
+                    self.two_proxy_barracks_found = True
 
 
     async def build_second_gas(self):
-        if self.minerals > 500:
-            if self.tag_worker_second_gas == 0:
-                if self.can_afford(UnitID.EXTRACTOR):
-                    target_geysers = self.vespene_geyser.closest_n_units(self.first_base, 4)
-                    if target_geysers:
-                        target_geyser = target_geysers[0]  # Select the first geyser
-                        worker = self.mediator.select_worker(target_position=target_geyser.position)
-                        if worker:
-                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                            self.tag_worker_second_gas = worker
-                            self.mediator.build_with_specific_worker(worker=self.tag_worker_second_gas, structure_type=UnitID.EXTRACTOR, pos=target_geyser, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-
+        if self.structures(UnitID.HATCHERY).amount == 2:
+            self.register_behavior(GasBuildingController(to_count = 2))
 
     async def cancel_second_base(self):
         hatcheries = self.structures(UnitID.HATCHERY)
@@ -739,14 +771,121 @@ class MyBot(AresBot):
             if self.structures(UnitID.SPINECRAWLER).amount == 0 and not self.already_pending(UnitID.SPINECRAWLER):
                 if self.tag_worker_build_spine_crawler == 0:
                     if self.can_afford(UnitID.SPINECRAWLER):
-                        my_base_location = self.first_base
+                        my_ramp = self.main_base_ramp.top_center
                         # Send the second Overlord in front of second base to scout
-                        target = my_base_location.position.towards(self.game_info.map_center, 5)                   
+                        target = my_ramp.position.towards(self.first_base, 6)                   
                         if worker := self.mediator.select_worker(target_position=target):                
                             self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
                             self.tag_worker_build_spine_crawler = worker
                             #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+        if self.tag_worker_build_spine_crawler != 0:
+            if self.can_afford(UnitID.SPINECRAWLER):
+                my_ramp = self.main_base_ramp.top_center
+                reference = my_ramp.position.towards(self.first_base, 6)
+                target = reference.towards(self.game_info.map_center, 2)
+                if worker := self.mediator.select_worker(target_position=target):                
+                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                    self.tag_worker_build_2nd_spine_crawler = worker
+                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                    self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+
+        if self.tag_worker_build_2nd_spine_crawler != 0:
+            if self.can_afford(UnitID.SPINECRAWLER):
+                my_ramp = self.main_base_ramp.top_center
+                reference = my_ramp.position.towards(self.first_base, 6)
+                target = reference.towards(self.game_info.map_center, -2)
+                if worker := self.mediator.select_worker(target_position=target):                
+                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                    self.tag_worker_build_3rd_spine_crawler = worker
+                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                    self.mediator.build_with_specific_worker(worker=self.tag_worker_build_3rd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+
+    async def defend(self):
+        for enemyUnit in self.enemy_units:
+            if self.has_creep(enemyUnit.position):
+                forces: Units = self.mediator.get_units_from_role(role=UnitRole.ATTACKING)
+                for unit in forces:
+                    unit.attack(enemyUnit.position)
+
+
+
+    async def find_mutalisks(self):
+        if self.mutalisksFound == False:
+            for unit in self.enemy_units:
+                if unit.name == 'Mutalisk':
+                    self.mutalisksFound = True
+                    break
+            if self.mutalisksFound:
+                await self.chat_send("Tag: Mutalisk")
+                self.enemy_strategy.append("Mutalisk")
+
+
+    async def search_proxy_vs_protoss(self):
+        if self.time < 94:
+            if self.proxy_pylon_found == False:
+                for unit in self.enemy_structures:
+                    if unit.name == 'Pylon':
+                        self.proxy_pylon_found = True
+                        await self.chat_send("Tag: Proxy_Pylon")
+                        self.enemy_strategy.append("Proxy_Pylon")
+                        break
+
+            if self.one_proxy_gateWay_found == False:
+                for unit in self.enemy_structures:
+                    if unit.name == 'Gateway':
+                        self.one_proxy_gateWay_found = True
+                        await self.chat_send("Tag: Proxy_Gateway")
+                        self.enemy_strategy.append("Proxy_Gateway")
+                        break
+
+            if self.two_proxy_gateWay_found == False:
+                gateWays_count = sum(1 for structure in self.enemy_structures if structure.name == "Gateway")
+                if gateWays_count > 1:
+                    await self.chat_send("Tag: 2_Proxy_Gateway")
+                    self.enemy_strategy.append("2_Proxy_Gateway")
+                    self.two_proxy_gateWay_found = True
+
+            if self.photon_cannon_found == False:
+                for unit in self.enemy_structures:
+                    if unit.name == 'PhotonCannon':
+                        expansion = self.mediator.get_own_nat
+                        if unit.distance_to(expansion) < 20:
+                            self.photon_cannon_found = True
+                            await self.chat_send("Tag: Cannon_Rush")
+                            self.enemy_strategy.append("Cannon_Rush")
+                            break
+
+
+    async def is_structures_flying(self):
+        #Some terrans, lift their structures when they feel they are about to lose.
+        #This function aims to recognize this situation to make mutaliskas
+        if self.time > 180:
+            if self.terran_flying_structures == False:
+                for unit in self.enemy_structures:
+                    if unit.is_flying:
+                        await self.chat_send("Tag: Flying_Structures")
+                        self.enemy_strategy.append("Flying_Structures")
+                        self.terran_flying_structures = True
+
+
+    async def build_spire(self):
+        if self.structures(UnitID.LAIR).ready:
+            if self.structures(UnitID.SPIRE).amount == 0 and not self.already_pending(UnitID.SPIRE):
+                if self.tag_worker_build_spire == 0:
+                    if self.can_afford(UnitID.SPIRE):
+                        positions = self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position)
+                        target = positions[0] if positions else None
+                        #await self.build(UnitID.HYDRALISKDEN, near=target)
+                        if worker := self.mediator.select_worker(target_position=target):                
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_build_spire = worker
+                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spire, structure_type=UnitID.SPIRE, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -762,8 +901,9 @@ class MyBot(AresBot):
             #print("Creep Queens: ", self.creep_queen_tags)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
-            #print("Enemy Structures: ", self.enemy_structures)
+            print("Enemy Structures: ", self.enemy_structures)
             print("Enemy Units: ", self.enemy_units)
+            print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
@@ -818,7 +958,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_241209")
+            await self.chat_send("Tag: Version_250127")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
@@ -851,15 +991,6 @@ class MyBot(AresBot):
                 for hatcherys in self.structures(UnitID.HATCHERY).ready:
                     self.do(hatcherys(AbilityId.RALLY_HATCHERY_UNITS, rally_point))
 
-#_______________________________________________________________________________________________________________________
-#          ON ENEMY UNIT ENTERED VISION
-#_______________________________________________________________________________________________________________________
-
-    async def on_enemy_unit_entered_vision(self, unit):
-        if self.has_creep(unit.position):
-            self.commenced_attack = True
-
-
 
 #_______________________________________________________________________________________________________________________
 #          DEF MACRO
@@ -877,19 +1008,40 @@ class MyBot(AresBot):
         if self.build_order_runner.build_completed:
             self.register_behavior(AutoSupply(base_location=self.start_location))
 
+
+
+
+#_______________________________________________________________________________________________________________________
         # BUILD ARMY
         # ares-sc2 SpawnController
+#_______________________________________________________________________________________________________________________
+
+
+
 
         if self.EnemyRace == Race.Terran:
-            if "Bunker_Rush" in self.enemy_strategy:
+
+            #Shyguy
+            if self.opponent_id == "88b7a15a-b346-4426-9103-094a260b873c":
                 self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
-            if "Terran_Agressive" in self.enemy_strategy:
-                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))               
+                
+            if "Bunker_Rush" in self.enemy_strategy:
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))             
             else:
                 self.register_behavior(SpawnController(ARMY_COMP_HYDRALING[self.race]))
 
+
+
         if self.EnemyRace == Race.Protoss:
-            self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
+            if "2_Proxy_Gateway" in self.enemy_strategy:
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race])) 
+
+            if "Cannon_Rush" in self.enemy_strategy:
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race])) 
+
+
+            else:                                           
+                self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
 
         else:
             self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
@@ -1020,6 +1172,8 @@ class MyBot(AresBot):
 
     def _zerg_specific_macro(self) -> None:
         if self.EnemyRace == Race.Terran:
+
+
             if self.enemy_strategy == "Bunker_Rush":
                 if (not self.already_pending_upgrade(UpgradeId.BURROW)):
                     self.research(UpgradeId.BURROW)
