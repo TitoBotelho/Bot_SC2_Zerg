@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - OppeningVsRoachRush
+            - TwelvePool
 
     Protoss:
         BotName: ProtossRace
@@ -106,6 +106,12 @@ BuildChoices:
         BotName: t-bone
         Cycle:
             - VsReaperPressure
+
+
+    745ab3e1-86ed-4090-b79c-1db199655a78:
+        BotName: Thheo
+        Cycle:
+            - OppeningVsLingRush
 
 
 Builds:
@@ -266,6 +272,12 @@ Builds:
             - 13 overlord
             - 13 drone
             - 14 overlord
+            - 14 zergling
+            - 14 zergling
+            - 14 zergling
+            - 14 queen
+            - 14 hatchery
+
 
 
     OppeningVsLingRush:
