@@ -29,7 +29,7 @@ from ares.behaviors.combat.individual import (
     StutterUnitBack,
     UseAbility,
 )
-from ares.behaviors.macro import AutoSupply, Mining, SpawnController, GasBuildingController
+from ares.behaviors.macro import AutoSupply, Mining, SpawnController, GasBuildingController, BuildWorkers
 from ares.consts import ALL_STRUCTURES, WORKER_TYPES, UnitRole, UnitTreeQueryType, BuildingPurpose
 from cython_extensions import cy_closest_to, cy_in_attack_range, cy_pick_enemy_target
 from sc2.data import Race
@@ -54,8 +54,8 @@ from queens_sc2.queens import Queens
 # against Terran
 ARMY_COMP_HYDRALING: dict[Race, dict] = {
     Race.Zerg: {
-        UnitID.ZERGLING: {"proportion": 0.9, "priority": 0},
-        UnitID.HYDRALISK: {"proportion": 0.1, "priority": 1},
+        UnitID.ZERGLING: {"proportion": 0.8, "priority": 0},
+        UnitID.HYDRALISK: {"proportion": 0.2, "priority": 1},
     }
 }
 
@@ -128,6 +128,7 @@ class MyBot(AresBot):
         self.two_proxy_gateWay_found = False
         self.photon_cannon_found = False
         self.terran_flying_structures = False
+        self.tag_worker_build_spire = 0
 
         self._commenced_attack: bool = False
 
@@ -316,6 +317,8 @@ class MyBot(AresBot):
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
             await self.is_structures_flying()
+            await self.build_lair()
+            await self.build_hydra_den()
 
 
 
@@ -343,7 +346,10 @@ class MyBot(AresBot):
             if "Flying_Structures" in self.enemy_strategy:
                 await self.build_lair()
                 await self.build_hydra_den()
+                #self.register_behavior(BuildWorkers(to_count=80))
+                #await self.build_spire()
                 #await self.build_second_gas()
+
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -495,7 +501,11 @@ class MyBot(AresBot):
             if self.structures(UnitID.HYDRALISKDEN).amount == 0 and not self.already_pending(UnitID.HYDRALISKDEN):
                 if self.tag_worker_build_hydra_den == 0:
                     if self.can_afford(UnitID.HYDRALISKDEN):
-                        target = self.first_base.position.towards(self.second_base.position, 5)
+                        positions = self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position)
+                        reference = positions[1] if positions else None
+                        target = reference.towards(self.first_base, -1)
+
+
                         #await self.build(UnitID.HYDRALISKDEN, near=target)
                         if worker := self.mediator.select_worker(target_position=target):                
                             self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
@@ -865,6 +875,22 @@ class MyBot(AresBot):
                         self.enemy_strategy.append("Flying_Structures")
                         self.terran_flying_structures = True
 
+
+    async def build_spire(self):
+        if self.structures(UnitID.LAIR).ready:
+            if self.structures(UnitID.SPIRE).amount == 0 and not self.already_pending(UnitID.SPIRE):
+                if self.tag_worker_build_spire == 0:
+                    if self.can_afford(UnitID.SPIRE):
+                        positions = self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position)
+                        target = positions[0] if positions else None
+                        #await self.build(UnitID.HYDRALISKDEN, near=target)
+                        if worker := self.mediator.select_worker(target_position=target):                
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_build_spire = worker
+                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spire, structure_type=UnitID.SPIRE, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -881,6 +907,7 @@ class MyBot(AresBot):
             #print("RallyPointSet: ", self.rally_point_set)
             print("Enemy Structures: ", self.enemy_structures)
             print("Enemy Units: ", self.enemy_units)
+            print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada

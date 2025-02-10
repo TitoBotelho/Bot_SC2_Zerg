@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - TwelvePool
+            - MacroVsTerran
 
     Protoss:
         BotName: ProtossRace
@@ -275,8 +275,10 @@ Builds:
             - 14 zergling
             - 14 zergling
             - 14 zergling
+            - 14 zergling
             - 14 queen
-            - 14 hatchery
+            - 14 roachwarren
+            - 14 gas
 
 
 
@@ -451,7 +453,7 @@ Builds:
     MacroVsTerran:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
-        ConstantWorkerProductionTill: 0
+        ConstantWorkerProductionTill: 45
         OpeningBuildOrder:
             - 12 overlord
             - 12 worker_scout:
@@ -477,6 +479,7 @@ Builds:
             - 20 drone
             - 21 drone
             - 22 drone
+            - 22 overlord
             - 23 drone
             - 24 drone
             - 25 drone
@@ -501,6 +504,10 @@ Builds:
             - 40 overlord
             - 40 drone
             - 41 drone
+            - 42 evolutionchamber
+            - 42 hatchery
+            - 43 gas
+            - 44 gas
 
 
     OppeningVs4gatewayZealotRush:
