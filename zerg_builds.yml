@@ -453,7 +453,7 @@ Builds:
     MacroVsTerran:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
-        ConstantWorkerProductionTill: 45
+        ConstantWorkerProductionTill: 50
         OpeningBuildOrder:
             - 12 overlord
             - 12 worker_scout:

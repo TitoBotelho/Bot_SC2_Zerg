@@ -209,7 +209,7 @@ class MyBot(AresBot):
         else:
             if self.EnemyRace == Race.Terran:
                 if self.time < 290:
-                    self._begin_attack_at_supply = 24
+                    self._begin_attack_at_supply = 40
                 else:
                     additional_supply = ((self.time - 290) // 3)
                     self._begin_attack_at_supply = 20 + additional_supply
@@ -867,7 +867,7 @@ class MyBot(AresBot):
     async def is_structures_flying(self):
         #Some terrans, lift their structures when they feel they are about to lose.
         #This function aims to recognize this situation to make mutaliskas
-        if self.time > 180:
+        if self.time > 240:
             if self.terran_flying_structures == False:
                 for unit in self.enemy_structures:
                     if unit.is_flying:
@@ -1114,7 +1114,7 @@ class MyBot(AresBot):
 
                 # idea here is to attack anything in range if weapon is ready
                 # check for enemy units first
-                if unit.type_id in [UnitID.ROACH, UnitID.HYDRALISK]:
+                if unit.type_id in [UnitID.ROACH]:
                     if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
                         # `ShootTargetInRange` will check weapon is ready
                         # otherwise it will not execute
