@@ -29,7 +29,7 @@ from ares.behaviors.combat.individual import (
     StutterUnitBack,
     UseAbility,
 )
-from ares.behaviors.macro import AutoSupply, Mining, SpawnController, GasBuildingController
+from ares.behaviors.macro import AutoSupply, Mining, SpawnController, GasBuildingController, BuildWorkers
 from ares.consts import ALL_STRUCTURES, WORKER_TYPES, UnitRole, UnitTreeQueryType, BuildingPurpose
 from cython_extensions import cy_closest_to, cy_in_attack_range, cy_pick_enemy_target
 from sc2.data import Race
@@ -54,8 +54,8 @@ from queens_sc2.queens import Queens
 # against Terran
 ARMY_COMP_HYDRALING: dict[Race, dict] = {
     Race.Zerg: {
-        UnitID.ZERGLING: {"proportion": 0.9, "priority": 0},
-        UnitID.HYDRALISK: {"proportion": 0.1, "priority": 1},
+        UnitID.ZERGLING: {"proportion": 0.8, "priority": 0},
+        UnitID.HYDRALISK: {"proportion": 0.2, "priority": 1},
     }
 }
 
@@ -129,6 +129,7 @@ class MyBot(AresBot):
         self.photon_cannon_found = False
         self.terran_flying_structures = False
         self.tag_worker_build_spire = 0
+        self.is_roach_attacking = False
 
         self._commenced_attack: bool = False
 
@@ -209,7 +210,7 @@ class MyBot(AresBot):
         else:
             if self.EnemyRace == Race.Terran:
                 if self.time < 290:
-                    self._begin_attack_at_supply = 24
+                    self._begin_attack_at_supply = 40
                 else:
                     additional_supply = ((self.time - 290) // 3)
                     self._begin_attack_at_supply = 20 + additional_supply
@@ -265,7 +266,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
         self._macro()
@@ -287,6 +288,7 @@ class MyBot(AresBot):
             #RETURN TO BASE
             if self.get_total_supply(forces) < self._begin_attack_at_supply:
                 self._commenced_attack = False
+                self.is_roach_attacking = False
                 # If the army is not atacking and is far form the base, move it to the base
                 for unit in forces:
                     bases = self.structures(UnitID.HATCHERY).ready
@@ -317,6 +319,8 @@ class MyBot(AresBot):
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
             await self.is_structures_flying()
+            await self.build_lair()
+            await self.build_hydra_den()
 
 
 
@@ -344,8 +348,10 @@ class MyBot(AresBot):
             if "Flying_Structures" in self.enemy_strategy:
                 await self.build_lair()
                 await self.build_hydra_den()
+                #self.register_behavior(BuildWorkers(to_count=80))
                 #await self.build_spire()
                 #await self.build_second_gas()
+
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -863,7 +869,7 @@ class MyBot(AresBot):
     async def is_structures_flying(self):
         #Some terrans, lift their structures when they feel they are about to lose.
         #This function aims to recognize this situation to make mutaliskas
-        if self.time > 180:
+        if self.time > 240:
             if self.terran_flying_structures == False:
                 for unit in self.enemy_structures:
                     if unit.is_flying:
@@ -923,6 +929,12 @@ class MyBot(AresBot):
             unit(AbilityId.CANCEL_BUILDINPROGRESS)
 
 
+        if unit.type_id == UnitID.ROACH:
+            self.is_roach_attacking = True
+             
+
+
+
 #_______________________________________________________________________________________________________________________
 #          ON UNIT CREATED
 #_______________________________________________________________________________________________________________________
@@ -958,7 +970,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250127")
+            await self.chat_send("Tag: Version_250212")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
@@ -1110,7 +1122,14 @@ class MyBot(AresBot):
 
                 # idea here is to attack anything in range if weapon is ready
                 # check for enemy units first
-                if unit.type_id in [UnitID.ROACH, UnitID.HYDRALISK]:
+
+
+
+#_______________________________________________________________________________________________________________________
+#          ROACH
+#_______________________________________________________________________________________________________________________
+
+                if unit.type_id in [UnitID.ROACH]:
                     if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
                         # `ShootTargetInRange` will check weapon is ready
                         # otherwise it will not execute
@@ -1133,6 +1152,28 @@ class MyBot(AresBot):
                         attacking_maneuver.add(
                             StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
                         )
+
+#_______________________________________________________________________________________________________________________
+#          ZERGLING
+#_______________________________________________________________________________________________________________________
+
+                if unit.type_id in [UnitID.ZERGLING]:
+                    if self.units(UnitID.ROACH).amount > 0:
+                        if self.is_roach_attacking:
+                            attacking_maneuver.add(AMove(unit=unit, target=target))
+                        
+                        else:
+                            attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
+                
+                    else:
+                        attacking_maneuver.add(AMove(unit=unit, target=target))
+
+
+
+#_______________________________________________________________________________________________________________________
+#          OTHER UNITS
+#_______________________________________________________________________________________________________________________
+
 
                 else:
                     attacking_maneuver.add(AMove(unit=unit, target=target))
