@@ -73,6 +73,17 @@ ARMY_COMP_ROACH: dict[Race, dict] = {
     }
 }
 
+# against other races
+ARMY_COMP_LINGROACH: dict[Race, dict] = {
+    Race.Zerg: {
+        UnitID.ZERGLING: {"proportion": 0.6, "priority": 0},
+        UnitID.ROACH: {"proportion": 0.4, "priority": 0},
+
+    }
+}
+
+
+
 
 COMMON_UNIT_IGNORE_TYPES: set[UnitID] = {
     UnitID.EGG,
@@ -129,6 +140,7 @@ class MyBot(AresBot):
         self.photon_cannon_found = False
         self.terran_flying_structures = False
         self.tag_worker_build_spire = 0
+        self.is_roach_attacking = False
 
         self._commenced_attack: bool = False
 
@@ -287,6 +299,7 @@ class MyBot(AresBot):
             #RETURN TO BASE
             if self.get_total_supply(forces) < self._begin_attack_at_supply:
                 self._commenced_attack = False
+                self.is_roach_attacking = False
                 # If the army is not atacking and is far form the base, move it to the base
                 for unit in forces:
                     bases = self.structures(UnitID.HATCHERY).ready
@@ -314,11 +327,11 @@ class MyBot(AresBot):
             await self.attack_reaper()
             await self.attack_banshee()
             await self.defend()
-            await self.build_mellee_upgrades()
+            await self.build_range_upgrades()
             await self.build_armor_upgrades()
             await self.is_structures_flying()
             await self.build_lair()
-            await self.build_hydra_den()
+            #await self.build_hydra_den()
 
 
 
@@ -489,6 +502,22 @@ class MyBot(AresBot):
                 if not self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL3):
                     if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL3):
                         self.research(UpgradeId.ZERGGROUNDARMORSLEVEL3)
+
+
+    async def build_range_upgrades(self):
+        if self.structures(UnitID.EVOLUTIONCHAMBER).ready:
+            if self.structures(UnitID.SPAWNINGPOOL).ready:
+                if not self.already_pending_upgrade(UpgradeId.ZERGMISSILEWEAPONSLEVEL1):
+                    if self.can_afford(UpgradeId.ZERGMISSILEWEAPONSLEVEL1):
+                        self.research(UpgradeId.ZERGMISSILEWEAPONSLEVEL1)
+                if not self.already_pending_upgrade(UpgradeId.ZERGMISSILEWEAPONSLEVEL2):
+                    if self.can_afford(UpgradeId.ZERGMISSILEWEAPONSLEVEL2):
+                        self.research(UpgradeId.ZERGMISSILEWEAPONSLEVEL2)
+                if not self.already_pending_upgrade(UpgradeId.ZERGMISSILEWEAPONSLEVEL3):
+                    if self.can_afford(UpgradeId.ZERGMISSILEWEAPONSLEVEL3):
+                        self.research(UpgradeId.ZERGMISSILEWEAPONSLEVEL3)
+
+
 
     async def build_lair(self):
         if not self.structures(UnitID.LAIR):
@@ -922,9 +951,17 @@ class MyBot(AresBot):
     async def on_unit_took_damage(self, unit: Unit, amount_damage_taken: float) -> None:
         await super(MyBot, self).on_unit_took_damage(unit, amount_damage_taken)
 
+
+        # If the building is attacked and is not complete, cancel the construction
         compare_health: float = max(50.0, unit.health_max * 0.09)
         if unit.health < compare_health and unit.is_structure:
             unit(AbilityId.CANCEL_BUILDINPROGRESS)
+
+
+        if unit.type_id == UnitID.ROACH:
+            self.is_roach_attacking = True
+             
+
 
 
 #_______________________________________________________________________________________________________________________
@@ -962,7 +999,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250127")
+            await self.chat_send("Tag: Version_250212")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
@@ -1032,7 +1069,7 @@ class MyBot(AresBot):
             if "Bunker_Rush" in self.enemy_strategy:
                 self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))             
             else:
-                self.register_behavior(SpawnController(ARMY_COMP_HYDRALING[self.race]))
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
 
 
 
@@ -1114,6 +1151,13 @@ class MyBot(AresBot):
 
                 # idea here is to attack anything in range if weapon is ready
                 # check for enemy units first
+
+
+
+#_______________________________________________________________________________________________________________________
+#          ROACH
+#_______________________________________________________________________________________________________________________
+
                 if unit.type_id in [UnitID.ROACH]:
                     if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
                         # `ShootTargetInRange` will check weapon is ready
@@ -1137,6 +1181,28 @@ class MyBot(AresBot):
                         attacking_maneuver.add(
                             StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
                         )
+
+#_______________________________________________________________________________________________________________________
+#          ZERGLING
+#_______________________________________________________________________________________________________________________
+
+                if unit.type_id in [UnitID.ZERGLING]:
+                    if self.units(UnitID.ROACH).amount > 0:
+                        if self.is_roach_attacking:
+                            attacking_maneuver.add(AMove(unit=unit, target=target))
+                        
+                        else:
+                            attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
+                
+                    else:
+                        attacking_maneuver.add(AMove(unit=unit, target=target))
+
+
+
+#_______________________________________________________________________________________________________________________
+#          OTHER UNITS
+#_______________________________________________________________________________________________________________________
+
 
                 else:
                     attacking_maneuver.add(AMove(unit=unit, target=target))

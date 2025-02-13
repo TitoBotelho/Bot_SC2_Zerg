@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - MacroVsTerran
+            - LingRoachMacroVsTerran
 
     Protoss:
         BotName: ProtossRace
@@ -628,3 +628,81 @@ Builds:
             - 18 drone
             - 19 BURROW
             - 19 gas
+
+
+    LingRoachMacroVsTerran:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 76
+        OpeningBuildOrder:
+            - 12 overlord
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 15 hatchery
+            - 14 drone
+            - 15 spawningpool
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 18 overlord
+            - 18 drone
+            - 19 drone
+            - 19 roachwarren
+            - 20 hatchery
+            - 20 overlord
+            - 19 drone
+            - 20 drone
+            - 21 drone
+            - 22 drone
+            - 22 overlord
+            - 23 drone
+            - 24 drone
+            - 25 drone
+            - 26 overlord
+            - 26 drone
+            - 27 drone
+            - 28 drone
+            - 29 drone
+            - 30 drone
+            - 31 drone
+            - 32 drone
+            - 33 drone
+            - 34 overlord
+            - 34 drone
+            - 37 hatchery
+            - 38 overlord
+            - 38 drone
+            - 39 drone
+            - 40 overlord
+            - 40 drone
+            - 41 drone
+            - 42 evolutionchamber
+            - 42 hatchery
+            - 41 overlord
+            - 43 gas
+            - 42 overlord
+            - 44 gas
+            - 43 overlord
+            - 43 gas
+            - 42 overlord
+            - 44 gas
+            - 43 overlord
+            - 102 gas
+            - 102 overlord
+            - 103 gas
+            - 103 overlord
+            - 104 gas
+            - 104 overlord
+            - 104 gas
+            - 104 overlord
+            - 104 gas
+            - 104 overlord
+            - 104 gas
+            - 104 overlord
+            - 104 gas
