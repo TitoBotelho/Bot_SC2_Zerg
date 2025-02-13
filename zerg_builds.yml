@@ -27,7 +27,7 @@ BuildChoices:
     Terran:
         BotName: TerranRace
         Cycle:
-            - MacroVsTerran
+            - LingRoachMacroVsTerran
 
     Zerg:
         BotName: ZergRace
@@ -272,13 +272,7 @@ Builds:
             - 13 overlord
             - 13 drone
             - 14 overlord
-            - 14 zergling
-            - 14 zergling
-            - 14 zergling
-            - 14 zergling
-            - 14 queen
-            - 14 roachwarren
-            - 14 gas
+            - 14 zergling x60
 
 
 
@@ -633,7 +627,7 @@ Builds:
     LingRoachMacroVsTerran:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
-        ConstantWorkerProductionTill: 76
+        ConstantWorkerProductionTill: 55
         OpeningBuildOrder:
             - 12 overlord
             - 12 worker_scout:
@@ -658,6 +652,7 @@ Builds:
             - 20 overlord
             - 19 drone
             - 20 drone
+            - 20 overlord
             - 21 drone
             - 22 drone
             - 22 overlord
@@ -668,6 +663,7 @@ Builds:
             - 26 drone
             - 27 drone
             - 28 drone
+            - 28 gas
             - 29 drone
             - 30 drone
             - 31 drone
@@ -681,10 +677,15 @@ Builds:
             - 39 drone
             - 40 overlord
             - 40 drone
+            - 40 gas
             - 41 drone
             - 42 evolutionchamber
+            - 42 overlord
             - 42 hatchery
             - 41 overlord
+            - 42 BURROW
+            - 42 hatchery
+            - 43 TUNNELINGCLAWS
             - 43 gas
             - 42 overlord
             - 44 gas
@@ -693,16 +694,8 @@ Builds:
             - 42 overlord
             - 44 gas
             - 43 overlord
-            - 102 gas
-            - 102 overlord
-            - 103 gas
-            - 103 overlord
-            - 104 gas
-            - 104 overlord
-            - 104 gas
-            - 104 overlord
-            - 104 gas
-            - 104 overlord
-            - 104 gas
-            - 104 overlord
-            - 104 gas
+            - 43 gas
+            - 43 overlord
+            - 43 gas
+
+
