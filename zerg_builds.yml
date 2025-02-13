@@ -642,6 +642,7 @@ Builds:
             - 14 gas
             - 14 drone
             - 15 drone
+            - 15 overlord
             - 16 drone
             - 17 drone
             - 18 overlord
@@ -651,6 +652,7 @@ Builds:
             - 20 hatchery
             - 20 overlord
             - 19 drone
+            - 20 overlord
             - 20 drone
             - 20 overlord
             - 21 drone
@@ -666,36 +668,37 @@ Builds:
             - 28 gas
             - 29 drone
             - 30 drone
+            - 30 overlord
             - 31 drone
+            - 31 overlord
             - 32 drone
             - 33 drone
             - 34 overlord
             - 34 drone
             - 37 hatchery
+            - 37 BURROW
+            - 37 TUNNELINGCLAWS
             - 38 overlord
             - 38 drone
             - 39 drone
             - 40 overlord
             - 40 drone
             - 40 gas
+            - 40 overlord
             - 41 drone
             - 42 evolutionchamber
             - 42 overlord
             - 42 hatchery
             - 41 overlord
-            - 42 BURROW
+            - 42 overlord
             - 42 hatchery
-            - 43 TUNNELINGCLAWS
+            - 42 overlord
             - 43 gas
             - 42 overlord
             - 44 gas
-            - 43 overlord
             - 43 gas
-            - 42 overlord
             - 44 gas
-            - 43 overlord
             - 43 gas
-            - 43 overlord
-            - 43 gas
+
 
 

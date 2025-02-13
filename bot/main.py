@@ -220,11 +220,11 @@ class MyBot(AresBot):
 
         else:
             if self.EnemyRace == Race.Terran:
-                if self.time < 290:
+                #if self.time < 290:
                     self._begin_attack_at_supply = 50
-                else:
-                    additional_supply = ((self.time - 290) // 3)
-                    self._begin_attack_at_supply = 20 + additional_supply
+                #else:
+                    #additional_supply = ((self.time - 290) // 3)
+                    #self._begin_attack_at_supply = 20 + additional_supply
 
             if self.EnemyRace == Race.Protoss:
                 self._begin_attack_at_supply = 10
