@@ -627,7 +627,7 @@ Builds:
     LingRoachMacroVsTerran:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
-        ConstantWorkerProductionTill: 55
+        ConstantWorkerProductionTill: 45
         OpeningBuildOrder:
             - 12 overlord
             - 12 worker_scout:
@@ -652,6 +652,7 @@ Builds:
             - 20 hatchery
             - 20 overlord
             - 19 drone
+            - 19 gas
             - 20 overlord
             - 20 drone
             - 20 overlord
@@ -696,9 +697,9 @@ Builds:
             - 43 gas
             - 42 overlord
             - 44 gas
-            - 43 gas
-            - 44 gas
-            - 43 gas
+
+
+
 
 
 

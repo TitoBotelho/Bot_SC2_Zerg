@@ -82,7 +82,14 @@ ARMY_COMP_LINGROACH: dict[Race, dict] = {
     }
 }
 
+# against other races
+ARMY_COMP_MUTAROACH: dict[Race, dict] = {
+    Race.Zerg: {
+        UnitID.MUTALISK: {"proportion": 0.6, "priority": 0},
+        UnitID.ROACH: {"proportion": 0.4, "priority": 0},
 
+    }
+}
 
 
 COMMON_UNIT_IGNORE_TYPES: set[UnitID] = {
@@ -357,10 +364,10 @@ class MyBot(AresBot):
                 await self.make_spines_on_main()
 
             if "Flying_Structures" in self.enemy_strategy:
-                await self.build_lair()
-                await self.build_hydra_den()
+                #await self.build_lair()
+                #await self.build_hydra_den()
                 #self.register_behavior(BuildWorkers(to_count=80))
-                #await self.build_spire()
+                await self.build_spire()
                 #await self.build_second_gas()
 
 
@@ -900,9 +907,10 @@ class MyBot(AresBot):
             if self.terran_flying_structures == False:
                 for unit in self.enemy_structures:
                     if unit.is_flying:
-                        await self.chat_send("Tag: Flying_Structures")
-                        self.enemy_strategy.append("Flying_Structures")
-                        self.terran_flying_structures = True
+                        if unit.distance_to(self.enemy_start_locations[0]) < 20:
+                            await self.chat_send("Tag: Flying_Structures")
+                            self.enemy_strategy.append("Flying_Structures")
+                            self.terran_flying_structures = True
 
 
     async def build_spire(self):
@@ -937,6 +945,7 @@ class MyBot(AresBot):
             print("Enemy Structures: ", self.enemy_structures)
             print("Enemy Units: ", self.enemy_units)
             print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
+            print("Enemy Start Location: ", self.enemy_start_locations[0])
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
@@ -1061,15 +1070,7 @@ class MyBot(AresBot):
 
 
         if self.EnemyRace == Race.Terran:
-
-            #Shyguy
-            if self.opponent_id == "88b7a15a-b346-4426-9103-094a260b873c":
-                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
-                
-            if "Bunker_Rush" in self.enemy_strategy:
-                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))             
-            else:
-                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+            self.register_behavior(SpawnController(ARMY_COMP_MUTAROACH[self.race]))
 
 
 
@@ -1196,6 +1197,14 @@ class MyBot(AresBot):
                 
                     else:
                         attacking_maneuver.add(AMove(unit=unit, target=target))
+
+
+#_______________________________________________________________________________________________________________________
+#          ROACH BURROWED
+#_______________________________________________________________________________________________________________________
+
+                if unit.type_id in [UnitID.ROACHBURROWED]:
+                    attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
 
 
 
