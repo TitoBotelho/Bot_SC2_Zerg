@@ -627,7 +627,7 @@ Builds:
     LingRoachMacroVsTerran:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
-        ConstantWorkerProductionTill: 45
+        ConstantWorkerProductionTill: 0
         OpeningBuildOrder:
             - 12 overlord
             - 12 worker_scout:
@@ -636,40 +636,36 @@ Builds:
             - 13 drone
             - 14 drone
             - 15 drone
-            - 15 hatchery
-            - 14 drone
+            - 16 hatchery
+            - 15 drone
             - 15 spawningpool
             - 14 gas
             - 14 drone
             - 15 drone
-            - 15 overlord
             - 16 drone
             - 17 drone
             - 18 overlord
             - 18 drone
-            - 19 drone
             - 19 roachwarren
-            - 20 hatchery
-            - 20 overlord
+            - 17 drone
+            - 18 drone
             - 19 drone
-            - 19 gas
-            - 20 overlord
+            - 22 hatchery
+            - 21 drone
+            - 21 gas
             - 20 drone
-            - 20 overlord
+            - 21 overlord
             - 21 drone
             - 22 drone
-            - 22 overlord
+            - 21 overlord
             - 23 drone
             - 24 drone
             - 25 drone
-            - 26 overlord
             - 26 drone
             - 27 drone
             - 28 drone
-            - 28 gas
             - 29 drone
             - 30 drone
-            - 30 overlord
             - 31 drone
             - 31 overlord
             - 32 drone
@@ -677,26 +673,29 @@ Builds:
             - 34 overlord
             - 34 drone
             - 37 hatchery
-            - 37 BURROW
-            - 37 TUNNELINGCLAWS
             - 38 overlord
             - 38 drone
             - 39 drone
             - 40 overlord
             - 40 drone
-            - 40 gas
             - 40 overlord
             - 41 drone
             - 42 evolutionchamber
             - 42 overlord
-            - 42 hatchery
             - 41 overlord
+            - 41 drone
             - 42 overlord
-            - 42 hatchery
+            - 42 drone
             - 42 overlord
-            - 43 gas
+            - 42 drone
             - 42 overlord
-            - 44 gas
+            - 42 drone
+            - 42 overlord
+            - 42 drone
+            - 42 overlord
+            - 42 drone
+            - 42 overlord
+            - 42 drone
 
 
 

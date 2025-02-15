@@ -228,7 +228,7 @@ class MyBot(AresBot):
         else:
             if self.EnemyRace == Race.Terran:
                 #if self.time < 290:
-                    self._begin_attack_at_supply = 50
+                    self._begin_attack_at_supply = 100
                 #else:
                     #additional_supply = ((self.time - 290) // 3)
                     #self._begin_attack_at_supply = 20 + additional_supply
@@ -338,6 +338,7 @@ class MyBot(AresBot):
             await self.build_armor_upgrades()
             await self.is_structures_flying()
             await self.build_lair()
+            await self.build_spine_crawlers()
             #await self.build_hydra_den()
 
 
@@ -352,10 +353,7 @@ class MyBot(AresBot):
                 await self.cancel_second_base()
                 await self.retreat_overlords()
 
-
-            if "Terran_Agressive" in self.enemy_strategy:
-                await self.build_spine_crawlers()
-
+    
 
             if "Banshee" in self.enemy_strategy:
                 await self.make_spores()
@@ -1250,18 +1248,18 @@ class MyBot(AresBot):
 
 
     def _zerg_specific_macro(self) -> None:
-        if self.EnemyRace == Race.Terran:
+        if self.EnemyRace == Race.Terran:  
+            
+            if (not self.already_pending_upgrade(UpgradeId.BURROW)):
+                self.research(UpgradeId.BURROW)
+
+            if (not self.already_pending_upgrade(UpgradeId.GLIALRECONSTITUTION)):
+                self.research(UpgradeId.GLIALRECONSTITUTION)
+
+            if (not self.already_pending_upgrade(UpgradeId.TUNNELINGCLAWS)):
+                self.research(UpgradeId.TUNNELINGCLAWS)
 
 
-            if self.enemy_strategy == "Bunker_Rush":
-                if (not self.already_pending_upgrade(UpgradeId.BURROW)):
-                    self.research(UpgradeId.BURROW)
-            if self.enemy_strategy == "Terran_Agressive":
-                if (not self.already_pending_upgrade(UpgradeId.BURROW)):
-                    self.research(UpgradeId.BURROW)        
-            else:
-                if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
-                    self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
 
         if self.EnemyRace == Race.Protoss:
             if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
