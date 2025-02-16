@@ -148,6 +148,7 @@ class MyBot(AresBot):
         self.terran_flying_structures = False
         self.tag_worker_build_spire = 0
         self.is_roach_attacking = False
+        self.defending = False
 
         self._commenced_attack: bool = False
 
@@ -228,7 +229,7 @@ class MyBot(AresBot):
         else:
             if self.EnemyRace == Race.Terran:
                 #if self.time < 290:
-                    self._begin_attack_at_supply = 100
+                    self._begin_attack_at_supply = 40
                 #else:
                     #additional_supply = ((self.time - 290) // 3)
                     #self._begin_attack_at_supply = 20 + additional_supply
@@ -339,6 +340,7 @@ class MyBot(AresBot):
             await self.is_structures_flying()
             await self.build_lair()
             await self.build_spine_crawlers()
+            await self.make_zerglings()
             #await self.build_hydra_den()
 
 
@@ -843,11 +845,25 @@ class MyBot(AresBot):
 
 
     async def defend(self):
+        enemy_on_creep = False
         for enemyUnit in self.enemy_units:
             if self.has_creep(enemyUnit.position):
-                forces: Units = self.mediator.get_units_from_role(role=UnitRole.ATTACKING)
+                enemy_on_creep = True
+                self.defending = True
+                self._commenced_attack = True
+
+        if not enemy_on_creep:
+            forces: Units = self.mediator.get_units_from_role(role=UnitRole.ATTACKING)
+            if self.get_total_supply(forces) < self._begin_attack_at_supply:
+                self._commenced_attack = False
+                self.defending = False
                 for unit in forces:
-                    unit.attack(enemyUnit.position)
+                    if self.second_base is not None:         
+                        unit.move(self.second_base.position.towards(self.game_info.map_center, 9))                        
+                    else:
+                        unit.move(self.first_base.position.towards(self.game_info.map_center, 6))
+
+
 
 
 
@@ -924,6 +940,11 @@ class MyBot(AresBot):
                             self.tag_worker_build_spire = worker
                             #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spire, structure_type=UnitID.SPIRE, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+    async def make_zerglings(self):
+        if self.minerals >700:
+            if self.vespene < 25:
+                self.train(UnitID.ZERGLING)
 
 
 #_______________________________________________________________________________________________________________________
@@ -1093,7 +1114,7 @@ class MyBot(AresBot):
         self._zerg_specific_macro()
 
 #_______________________________________________________________________________________________________________________
-#          DEF MICRO
+#          DEF _MICRO
 #_______________________________________________________________________________________________________________________
 
     def _micro(self, forces: Units) -> None:

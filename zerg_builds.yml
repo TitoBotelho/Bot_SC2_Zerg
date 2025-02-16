@@ -14,6 +14,7 @@ BuildChoices:
         Cycle:
             - LingRoachMacroVsTerran
 
+
     Protoss:
         BotName: ProtossRace
         Cycle:
@@ -573,12 +574,15 @@ Builds:
             - 15 zergling
             - 15 zergling
             - 15 drone
+            - 16 roachwarren
             - 16 drone
             - 17 drone
+            - 18 overlord
             - 18 drone
             - 19 drone
             - 19 overlord
             - 20 drone
+            - 21 overlord
             - 21 drone
             - 22 drone
             - 23 drone
@@ -586,10 +590,14 @@ Builds:
             - 25 hatchery
             - 25 overlord
             - 24 drone
+            - 25 overlord
             - 25 drone
+            - 25 overlord
             - 26 drone
+            - 26 gas
             - 27 evolutionchamber
             - 26 hatchery
+            - 26 overlord
 
 
     OppeningVsRoachRush:
