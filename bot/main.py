@@ -149,6 +149,7 @@ class MyBot(AresBot):
         self.tag_worker_build_spire = 0
         self.is_roach_attacking = False
         self.defending = False
+        self.liberatorFound = False
 
         self._commenced_attack: bool = False
 
@@ -341,6 +342,7 @@ class MyBot(AresBot):
             await self.build_lair()
             await self.build_spine_crawlers()
             await self.make_zerglings()
+            await self.find_liberator()
             #await self.build_hydra_den()
 
 
@@ -945,6 +947,17 @@ class MyBot(AresBot):
         if self.minerals >700:
             if self.vespene < 25:
                 self.train(UnitID.ZERGLING)
+
+
+    async def find_liberator(self):
+        if self.liberatorFound == False:
+            for unit in self.enemy_units:
+                if unit.name == 'Liberator':
+                    self.liberatorFound = True
+                    break
+            if self.liberatorFound:
+                await self.chat_send("Tag: Liberator")
+                self.enemy_strategy.append("Liberator")
 
 
 #_______________________________________________________________________________________________________________________
