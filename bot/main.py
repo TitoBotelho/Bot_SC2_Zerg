@@ -137,6 +137,7 @@ class MyBot(AresBot):
         self.reaperFound = False
         self.bansheeFound = False
         self.tag_worker_build_first_spore = 0
+        self.tag_worker_build_second_spore = 0
         self.random_race_discovered = False
         self.one_proxy_barracks_found = False
         self.two_proxy_barracks_found = False
@@ -357,10 +358,13 @@ class MyBot(AresBot):
                 await self.cancel_second_base()
                 await self.retreat_overlords()
 
-    
 
             if "Banshee" in self.enemy_strategy:
                 await self.make_spores()
+
+            if "Liberator" in self.enemy_strategy:
+                await self.make_spores()
+
 
             if "2_Proxy_Barracks" in self.enemy_strategy:
                 await self.make_spines_on_main()
@@ -796,17 +800,28 @@ class MyBot(AresBot):
 
 
     async def make_spores(self):
-        if self.structures(UnitID.SPORECRAWLER).amount == 0 and not self.already_pending(UnitID.SPORECRAWLER):
-            if self.tag_worker_build_first_spore == 0:
+        if self.tag_worker_build_first_spore == 0:
+            if self.can_afford(UnitID.SPORECRAWLER):
+                my_base_location = self.first_base
+                # Send the second Overlord in front of second base to scout
+                target = my_base_location.position.towards(self.game_info.map_center, -5)                   
+                if worker := self.mediator.select_worker(target_position=target):                
+                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                    self.tag_worker_build_first_spore = worker
+                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                    self.mediator.build_with_specific_worker(worker=self.tag_worker_build_first_spore, structure_type=UnitID.SPORECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+        if self.tag_worker_build_second_spore == 0:
+            if self.second_base is not None:
                 if self.can_afford(UnitID.SPORECRAWLER):
-                    my_base_location = self.first_base
+                    my_base_location = self.second_base
                     # Send the second Overlord in front of second base to scout
-                    target = my_base_location.position.towards(self.game_info.map_center, -4)                   
+                    target = my_base_location.position.towards(self.game_info.map_center, -5)                   
                     if worker := self.mediator.select_worker(target_position=target):                
                         self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                        self.tag_worker_build_first_spore = worker
+                        self.tag_worker_build_second_spore = worker
                         #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                        self.mediator.build_with_specific_worker(worker=self.tag_worker_build_first_spore, structure_type=UnitID.SPORECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+                        self.mediator.build_with_specific_worker(worker=self.tag_worker_build_second_spore, structure_type=UnitID.SPORECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
     async def make_spines_on_main(self):
         if self.structures(UnitID.SPAWNINGPOOL).ready:
