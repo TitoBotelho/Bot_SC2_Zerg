@@ -82,14 +82,28 @@ ARMY_COMP_LINGROACH: dict[Race, dict] = {
     }
 }
 
-# against other races
+# against terran
 ARMY_COMP_MUTAROACH: dict[Race, dict] = {
     Race.Zerg: {
-        UnitID.MUTALISK: {"proportion": 0.6, "priority": 0},
-        UnitID.ROACH: {"proportion": 0.4, "priority": 0},
+        UnitID.MUTALISK: {"proportion": 0.9, "priority": 0},
+        UnitID.ROACH: {"proportion": 0.1, "priority": 1 },
 
     }
 }
+
+
+# against flying units
+ARMY_COMP_MUTAlLISK: dict[Race, dict] = {
+    Race.Zerg: {
+        UnitID.MUTALISK: {"proportion": 1.0, "priority": 0},
+
+    }
+}
+
+
+
+
+
 
 
 COMMON_UNIT_IGNORE_TYPES: set[UnitID] = {
@@ -151,6 +165,7 @@ class MyBot(AresBot):
         self.is_roach_attacking = False
         self.defending = False
         self.liberatorFound = False
+        self.SapwnControllerOn = True
 
         self._commenced_attack: bool = False
 
@@ -375,6 +390,7 @@ class MyBot(AresBot):
                 #self.register_behavior(BuildWorkers(to_count=80))
                 await self.build_spire()
                 #await self.build_second_gas()
+                await self.build_four_gas()
 
 
         if self.EnemyRace == Race.Protoss:
@@ -718,6 +734,14 @@ class MyBot(AresBot):
         if self.structures(UnitID.HATCHERY).amount == 2:
             self.register_behavior(GasBuildingController(to_count = 2))
 
+
+    async def build_four_gas(self):
+        if self.structures(UnitID.HATCHERY).amount >= 2:
+            self.register_behavior(GasBuildingController(to_count = 4))
+            
+            
+
+
     async def cancel_second_base(self):
         hatcheries = self.structures(UnitID.HATCHERY)
         if hatcheries:
@@ -865,9 +889,10 @@ class MyBot(AresBot):
         enemy_on_creep = False
         for enemyUnit in self.enemy_units:
             if self.has_creep(enemyUnit.position):
-                enemy_on_creep = True
-                self.defending = True
-                self._commenced_attack = True
+                if not enemyUnit.is_flying:
+                    enemy_on_creep = True
+                    self.defending = True
+                    self._commenced_attack = True
 
         if not enemy_on_creep:
             forces: Units = self.mediator.get_units_from_role(role=UnitRole.ATTACKING)
@@ -945,6 +970,12 @@ class MyBot(AresBot):
 
 
     async def build_spire(self):
+        if self.structures(UnitID.SPIRE).ready.amount < 1:
+            self.SapwnControllerOn = False
+
+        else:
+            self.SapwnControllerOn = True
+
         if self.structures(UnitID.LAIR).ready:
             if self.structures(UnitID.SPIRE).amount == 0 and not self.already_pending(UnitID.SPIRE):
                 if self.tag_worker_build_spire == 0:
@@ -957,6 +988,8 @@ class MyBot(AresBot):
                             self.tag_worker_build_spire = worker
                             #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spire, structure_type=UnitID.SPIRE, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+
 
     async def make_zerglings(self):
         if self.minerals >700:
@@ -1114,30 +1147,34 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
 
+        if self.SapwnControllerOn == True:
 
 
-        if self.EnemyRace == Race.Terran:
-            self.register_behavior(SpawnController(ARMY_COMP_MUTAROACH[self.race]))
+            if self.EnemyRace == Race.Terran:
+                self.register_behavior(SpawnController(ARMY_COMP_MUTAROACH[self.race]))
 
 
 
-        if self.EnemyRace == Race.Protoss:
-            if "2_Proxy_Gateway" in self.enemy_strategy:
-                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race])) 
+            if self.EnemyRace == Race.Protoss:
+                if "2_Proxy_Gateway" in self.enemy_strategy:
+                    self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race])) 
 
-            if "Cannon_Rush" in self.enemy_strategy:
-                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race])) 
+                if "Cannon_Rush" in self.enemy_strategy:
+                    self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race])) 
 
 
-            else:                                           
-                self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
+                else:                                           
+                    self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
 
-        else:
-            self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+            else:
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
 
 
         # see also `ProductionController` for ongoing generic production, not needed here
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/macro_behaviors.html#ares.behaviors.macro.spawn_controller.ProductionController
+
+
+
 
         self._zerg_specific_macro()
 
