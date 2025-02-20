@@ -356,9 +356,10 @@ class MyBot(AresBot):
             await self.build_armor_upgrades()
             await self.is_structures_flying()
             await self.build_lair()
-            await self.build_spine_crawlers()
+            #await self.build_spine_crawlers()
             await self.make_zerglings()
             await self.find_liberator()
+            await self.turnOffSpawningControllerOnEarlyGame()
             #await self.build_hydra_den()
 
 
@@ -652,7 +653,7 @@ class MyBot(AresBot):
                 if "Terran_Agressive" not in self.enemy_strategy:
                     await self.chat_send("Tag: Terran_Agressive")
                     self.enemy_strategy.append("Terran_Agressive")
-                    await self.build_spine_crawlers()
+                    #await self.build_spine_crawlers()
             else:
                 if "2_Base_Terran" not in self.enemy_strategy:
                     await self.chat_send("Tag: 2_Base_Terran")
@@ -1008,6 +1009,11 @@ class MyBot(AresBot):
                 self.enemy_strategy.append("Liberator")
 
 
+    async def turnOffSpawningControllerOnEarlyGame(self):
+        if self.build_order_runner.build_completed == False:
+            self.SapwnControllerOn = False
+        else:
+            self.SapwnControllerOn = True
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1026,6 +1032,7 @@ class MyBot(AresBot):
             print("Enemy Units: ", self.enemy_units)
             print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
             print("Enemy Start Location: ", self.enemy_start_locations[0])
+            print("Build Completed: ", self.build_order_runner.build_completed)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
