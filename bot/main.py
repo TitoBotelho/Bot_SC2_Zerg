@@ -28,6 +28,7 @@ from ares.behaviors.combat.individual import (
     ShootTargetInRange,
     StutterUnitBack,
     UseAbility,
+    AttackTarget,
 )
 from ares.behaviors.macro import AutoSupply, Mining, SpawnController, GasBuildingController, BuildWorkers
 from ares.consts import ALL_STRUCTURES, WORKER_TYPES, UnitRole, UnitTreeQueryType, BuildingPurpose
@@ -1297,6 +1298,33 @@ class MyBot(AresBot):
                 if unit.type_id in [UnitID.ROACHBURROWED]:
                     attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
 
+
+
+#_______________________________________________________________________________________________________________________
+#          MUTALISK
+#_______________________________________________________________________________________________________________________
+
+                if unit.type_id in [UnitID.MUTALISK]:
+                    flyingTarget = None
+                    for unit in self.enemy_units:
+                        if unit.is_flying:
+                            flyingTarget = unit.position
+                            break
+
+                    if flyingTarget is not None:
+                        attacking_maneuver.add(AttackTarget(unit=unit, target=flyingTarget))
+
+                    else: 
+                        for structure in self.enemy_structures:
+                            if structure.is_flying:
+                                flyingTarget = structure.position
+                                break
+
+                        if flyingTarget is not None:
+                            attacking_maneuver.add(AttackTarget(unit=unit, target=flyingTarget))
+
+                        else:
+                            attacking_maneuver.add(AMove(unit=unit, target=target))
 
 
 #_______________________________________________________________________________________________________________________
