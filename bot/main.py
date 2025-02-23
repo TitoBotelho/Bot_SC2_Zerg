@@ -167,6 +167,7 @@ class MyBot(AresBot):
         self.defending = False
         self.liberatorFound = False
         self.SapwnControllerOn = True
+        self.speedMiningOn = True
 
         self._commenced_attack: bool = False
 
@@ -428,13 +429,20 @@ class MyBot(AresBot):
 
 
         if self.EnemyRace == Race.Zerg:
-            await self.defend_vs_spine_crawler()
+            await self.find_cheese_spine_crawler()
             await self.burrow_roaches()
             await self.find_mutalisks()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
         
+            if "Cheese_Spine_Crawler" in self.enemy_strategy:
+                await self.build_spine_crawlers()
+                await self.turnOffSpeedMining()
+                await self.find_cheese_spine_crawler()
+                await self.worker_defense()
+
+
         if self.EnemyRace == Race.Random:
             await self.build_queens()
             await self.discover_race()
@@ -761,19 +769,32 @@ class MyBot(AresBot):
                     self.overlord_retreated = True
 
 
-    async def defend_vs_spine_crawler(self):
+    async def worker_defense(self):
         spine_crawler_amount = 0
         for spinecrawler in self.enemy_structures(UnitID.SPINECRAWLER):
-            if spinecrawler.distance_to(self.first_base) < 11:
-                self.spineCrawlerCheeseDetected = True
+            if spinecrawler.distance_to(self.first_base) < 20:
                 spine_crawler_amount = spine_crawler_amount+1
                 for drone in self.workers:
                     self.mediator.switch_roles(from_role=UnitRole.GATHERING, to_role=UnitRole.DEFENDING)
                     drone.attack(spinecrawler.position)
+
+
         if spine_crawler_amount == 0 and self.spineCrawlerCheeseDetected:
             self.spineCrawlerCheeseDetected = False
             for drone in self.workers:
                 self.mediator.assign_role(tag = drone.tag, role = UnitRole.GATHERING)
+                #self.speedMiningOn = True
+                
+
+
+    async def find_cheese_spine_crawler(self):
+        if self.spineCrawlerCheeseDetected == False:
+            for spinecrawler in self.enemy_structures(UnitID.SPINECRAWLER):
+                if spinecrawler.distance_to(self.first_base) < 11:
+                    self.spineCrawlerCheeseDetected = True
+                    await self.chat_send("Tag: Cheese Spine Crawler")
+                    self.enemy_strategy.append("Cheese_Spine_Crawler")
+
 
 
     async def burrow_roaches(self):
@@ -1015,6 +1036,10 @@ class MyBot(AresBot):
             self.SapwnControllerOn = False
         else:
             self.SapwnControllerOn = True
+
+    async def turnOffSpeedMining(self):
+        if self.speedMiningOn == True:
+            self.speedMiningOn = False
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1138,7 +1163,9 @@ class MyBot(AresBot):
         # MINE
         # ares-sc2 Mining behavior
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/macro_behaviors.html#ares.behaviors.macro.mining.Mining
-        self.register_behavior(Mining())
+        
+        if self.speedMiningOn == True:
+            self.register_behavior(Mining())
 
         # MAKE SUPPLY
         # ares-sc2 AutoSupply

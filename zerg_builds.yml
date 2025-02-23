@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - LingRoachMacroVsTerran
+            - OppeningVsSharkling
 
 
     Protoss:
@@ -113,6 +113,14 @@ BuildChoices:
         BotName: Thheo
         Cycle:
             - OppeningVsLingRush
+
+
+    944bcdff-a18f-4ed0-a5fc-35764399ef05:
+        BotName: Sharkling
+        Cycle:
+            - OppeningVsSharkling
+
+
 
 
 Builds:
@@ -699,6 +707,17 @@ Builds:
 
 
 
-
+    OppeningVsSharkling:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 spawningpool
+            - 11 drone
+            - 12 drone
+            - 13 drone
+            - 13 overlord
+            - 13 spinecrawler      
+            - 14 zergling x4
 
 
