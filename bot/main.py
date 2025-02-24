@@ -437,10 +437,9 @@ class MyBot(AresBot):
                 await self.make_spores()
         
             if "Cheese_Spine_Crawler" in self.enemy_strategy:
-                await self.build_spine_crawlers()
                 await self.turnOffSpeedMining()
-                await self.find_cheese_spine_crawler()
                 await self.worker_defense()
+                await self.turnOnSpeedMiningAtTimeX(95)
 
 
         if self.EnemyRace == Race.Random:
@@ -779,10 +778,10 @@ class MyBot(AresBot):
                     drone.attack(spinecrawler.position)
 
 
-        if spine_crawler_amount == 0 and self.spineCrawlerCheeseDetected:
-            self.spineCrawlerCheeseDetected = False
-            for drone in self.workers:
-                self.mediator.assign_role(tag = drone.tag, role = UnitRole.GATHERING)
+        #if spine_crawler_amount == 0 and self.spineCrawlerCheeseDetected:
+            #self.spineCrawlerCheeseDetected = False
+            #for drone in self.workers:
+                #self.mediator.assign_role(tag = drone.tag, role = UnitRole.GATHERING)
                 #self.speedMiningOn = True
                 
 
@@ -792,6 +791,8 @@ class MyBot(AresBot):
             for spinecrawler in self.enemy_structures(UnitID.SPINECRAWLER):
                 if spinecrawler.distance_to(self.first_base) < 11:
                     self.spineCrawlerCheeseDetected = True
+                    break
+            if self.spineCrawlerCheeseDetected:
                     await self.chat_send("Tag: Cheese Spine Crawler")
                     self.enemy_strategy.append("Cheese_Spine_Crawler")
 
@@ -1040,6 +1041,14 @@ class MyBot(AresBot):
     async def turnOffSpeedMining(self):
         if self.speedMiningOn == True:
             self.speedMiningOn = False
+
+
+    async def turnOnSpeedMiningAtTimeX(self, x: int):
+        if self.time > x:
+            self.spineCrawlerCheeseDetected = False
+            for drone in self.workers:
+                self.mediator.assign_role(tag = drone.tag, role = UnitRole.GATHERING)
+            self.speedMiningOn = True
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1121,7 +1130,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250212")
+            await self.chat_send("Tag: Version_250224")
             
         # For the third Overlord and beyond, send them behind the first base
         elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:

@@ -717,7 +717,9 @@ Builds:
             - 12 drone
             - 13 drone
             - 13 overlord
-            - 13 spinecrawler      
-            - 14 zergling x4
+            - 13 spinecrawler
+            - 12 spinecrawler
+            - 13 queen
+            - 11 zergling x4
 
 
