@@ -787,15 +787,13 @@ class MyBot(AresBot):
 
 
     async def find_cheese_spine_crawler(self):
-        if self.spineCrawlerCheeseDetected == False:
+        if not self.spineCrawlerCheeseDetected:
             for spinecrawler in self.enemy_structures(UnitID.SPINECRAWLER):
-                if spinecrawler.distance_to(self.first_base) < 11:
+                if spinecrawler.distance_to(self.first_base) < 20:
                     self.spineCrawlerCheeseDetected = True
-                    break
-            if self.spineCrawlerCheeseDetected:
                     await self.chat_send("Tag: Cheese Spine Crawler")
                     self.enemy_strategy.append("Cheese_Spine_Crawler")
-
+                    break
 
 
     async def burrow_roaches(self):

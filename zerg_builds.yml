@@ -713,13 +713,17 @@ Builds:
         ConstantWorkerProductionTill: 0
         OpeningBuildOrder:
             - 12 spawningpool
-            - 11 drone
-            - 12 drone
-            - 13 drone
-            - 13 overlord
-            - 13 spinecrawler
-            - 12 spinecrawler
-            - 13 queen
-            - 11 zergling x4
+            - 6 drone
+            - 6 drone
+            - 6 drone
+            - 6 overlord
+            - 6 spinecrawler
+            - 6 spinecrawler
+            - 6 queen
+            - 6 zergling x4
+            - 6 overlord
+            - 6 queen
+            - 6 zergling x4
+            - 6 overlord
 
 
