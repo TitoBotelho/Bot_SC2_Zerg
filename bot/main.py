@@ -245,6 +245,13 @@ class MyBot(AresBot):
         if self.opponent_id == "da0fe671-3f51-4c48-8ac2-252cb67ee545":
             self._begin_attack_at_supply = 1
 
+        #SharpenedEdge
+        if self.opponent_id == "c5e0e203-bfa8-4f8f-a96d-5235a9a481af":
+            self._begin_attack_at_supply = 1
+
+
+
+
         else:
             if self.EnemyRace == Race.Terran:
                 #if self.time < 290:

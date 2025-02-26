@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - OppeningVsSharkling
+            - VsmuravevTerran
 
 
     Protoss:
@@ -42,6 +42,12 @@ BuildChoices:
     #        - DummyOpening
 
 
+
+
+    c5e0e203-bfa8-4f8f-a96d-5235a9a481af:
+        BotName: SharpenedEdge
+        Cycle:
+            - TwelvePool
 
 
     da0fe671-3f51-4c48-8ac2-252cb67ee545:
@@ -107,6 +113,12 @@ BuildChoices:
         BotName: t-bone
         Cycle:
             - VsReaperPressure
+
+
+    8c6e0427-4960-47bc-8153-a434726739bd:
+        BotName: muravevTerran
+        Cycle:
+            - VsmuravevTerran
 
 
     745ab3e1-86ed-4090-b79c-1db199655a78:
@@ -560,52 +572,36 @@ Builds:
             - 16 queen
             - 16 overlord
 
-    VsReaperPressure:
+    VsmuravevTerran:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
         ConstantWorkerProductionTill: 38
         OpeningBuildOrder:
-            - 12 overlord
-            - 12 worker_scout:
+            - 14 overlord
+            - 14 worker_scout:
                 [nat, third, fourth, fifth, third, fourth, sixth, map_center]
-            - 12 drone
-            - 13 drone
-            - 14 spawningpool
-            - 13 gas
-            - 12 drone
-            - 13 drone
             - 14 drone
-            - 15 drone
             - 16 drone
-            - 16 hatchery
-            - 15 overlord
-            - 15 zergling
-            - 15 zergling
+            - 16 spawningpool
             - 15 drone
-            - 16 roachwarren
-            - 16 drone
-            - 17 drone
+            - 18 hatchery
             - 18 overlord
-            - 18 drone
-            - 19 drone
-            - 19 overlord
-            - 20 drone
-            - 21 overlord
-            - 21 drone
+            - 17 gas
+            - 19 zergling
+            - 20 zergling
+            - 21 zergling
             - 22 drone
-            - 23 drone
-            - 24 overlord
+            - 25 drone
+            - 26 drone
+            - 26 roachwarren
+            - 26 drone
+            - 27 drone
+            - 28 drone
+            - 29 drone
             - 25 hatchery
             - 25 overlord
-            - 24 drone
+            - 25 gas
             - 25 overlord
-            - 25 drone
-            - 25 overlord
-            - 26 drone
-            - 26 gas
-            - 27 evolutionchamber
-            - 26 hatchery
-            - 26 overlord
 
 
     OppeningVsRoachRush:
@@ -731,3 +727,49 @@ Builds:
             - 6 overlord
 
 
+    VsReaperPressure:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 38
+        OpeningBuildOrder:
+            - 12 overlord
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
+            - 12 drone
+            - 13 drone
+            - 14 spawningpool
+            - 13 gas
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 16 hatchery
+            - 15 overlord
+            - 15 zergling
+            - 15 zergling
+            - 15 drone
+            - 16 roachwarren
+            - 16 drone
+            - 17 drone
+            - 18 overlord
+            - 18 drone
+            - 19 drone
+            - 19 overlord
+            - 20 drone
+            - 21 overlord
+            - 21 drone
+            - 22 drone
+            - 23 drone
+            - 24 overlord
+            - 25 hatchery
+            - 25 overlord
+            - 24 drone
+            - 25 overlord
+            - 25 drone
+            - 25 overlord
+            - 26 drone
+            - 26 gas
+            - 27 evolutionchamber
+            - 26 hatchery
+            - 26 overlord
