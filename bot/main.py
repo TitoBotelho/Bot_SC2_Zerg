@@ -380,8 +380,10 @@ class MyBot(AresBot):
 
 
             if "Proxy_Barracks" in self.enemy_strategy:
-                await self.cancel_second_base()
+                #await self.cancel_second_base()
                 await self.retreat_overlords()
+                await self.harass_worker_proxy_barracks()
+                await self.build_spine_crawlers()
 
 
             if "Banshee" in self.enemy_strategy:
@@ -770,7 +772,7 @@ class MyBot(AresBot):
         #retreat the overlords to the first base so they don't die
         if self.overlord_retreated == False:
             for overlord in self.units(UnitID.OVERLORD):
-                if overlord.distance_to(self.first_base.position) < 20:  # Defina a distância que considera "perto"
+                if overlord.distance_to(self.first_base.position) < 30:  # Defina a distância que considera "perto"
                     overlord.move(self.first_base.position)
                     self.overlord_retreated = True
 
@@ -1054,6 +1056,20 @@ class MyBot(AresBot):
             for drone in self.workers:
                 self.mediator.assign_role(tag = drone.tag, role = UnitRole.GATHERING)
             self.speedMiningOn = True
+
+
+    async def harass_worker_proxy_barracks(self):
+        worker_scouts: Units = self.mediator.get_units_from_role(
+        role=UnitRole.BUILD_RUNNER_SCOUT, unit_type=self.worker_type
+        )
+        for scout in worker_scouts:
+            for unit in self.enemy_units:
+                if unit.name == 'SCV':
+                    scout.attack(unit.position)
+                    break
+
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
