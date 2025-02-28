@@ -168,6 +168,7 @@ class MyBot(AresBot):
         self.liberatorFound = False
         self.SapwnControllerOn = True
         self.speedMiningOn = True
+        self.enemy_has_3_bases = False
 
         self._commenced_attack: bool = False
 
@@ -369,6 +370,7 @@ class MyBot(AresBot):
             await self.make_zerglings()
             await self.find_liberator()
             await self.turnOffSpawningControllerOnEarlyGame()
+            await self.is_3_base_terran()
             #await self.build_hydra_den()
 
 
@@ -392,9 +394,6 @@ class MyBot(AresBot):
             if "Liberator" in self.enemy_strategy:
                 await self.make_spores()
 
-
-            if "2_Proxy_Barracks" in self.enemy_strategy:
-                await self.make_spines_on_main()
 
             if "Flying_Structures" in self.enemy_strategy:
                 #await self.build_lair()
@@ -932,7 +931,7 @@ class MyBot(AresBot):
                 self.defending = False
                 for unit in forces:
                     if self.second_base is not None:         
-                        unit.move(self.second_base.position.towards(self.game_info.map_center, 9))                        
+                        unit.move(self.second_base.position.towards(self.game_info.map_center, 4))                        
                     else:
                         unit.move(self.first_base.position.towards(self.game_info.map_center, 6))
 
@@ -1067,6 +1066,14 @@ class MyBot(AresBot):
                 if unit.name == 'SCV':
                     scout.attack(unit.position)
                     break
+
+
+    async def is_3_base_terran(self):
+        if self.enemy_has_3_bases == False:
+            if self.mediator.get_enemy_has_base_outside_natural == True:
+                await self.chat_send("Tag: 3_Base_Terran")
+                self.enemy_strategy.append("3_Base_Terran")
+                self.enemy_has_3_bases = True
 
 
 
