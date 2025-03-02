@@ -30,7 +30,7 @@ from ares.behaviors.combat.individual import (
     UseAbility,
     AttackTarget,
 )
-from ares.behaviors.macro import AutoSupply, Mining, SpawnController, GasBuildingController, BuildWorkers
+from ares.behaviors.macro import AutoSupply, Mining, SpawnController, GasBuildingController, BuildWorkers, ExpansionController
 from ares.consts import ALL_STRUCTURES, WORKER_TYPES, UnitRole, UnitTreeQueryType, BuildingPurpose
 from cython_extensions import cy_closest_to, cy_in_attack_range, cy_pick_enemy_target
 from sc2.data import Race
@@ -250,6 +250,9 @@ class MyBot(AresBot):
         if self.opponent_id == "c5e0e203-bfa8-4f8f-a96d-5235a9a481af":
             self._begin_attack_at_supply = 1
 
+        #Apidae
+        if self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
+            self._begin_attack_at_supply = 1
 
 
 
@@ -403,6 +406,9 @@ class MyBot(AresBot):
                 #await self.build_second_gas()
                 await self.build_four_gas()
 
+
+            if "3_Base_Terran" in self.enemy_strategy:
+                await self.macro_protocol()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -1076,6 +1082,16 @@ class MyBot(AresBot):
                 self.enemy_has_3_bases = True
 
 
+
+    async def macro_protocol(self):
+        if self.workers.amount < 70:
+            self.SapwnControllerOn = False
+            self.register_behavior(ExpansionController(to_count=5, max_pending=2))
+            self.register_behavior(BuildWorkers(to_count=70))           
+            self.register_behavior(GasBuildingController(to_count=4, max_pending=2))
+
+        else:
+            self.SapwnControllerOn = True
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
