@@ -1176,8 +1176,36 @@ class MyBot(AresBot):
             self.do(unit.move(target))
             await self.chat_send("Tag: Version_250224")
             
+
+        # Send the second Overlord to scout on the third base
+        if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
+            enemy_third = self.mediator.get_enemy_third
+
+ 
+            # Send the second Overlord in front of second base to scout
+            target = enemy_third.position.towards(self.game_info.map_center, 9)
+        
+            # Send the Overlord to the new position
+            self.do(unit.move(target))
+
+
+        # Send the second Overlord to scout on the fourth base
+        if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 4:
+            enemy_fourth = self.mediator.get_enemy_fourth
+
+ 
+            # Send the second Overlord in front of second base to scout
+            target = enemy_fourth.position.towards(self.game_info.map_center, 9)
+        
+            # Send the Overlord to the new position
+            self.do(unit.move(target))
+
+
+
+
+
         # For the third Overlord and beyond, send them behind the first base
-        elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 3:
+        elif unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount >= 5:
 
             target = self.first_base.position.towards(self.game_info.map_center, -15)  # Get a position behind of the first base
             self.do(unit.move(target))
