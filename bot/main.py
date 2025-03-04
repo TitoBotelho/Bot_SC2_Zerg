@@ -1070,7 +1070,7 @@ class MyBot(AresBot):
         for scout in worker_scouts:
             for unit in self.enemy_units:
                 if unit.name == 'SCV':
-                    scout.attack(unit.position)
+                    scout.attack(unit)
                     break
 
 
