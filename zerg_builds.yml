@@ -55,10 +55,18 @@ BuildChoices:
         Cycle:
             - TwelvePool
 
+    4b2e0151-2696-4997-b2ae-bb4badeb0695:
+        BotName: Raiden-p-bot
+        Cycle:
+            - TwelvePool
+
+
+
     4a491758-76ff-40de-996c-018d49b6237f:
         BotName: 12PoolBot
         Cycle:
             - OppeningVsLingRush
+            
 
     81654bce-d0ae-4456-b987-2b585fe5a819:
         BotName: Tartarus

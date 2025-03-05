@@ -254,7 +254,9 @@ class MyBot(AresBot):
         if self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
             self._begin_attack_at_supply = 1
 
-
+        #Raiden-p-bot
+        if self.opponent_id == "4b2e0151-2696-4997-b2ae-bb4badeb0695":
+            self._begin_attack_at_supply = 1
 
         else:
             if self.EnemyRace == Race.Terran:
