@@ -434,8 +434,8 @@ class MyBot(AresBot):
                 await self.build_roach_warren()
                 await self.research_burrow()
 
-            if "Cannon_Rush" in self.enemy_strategy:
-                await self.cancel_second_base()
+            #if "Cannon_Rush" in self.enemy_strategy:
+                #await self.cancel_second_base()
                 #await self.build_roach_warren()
                 #await self.research_burrow()
                 #await self.build_second_gas()
@@ -712,7 +712,7 @@ class MyBot(AresBot):
                         break  # Breake the loop if find the Nexus
                 if found_bunker:
                     await self.chat_send("Tag: Bunker_Rush")
-                    self.enemy_strategy.append("2_Base_Protoss")
+                    self.enemy_strategy.append("Bunker_Rush")
 
 
     async def build_roach_warren(self):
@@ -943,6 +943,8 @@ class MyBot(AresBot):
                     else:
                         unit.move(self.first_base.position.towards(self.game_info.map_center, 6))
 
+            else:
+                self._commenced_attack = True
 
 
 

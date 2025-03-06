@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - LingRoachMacroVsTerran
+            - VsReaperPressure
 
 
     Protoss:
@@ -744,46 +744,40 @@ Builds:
     VsReaperPressure:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
-        ConstantWorkerProductionTill: 38
+        ConstantWorkerProductionTill: 0
         OpeningBuildOrder:
             - 12 overlord
-            - 12 worker_scout:
-                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
-            - 12 drone
-            - 13 drone
-            - 14 spawningpool
-            - 13 gas
             - 12 drone
             - 13 drone
             - 14 drone
             - 15 drone
-            - 16 drone
-            - 16 hatchery
-            - 15 overlord
-            - 15 zergling
-            - 15 zergling
+            - 15 hatchery
+            - 14 spawningpool
+            - 13 gas
+            - 13 drone
+            - 14 drone
             - 15 drone
-            - 16 roachwarren
             - 16 drone
             - 17 drone
-            - 18 overlord
-            - 18 drone
-            - 19 drone
-            - 19 overlord
+            - 20 zergling
+            - 21 zergling
+            - 22 zergling
+            - 23 queen
+            - 25 ZERGLINGMOVEMENTSPEED
+            - 25 overlord
+            - 15 drone
+            - 15 drone
             - 20 drone
             - 21 overlord
             - 21 drone
             - 22 drone
+            - 16 roachwarren
             - 23 drone
-            - 24 overlord
-            - 25 hatchery
-            - 25 overlord
             - 24 drone
-            - 25 overlord
+            - 25 hatchery
+            - 24 drone
             - 25 drone
-            - 25 overlord
             - 26 drone
             - 26 gas
             - 27 evolutionchamber
-            - 26 hatchery
             - 26 overlord
