@@ -211,12 +211,8 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
     async def on_start(self) -> None:
-        """
-        Can use burnysc2 hooks as usual, just add a call to the
-        parent method before your own logic.
-        """
         await super(MyBot, self).on_start()
-
+    
         self.EnemyRace = self.enemy_race  
         self.rally_point_set = False
         self.first_base = self.townhalls.first
@@ -224,14 +220,13 @@ class MyBot(AresBot):
         self.first_overlord = self.units(UnitID.OVERLORD).first
         self.worker_scout_tag = 0
         self.enemy_strategy = []
-
+    
         self.current_base_target = self.enemy_start_locations[0]
         self.expansions_generator = cycle(
             [pos for pos in self.expansion_locations_list]
         )
-
-
-        #find the ID of the opponent    
+    
+        # Find the ID of the opponent    
         self.opponent = self.opponent_id
         if self.opponent_id is not None:
             await self.chat_send(self.opponent_id)
@@ -239,51 +234,41 @@ class MyBot(AresBot):
             print(self.opponent_id)
         else:
             print("Warning: opponent_id is None, cannot send chat message.")
-
-
-
-        #BotKiller
+    
+        # BotKiller
         if self.opponent_id == "da0fe671-3f51-4c48-8ac2-252cb67ee545":
             self._begin_attack_at_supply = 1
-
-        #SharpenedEdge
-        if self.opponent_id == "c5e0e203-bfa8-4f8f-a96d-5235a9a481af":
+    
+        # SharpenedEdge
+        elif self.opponent_id == "c5e0e203-bfa8-4f8f-a96d-5235a9a481af":
             self._begin_attack_at_supply = 1
-
-        #Apidae
-        if self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
+    
+        # Apidae
+        elif self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
             self._begin_attack_at_supply = 1
-
-        #Raiden-p-bot
-        if self.opponent_id == "4b2e0151-2696-4997-b2ae-bb4badeb0695":
+    
+        # Raiden-p-bot
+        elif self.opponent_id == "4b2e0151-2696-4997-b2ae-bb4badeb0695":
             self._begin_attack_at_supply = 1
-
+    
         else:
             if self.EnemyRace == Race.Terran:
-                #if self.time < 290:
-                    self._begin_attack_at_supply = 40
-                #else:
-                    #additional_supply = ((self.time - 290) // 3)
-                    #self._begin_attack_at_supply = 20 + additional_supply
-
-            if self.EnemyRace == Race.Protoss:
+                self._begin_attack_at_supply = 40
+    
+            elif self.EnemyRace == Race.Protoss:
                 self._begin_attack_at_supply = 10
-            
-            
-            if self.EnemyRace == Race.Zerg:
+    
+            elif self.EnemyRace == Race.Zerg:
                 self._begin_attack_at_supply = 30
-
-
-            if self.EnemyRace == Race.Random:
+    
+            elif self.EnemyRace == Race.Random:
                 self._begin_attack_at_supply = 10
-
-
+    
         # Initialize the queens class
         self.queens = Queens(
             self, queen_policy=self.creep_queen_policy
         )
-
-
+    
         # Send Overlord to scout on the second base
         await self.send_overlord_to_scout()
 
