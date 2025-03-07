@@ -169,6 +169,9 @@ class MyBot(AresBot):
         self.SapwnControllerOn = True
         self.speedMiningOn = True
         self.enemy_has_3_bases = False
+        self.scout_targets = {}  # Dicionário para armazenar os alvos dos scouts
+
+
 
         self._commenced_attack: bool = False
 
@@ -1054,13 +1057,18 @@ class MyBot(AresBot):
 
     async def harass_worker_proxy_barracks(self):
         worker_scouts: Units = self.mediator.get_units_from_role(
-        role=UnitRole.BUILD_RUNNER_SCOUT, unit_type=self.worker_type
+            role=UnitRole.BUILD_RUNNER_SCOUT, unit_type=self.worker_type
         )
         for scout in worker_scouts:
-            for unit in self.enemy_units:
-                if unit.name == 'SCV':
-                    scout.attack(unit)
-                    break
+            if scout.tag not in self.scout_targets or self.scout_targets[scout.tag] not in self.enemy_units:
+                # Encontrar um novo alvo se não houver um alvo atual ou se o alvo atual não for mais válido
+                for unit in self.enemy_units:
+                    if unit.name == 'SCV':
+                        self.scout_targets[scout.tag] = unit
+                        break
+
+            if scout.tag in self.scout_targets:
+                scout.attack(self.scout_targets[scout.tag])
 
 
     async def is_3_base_terran(self):
