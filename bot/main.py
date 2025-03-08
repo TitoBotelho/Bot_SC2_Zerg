@@ -1066,9 +1066,13 @@ class MyBot(AresBot):
                     if unit.name == 'SCV':
                         self.scout_targets[scout.tag] = unit
                         break
-
+    
             if scout.tag in self.scout_targets:
-                scout.attack(self.scout_targets[scout.tag])
+                target = self.scout_targets[scout.tag]
+                if target in self.enemy_units:
+                    scout.attack(target)
+                else:
+                    del self.scout_targets[scout.tag]
 
 
     async def is_3_base_terran(self):
