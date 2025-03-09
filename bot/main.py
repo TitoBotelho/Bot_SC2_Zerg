@@ -305,7 +305,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
         self._macro()
@@ -1059,20 +1059,21 @@ class MyBot(AresBot):
         worker_scouts: Units = self.mediator.get_units_from_role(
             role=UnitRole.BUILD_RUNNER_SCOUT, unit_type=self.worker_type
         )
-        for scout in worker_scouts:
-            if scout.tag not in self.scout_targets or self.scout_targets[scout.tag] not in self.enemy_units:
-                # Encontrar um novo alvo se não houver um alvo atual ou se o alvo atual não for mais válido
-                for unit in self.enemy_units:
-                    if unit.name == 'SCV':
-                        self.scout_targets[scout.tag] = unit
-                        break
+        
+        # Adicionar todos os SCVs encontrados na lista de scout_targets
+        for unit in self.enemy_units:
+            if unit.name == 'SCV' and unit.tag not in self.scout_targets:
+                self.scout_targets[unit.tag] = unit
     
-            if scout.tag in self.scout_targets:
-                target = self.scout_targets[scout.tag]
-                if target in self.enemy_units:
-                    scout.attack(target)
-                else:
-                    del self.scout_targets[scout.tag]
+        for scout in worker_scouts:
+            # Remover SCVs que não estão mais na lista de unidades inimigas
+            self.scout_targets = {tag: target for tag, target in self.scout_targets.items() if target in self.enemy_units}
+    
+            # Se a lista de scout_targets não estiver vazia, atacar o primeiro SCV da lista
+            if self.scout_targets:
+                first_target_tag = next(iter(self.scout_targets))
+                first_target = self.scout_targets[first_target_tag]
+                scout.attack(first_target)
 
 
     async def is_3_base_terran(self):
@@ -1104,15 +1105,16 @@ class MyBot(AresBot):
             #print(self.mediator.get_all_enemy)
             #print("Enemy Race: ", self.EnemyRace)
             #print("Second Base: ", self.second_base)
-            print("Enemy Strategy: ", self.enemy_strategy)
+            #print("Enemy Strategy: ", self.enemy_strategy)
             #print("Creep Queens: ", self.creep_queen_tags)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
             print("Enemy Structures: ", self.enemy_structures)
             print("Enemy Units: ", self.enemy_units)
-            print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
-            print("Enemy Start Location: ", self.enemy_start_locations[0])
-            print("Build Completed: ", self.build_order_runner.build_completed)
+            #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
+            #print("Enemy Start Location: ", self.enemy_start_locations[0])
+            #print("Build Completed: ", self.build_order_runner.build_completed)
+            print("Scout Targets", self.scout_targets)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
