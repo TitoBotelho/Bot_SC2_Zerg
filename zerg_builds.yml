@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - VsReaperPressure
+            - LingRoachMacroVsTerran
 
 
     Protoss:
@@ -672,7 +672,6 @@ Builds:
             - 17 drone
             - 18 overlord
             - 18 drone
-            - 19 roachwarren
             - 17 drone
             - 18 drone
             - 19 drone
@@ -680,6 +679,7 @@ Builds:
             - 21 drone
             - 20 drone
             - 21 drone
+            - 21 roachwarren
             - 22 drone
             - 21 overlord
             - 23 drone
@@ -690,7 +690,6 @@ Builds:
             - 28 drone
             - 29 drone
             - 30 drone
-            - 30 gas
             - 31 drone
             - 31 overlord
             - 32 drone
@@ -704,6 +703,7 @@ Builds:
             - 40 overlord
             - 41 drone
             - 42 evolutionchamber
+            - 41 gas
             - 41 drone
             - 42 drone
             - 42 drone

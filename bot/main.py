@@ -185,9 +185,15 @@ class MyBot(AresBot):
         self.creep_queen_policy: Dict = {
             "creep_queens": {
                 "active": True,
+                "priority": 0,
                 "max": self.max_creep_queens,
+                "defend_against_air": True,
+                "defend_against_ground": True,
             },
-            "inject_queens": {"active": True},
+            "inject_queens": {""
+                "active": True,
+                "priority": 1,
+            },
             "defence_queens": {"active": False},
         }
         
@@ -305,7 +311,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
         self._macro()
@@ -1108,6 +1114,8 @@ class MyBot(AresBot):
         else:
             self.SapwnControllerOn = True
 
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1128,6 +1136,8 @@ class MyBot(AresBot):
             #print("Enemy Start Location: ", self.enemy_start_locations[0])
             #print("Build Completed: ", self.build_order_runner.build_completed)
             print("Scout Targets", self.scout_targets)
+            print("Max creep queens:", self.max_creep_queens)
+            print("Creep queen tags:", self.creep_queen_tags)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
