@@ -1073,7 +1073,8 @@ class MyBot(AresBot):
             if self.scout_targets:
                 first_target_tag = next(iter(self.scout_targets))
                 first_target = self.scout_targets[first_target_tag]
-                scout.attack(first_target)
+                #scout.attack(first_target)
+                self.register_behavior(AttackTarget(scout, first_target))
 
 
     async def is_3_base_terran(self):
