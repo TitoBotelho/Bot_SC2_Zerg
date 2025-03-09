@@ -1065,16 +1065,19 @@ class MyBot(AresBot):
             if unit.name == 'SCV' and unit.tag not in self.scout_targets:
                 self.scout_targets[unit.tag] = unit
     
-        for scout in worker_scouts:
-            # Remover SCVs que não estão mais na lista de unidades inimigas
-            self.scout_targets = {tag: target for tag, target in self.scout_targets.items() if target in self.enemy_units}
+        # Remover SCVs que não estão mais na lista de unidades inimigas
+        self.scout_targets = {tag: target for tag, target in self.scout_targets.items() if target in self.enemy_units}
     
+        for scout in worker_scouts:
             # Se a lista de scout_targets não estiver vazia, atacar o primeiro SCV da lista
             if self.scout_targets:
                 first_target_tag = next(iter(self.scout_targets))
                 first_target = self.scout_targets[first_target_tag]
-                #scout.attack(first_target)
-                self.register_behavior(AttackTarget(scout, first_target))
+                scout.attack(first_target)
+            else:
+                # Se a lista de scout_targets estiver vazia, atacar a primeira estrutura inimiga
+                if self.enemy_structures:
+                    scout.attack(self.enemy_structures.first.position)
 
 
     async def is_3_base_terran(self):
