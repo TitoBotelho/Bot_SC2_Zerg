@@ -1060,6 +1060,15 @@ class MyBot(AresBot):
             role=UnitRole.BUILD_RUNNER_SCOUT, unit_type=self.worker_type
         )
         
+        for scout in worker_scouts:
+            self.mediator.switch_roles(
+                from_role=UnitRole.BUILD_RUNNER_SCOUT, to_role=UnitRole.HARASSING)
+
+        worker_scouts: Units = self.mediator.get_units_from_role(
+            role=UnitRole.HARASSING, unit_type=self.worker_type
+        )
+
+
         # Adicionar todos os SCVs encontrados na lista de scout_targets
         for unit in self.enemy_units:
             if unit.name == 'SCV' and unit.tag not in self.scout_targets:
