@@ -1096,11 +1096,12 @@ class MyBot(AresBot):
 
 
     async def is_3_base_terran(self):
-        if self.enemy_has_3_bases == False:
-            if self.mediator.get_enemy_has_base_outside_natural == True:
-                await self.chat_send("Tag: 3_Base_Terran")
-                self.enemy_strategy.append("3_Base_Terran")
-                self.enemy_has_3_bases = True
+        if self.time > 300:
+            if self.enemy_has_3_bases == False:
+                if self.mediator.get_enemy_has_base_outside_natural == True:
+                    await self.chat_send("Tag: 3_Base_Terran")
+                    self.enemy_strategy.append("3_Base_Terran")
+                    self.enemy_has_3_bases = True
 
 
 
