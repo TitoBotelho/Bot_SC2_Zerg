@@ -170,6 +170,7 @@ class MyBot(AresBot):
         self.speedMiningOn = True
         self.enemy_has_3_bases = False
         self.scout_targets = {}  # Dicionário para armazenar os alvos dos scouts
+        self.enemies_on_creep = {}  # Dicionário para armazenar as unidades inimigas que estão no creep
 
 
 
@@ -311,7 +312,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
         self._macro()
@@ -403,8 +404,8 @@ class MyBot(AresBot):
                 await self.build_four_gas()
 
 
-            if "3_Base_Terran" in self.enemy_strategy:
-                await self.macro_protocol()
+            #if "3_Base_Terran" in self.enemy_strategy:
+                #await self.macro_protocol()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -925,7 +926,16 @@ class MyBot(AresBot):
                     enemy_on_creep = True
                     self.defending = True
                     self._commenced_attack = True
-
+                    # Adicionar a unidade inimiga ao dicionário enemies_on_creep
+                    self.enemies_on_creep[enemyUnit.tag] = enemyUnit
+            else:
+                # Remover a unidade inimiga do dicionário enemies_on_creep se ela sair da creep
+                if enemyUnit.tag in self.enemies_on_creep:
+                    del self.enemies_on_creep[enemyUnit.tag]
+    
+        # Remover unidades inimigas do dicionário se elas não estiverem mais na lista de unidades inimigas
+        self.enemies_on_creep = {tag: unit for tag, unit in self.enemies_on_creep.items() if unit in self.enemy_units}
+    
         if not enemy_on_creep:
             forces: Units = self.mediator.get_units_from_role(role=UnitRole.ATTACKING)
             if self.get_total_supply(forces) < self._begin_attack_at_supply:
@@ -936,11 +946,8 @@ class MyBot(AresBot):
                         unit.move(self.second_base.position.towards(self.game_info.map_center, 4))                        
                     else:
                         unit.move(self.first_base.position.towards(self.game_info.map_center, 6))
-
             else:
                 self._commenced_attack = True
-
-
 
 
     async def find_mutalisks(self):
@@ -1136,9 +1143,10 @@ class MyBot(AresBot):
             #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
             #print("Enemy Start Location: ", self.enemy_start_locations[0])
             #print("Build Completed: ", self.build_order_runner.build_completed)
-            print("Scout Targets", self.scout_targets)
-            print("Max creep queens:", self.max_creep_queens)
-            print("Creep queen tags:", self.creep_queen_tags)
+            #print("Scout Targets", self.scout_targets)
+            #print("Max creep queens:", self.max_creep_queens)
+            #print("Creep queen tags:", self.creep_queen_tags)
+            print("Enemies on creep:", self.enemies_on_creep)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
@@ -1348,6 +1356,12 @@ class MyBot(AresBot):
         # make a single call to self.attack_target property
         # otherwise it keep calculating for every unit
         target: Point2 = self.attack_target
+
+        # Atualizar o alvo se houver inimigos na creep
+        if self.enemies_on_creep:
+            first_enemy_on_creep = next(iter(self.enemies_on_creep.values()))
+            target = first_enemy_on_creep.position
+
 
         # use `ares-sc2` combat maneuver system
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/combat_behaviors.html
