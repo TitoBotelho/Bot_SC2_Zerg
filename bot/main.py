@@ -402,6 +402,7 @@ class MyBot(AresBot):
                 await self.build_spire()
                 #await self.build_second_gas()
                 await self.build_four_gas()
+                await self.mutalisk_attack()
 
 
             #if "3_Base_Terran" in self.enemy_strategy:
@@ -1124,6 +1125,24 @@ class MyBot(AresBot):
 
 
 
+    async def mutalisk_attack(self):
+        mutalisks: Units = self.units(UnitID.MUTALISK)
+        
+        for mutalisk in mutalisks:
+            # Encontrar unidades inimigas voadoras
+            flying_enemies = [unit for unit in self.enemy_units if unit.is_flying]
+            
+            if flying_enemies:
+                # Atacar a primeira unidade voadora encontrada
+                target = flying_enemies[0]
+                mutalisk.attack(target)
+            else:
+                # Se não houver unidades voadoras, atacar a primeira estrutura inimiga
+                if self.enemy_structures:
+                    target = self.enemy_structures.first
+                    mutalisk.attack(target)
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1192,6 +1211,7 @@ class MyBot(AresBot):
             UnitID.QUEEN,
             UnitID.MULE,
             UnitID.OVERLORD,
+            UnitID.MUTALISK,
         }:
             # here we are making a request to an ares manager via the mediator
             # See https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html
@@ -1209,7 +1229,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250224")
+            await self.chat_send("Tag: Version_250311")
             
 
         # Send the second Overlord to scout on the third base
@@ -1302,24 +1322,24 @@ class MyBot(AresBot):
 
 
             if self.EnemyRace == Race.Terran:
-                self.register_behavior(SpawnController(ARMY_COMP_MUTAROACH[self.race]))
-
-
-
-            if self.EnemyRace == Race.Protoss:
+                if "Flying_Structures" in self.enemy_strategy:
+                    self.register_behavior(SpawnController(ARMY_COMP_MUTAlLISK[self.race]))
+                else:
+                    self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+            
+            elif self.EnemyRace == Race.Protoss:
                 if "2_Proxy_Gateway" in self.enemy_strategy:
-                    self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race])) 
-
-                if "Cannon_Rush" in self.enemy_strategy:
-                    self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race])) 
-
-
-                else:                                           
+                    self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+                elif "Cannon_Rush" in self.enemy_strategy:
+                    self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+                else:
                     self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
-
-            else:
+            
+            elif self.EnemyRace == Race.Zerg:
                 self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
-
+            
+            elif self.EnemyRace == Race.Random:
+                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
 
         # see also `ProductionController` for ongoing generic production, not needed here
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/macro_behaviors.html#ares.behaviors.macro.spawn_controller.ProductionController
@@ -1449,31 +1469,6 @@ class MyBot(AresBot):
 
 
 
-#_______________________________________________________________________________________________________________________
-#          MUTALISK
-#_______________________________________________________________________________________________________________________
-
-                if unit.type_id in [UnitID.MUTALISK]:
-                    flyingTarget = None
-                    for unit in self.enemy_units:
-                        if unit.is_flying:
-                            flyingTarget = unit.position
-                            break
-
-                    if flyingTarget is not None:
-                        attacking_maneuver.add(AttackTarget(unit=unit, target=flyingTarget))
-
-                    else: 
-                        for structure in self.enemy_structures:
-                            if structure.is_flying:
-                                flyingTarget = structure.position
-                                break
-
-                        if flyingTarget is not None:
-                            attacking_maneuver.add(AttackTarget(unit=unit, target=flyingTarget))
-
-                        else:
-                            attacking_maneuver.add(AMove(unit=unit, target=target))
 
 
 #_______________________________________________________________________________________________________________________
