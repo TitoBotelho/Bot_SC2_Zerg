@@ -403,6 +403,7 @@ class MyBot(AresBot):
                 #await self.build_second_gas()
                 await self.build_four_gas()
                 await self.mutalisk_attack()
+                await self.spread_overlords()
 
 
             #if "3_Base_Terran" in self.enemy_strategy:
@@ -1034,9 +1035,10 @@ class MyBot(AresBot):
 
 
     async def make_zerglings(self):
-        if self.minerals >700:
-            if self.vespene < 25:
-                self.train(UnitID.ZERGLING)
+        if "Flying_Structures" not in self.enemy_strategy:
+            if self.minerals >700:
+                if self.vespene < 25:
+                    self.train(UnitID.ZERGLING)
 
 
     async def find_liberator(self):
@@ -1143,6 +1145,22 @@ class MyBot(AresBot):
                     mutalisk.attack(target)
 
 
+
+    async def spread_overlords(self):
+        overlords: Units = self.units(UnitID.OVERLORD)
+        expansion_locations = list(self.expansion_locations_list)
+        
+        # Iterar sobre cada Overlord e enviar para uma expansão diferente
+        for i, overlord in enumerate(overlords):
+            if i < len(expansion_locations):
+                target = expansion_locations[i]
+                if not overlord.is_moving:
+                    self.do(overlord.move(target))
+            else:
+                # Se houver mais Overlords do que expansões, enviar os Overlords restantes para a última expansão
+                target = expansion_locations[-1]
+                if not overlord.is_moving:
+                    self.do(overlord.move(target))
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
