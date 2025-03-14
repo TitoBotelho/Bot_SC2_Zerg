@@ -171,7 +171,7 @@ class MyBot(AresBot):
         self.enemy_has_3_bases = False
         self.scout_targets = {}  # Dicionário para armazenar os alvos dos scouts
         self.enemies_on_creep = {}  # Dicionário para armazenar as unidades inimigas que estão no creep
-
+        self.enemy_went_worker_rush = False
 
 
         self._commenced_attack: bool = False
@@ -371,6 +371,7 @@ class MyBot(AresBot):
             await self.find_liberator()
             await self.turnOffSpawningControllerOnEarlyGame()
             await self.is_3_base_terran()
+            await self.is_worker_rush()
             #await self.build_hydra_den()
 
 
@@ -417,6 +418,7 @@ class MyBot(AresBot):
             await self.burrow_roaches()
             await self.defend()
             await self.search_proxy_vs_protoss()
+            await self.is_worker_rush()
 
             if "Protoss_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
@@ -445,6 +447,7 @@ class MyBot(AresBot):
             await self.find_cheese_spine_crawler()
             await self.burrow_roaches()
             await self.find_mutalisks()
+            await self.is_worker_rush()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
@@ -461,6 +464,7 @@ class MyBot(AresBot):
             await self.build_spine_crawlers()
             await self.burrow_roaches()
             await self.defend()
+            await self.is_worker_rush()
 
 
 #_______________________________________________________________________________________________________________________
@@ -1161,6 +1165,14 @@ class MyBot(AresBot):
                 target = expansion_locations[-1]
                 if not overlord.is_moving:
                     self.do(overlord.move(target))
+
+    async def is_worker_rush(self):
+        if self.enemy_went_worker_rush == False:
+            if self.mediator.get_enemy_worker_rushed == True:
+                await self.chat_send("Tag: Worker_Rush")
+                self.enemy_strategy.append("Worker_Rush")
+                self.enemy_went_worker_rush = True
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1171,7 +1183,7 @@ class MyBot(AresBot):
             #print(self.mediator.get_all_enemy)
             #print("Enemy Race: ", self.EnemyRace)
             #print("Second Base: ", self.second_base)
-            #print("Enemy Strategy: ", self.enemy_strategy)
+            print("Enemy Strategy: ", self.enemy_strategy)
             #print("Creep Queens: ", self.creep_queen_tags)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
@@ -1184,6 +1196,7 @@ class MyBot(AresBot):
             #print("Max creep queens:", self.max_creep_queens)
             #print("Creep queen tags:", self.creep_queen_tags)
             print("Enemies on creep:", self.enemies_on_creep)
+            print("worker rush:", self.mediator.get_enemy_worker_rushed)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
