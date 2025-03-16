@@ -172,7 +172,7 @@ class MyBot(AresBot):
         self.scout_targets = {}  # Dicionário para armazenar os alvos dos scouts
         self.enemies_on_creep = {}  # Dicionário para armazenar as unidades inimigas que estão no creep
         self.enemy_went_worker_rush = False
-
+        self.bo_changed = False
 
         self._commenced_attack: bool = False
 
@@ -312,7 +312,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
         self._macro()
@@ -387,6 +387,7 @@ class MyBot(AresBot):
                 await self.retreat_overlords()
                 await self.harass_worker_proxy_barracks()
                 await self.build_spine_crawlers()
+                await self.change_to_bo_DefensiveVsProxyBarracks()
 
 
             if "Banshee" in self.enemy_strategy:
@@ -1173,6 +1174,11 @@ class MyBot(AresBot):
                 self.enemy_strategy.append("Worker_Rush")
                 self.enemy_went_worker_rush = True
 
+
+    async def change_to_bo_DefensiveVsProxyBarracks(self):
+        if self.bo_changed == False:
+            self.build_order_runner.switch_opening("DefensiveVsProxyBarracks")
+            self.bo_changed = True
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
