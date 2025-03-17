@@ -135,11 +135,6 @@ BuildChoices:
             - OppeningVsLingRush
 
 
-    944bcdff-a18f-4ed0-a5fc-35764399ef05:
-        BotName: Sharkling
-        Cycle:
-            - OppeningVsSharkling
-
     c033a97a-667d-42e3-91e8-13528ac191ed:
         BotName: Apidae
         Cycle:
