@@ -55,8 +55,9 @@ BuildChoices:
         Cycle:
             - TwelvePool
 
-    4b2e0151-2696-4997-b2ae-bb4badeb0695:
-        BotName: Raiden-p-bot
+
+    0d0d9c44-2520-457d-84ba-7f6ffe167a3e:
+        BotName: LiShiMinV2
         Cycle:
             - TwelvePool
 
@@ -834,4 +835,5 @@ Builds:
             - 40 overlord
             - 41 drone
             - 41 gas
+            - 42 gas
 

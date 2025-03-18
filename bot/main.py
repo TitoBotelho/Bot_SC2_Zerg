@@ -257,8 +257,8 @@ class MyBot(AresBot):
         elif self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
             self._begin_attack_at_supply = 1
     
-        # Raiden-p-bot
-        elif self.opponent_id == "4b2e0151-2696-4997-b2ae-bb4badeb0695":
+        # LiShiMinV2
+        elif self.opponent_id == "0d0d9c44-2520-457d-84ba-7f6ffe167a3e":
             self._begin_attack_at_supply = 1
     
         else:
@@ -805,13 +805,13 @@ class MyBot(AresBot):
 
 
     async def find_cheese_spine_crawler(self):
-        if not self.spineCrawlerCheeseDetected:
-            for spinecrawler in self.enemy_structures(UnitID.SPINECRAWLER):
-                if spinecrawler.distance_to(self.first_base) < 20:
-                    self.spineCrawlerCheeseDetected = True
-                    await self.chat_send("Tag: Cheese Spine Crawler")
-                    self.enemy_strategy.append("Cheese_Spine_Crawler")
-                    break
+        if self.time < 180:
+            if self.spineCrawlerCheeseDetected == False:
+                for spinecrawler in self.enemy_structures(UnitID.SPINECRAWLER):
+                    if spinecrawler.distance_to(self.first_base) < 20:
+                        self.spineCrawlerCheeseDetected = True
+                        await self.chat_send("Tag: Cheese Spine Crawler")
+                        self.enemy_strategy.append("Cheese_Spine_Crawler")
 
 
     async def burrow_roaches(self):
@@ -1011,7 +1011,7 @@ class MyBot(AresBot):
             if self.terran_flying_structures == False:
                 for unit in self.enemy_structures:
                     if unit.is_flying:
-                        if unit.distance_to(self.enemy_start_locations[0]) < 20:
+                        if unit.distance_to(self.enemy_start_locations[0]) < 16:
                             await self.chat_send("Tag: Flying_Structures")
                             self.enemy_strategy.append("Flying_Structures")
                             self.terran_flying_structures = True
@@ -1266,7 +1266,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250311")
+            await self.chat_send("Tag: Version_250318")
             
 
         # Send the second Overlord to scout on the third base
