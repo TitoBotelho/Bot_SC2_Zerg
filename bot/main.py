@@ -1011,7 +1011,7 @@ class MyBot(AresBot):
             if self.terran_flying_structures == False:
                 for unit in self.enemy_structures:
                     if unit.is_flying:
-                        if unit.distance_to(self.enemy_start_locations[0]) < 16:
+                        if unit.distance_to(self.enemy_start_locations[0]) < 14:
                             await self.chat_send("Tag: Flying_Structures")
                             self.enemy_strategy.append("Flying_Structures")
                             self.terran_flying_structures = True
