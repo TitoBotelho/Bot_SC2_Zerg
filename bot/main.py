@@ -173,6 +173,8 @@ class MyBot(AresBot):
         self.enemies_on_creep = {}  # Dicionário para armazenar as unidades inimigas que estão no creep
         self.enemy_went_worker_rush = False
         self.bo_changed = False
+        self.my_overlords = {}
+
 
         self._commenced_attack: bool = False
 
@@ -249,10 +251,6 @@ class MyBot(AresBot):
         if self.opponent_id == "da0fe671-3f51-4c48-8ac2-252cb67ee545":
             self._begin_attack_at_supply = 1
     
-        # SharpenedEdge
-        elif self.opponent_id == "c5e0e203-bfa8-4f8f-a96d-5235a9a481af":
-            self._begin_attack_at_supply = 1
-    
         # Apidae
         elif self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
             self._begin_attack_at_supply = 1
@@ -312,7 +310,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
         self._macro()
@@ -1011,7 +1009,7 @@ class MyBot(AresBot):
             if self.terran_flying_structures == False:
                 for unit in self.enemy_structures:
                     if unit.is_flying:
-                        if unit.distance_to(self.enemy_start_locations[0]) < 14:
+                        if unit.distance_to(self.enemy_start_locations[0]) < 12:
                             await self.chat_send("Tag: Flying_Structures")
                             self.enemy_strategy.append("Flying_Structures")
                             self.terran_flying_structures = True
@@ -1152,20 +1150,20 @@ class MyBot(AresBot):
 
 
     async def spread_overlords(self):
-        overlords: Units = self.units(UnitID.OVERLORD)
         expansion_locations = list(self.expansion_locations_list)
-        
-        # Iterar sobre cada Overlord e enviar para uma expansão diferente
-        for i, overlord in enumerate(overlords):
-            if i < len(expansion_locations):
-                target = expansion_locations[i]
-                if not overlord.is_moving:
-                    self.do(overlord.move(target))
-            else:
-                # Se houver mais Overlords do que expansões, enviar os Overlords restantes para a última expansão
-                target = expansion_locations[-1]
-                if not overlord.is_moving:
-                    self.do(overlord.move(target))
+        overlord_tags = list(self.my_overlords.keys())  # Obter as tags dos Overlords em ordem
+    
+        # Iterar sobre cada Overlord e enviar para uma expansão (repetindo se necessário)
+        for i, overlord_tag in enumerate(overlord_tags):
+            # Usar o índice modular para repetir as expansões se houver mais Overlords do que expansões
+            target_index = i % len(expansion_locations)
+            target = expansion_locations[target_index]
+            overlord = self.my_overlords[overlord_tag]
+    
+            # Enviar o Overlord para o destino apenas se ele não estiver se movendo
+            if not overlord.is_moving:
+                self.do(overlord.move(target))
+
 
     async def is_worker_rush(self):
         if self.enemy_went_worker_rush == False:
@@ -1201,8 +1199,9 @@ class MyBot(AresBot):
             #print("Scout Targets", self.scout_targets)
             #print("Max creep queens:", self.max_creep_queens)
             #print("Creep queen tags:", self.creep_queen_tags)
-            print("Enemies on creep:", self.enemies_on_creep)
-            print("worker rush:", self.mediator.get_enemy_worker_rushed)
+            #print("Enemies on creep:", self.enemies_on_creep)
+            #print("worker rush:", self.mediator.get_enemy_worker_rushed)
+            print("My Overlords:", self.my_overlords)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
@@ -1241,6 +1240,10 @@ class MyBot(AresBot):
         parent method before your own logic.
         """
         await super(MyBot, self).on_unit_created(unit)
+
+        # Adicionar Overlords ao dicionário self.my_overlords
+        if unit.type_id == UnitID.OVERLORD:
+            self.my_overlords[unit.tag] = unit
 
 
         # assign our forces ATTACKING by default

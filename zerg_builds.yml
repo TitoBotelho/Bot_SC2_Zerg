@@ -44,11 +44,6 @@ BuildChoices:
 
 
 
-    c5e0e203-bfa8-4f8f-a96d-5235a9a481af:
-        BotName: SharpenedEdge
-        Cycle:
-            - TwelvePool
-
 
     da0fe671-3f51-4c48-8ac2-252cb67ee545:
         BotName: BotKiller
@@ -835,5 +830,6 @@ Builds:
             - 40 overlord
             - 41 drone
             - 41 gas
+            - 42 gas
             - 42 gas
 
