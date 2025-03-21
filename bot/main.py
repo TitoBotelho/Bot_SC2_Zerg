@@ -232,6 +232,7 @@ class MyBot(AresBot):
         self.first_overlord = self.units(UnitID.OVERLORD).first
         self.worker_scout_tag = 0
         self.enemy_strategy = []
+
     
         self.current_base_target = self.enemy_start_locations[0]
         self.expansions_generator = cycle(
@@ -310,7 +311,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
         self._macro()
@@ -1153,17 +1154,15 @@ class MyBot(AresBot):
         expansion_locations = list(self.expansion_locations_list)
         overlord_tags = list(self.my_overlords.keys())  # Obter as tags dos Overlords em ordem
     
-        # Iterar sobre cada Overlord e enviar para uma expansão (repetindo se necessário)
-        for i, overlord_tag in enumerate(overlord_tags):
-            # Usar o índice modular para repetir as expansões se houver mais Overlords do que expansões
-            target_index = i % len(expansion_locations)
-            target = expansion_locations[target_index]
-            overlord = self.my_overlords[overlord_tag]
+        # Iterar sobre cada expansão e atribuir um Overlord
+        for i, expansion in enumerate(expansion_locations):
+            if i < len(overlord_tags):
+                overlord_tag = overlord_tags[i]
+                overlord = self.my_overlords[overlord_tag]
     
-            # Enviar o Overlord para o destino apenas se ele não estiver se movendo
-            if not overlord.is_moving:
-                self.do(overlord.move(target))
-
+                # Enviar o Overlord para a expansão apenas se ele não estiver se movendo
+                #if not overlord.is_moving:
+                self.do(overlord.move(expansion))
 
     async def is_worker_rush(self):
         if self.enemy_went_worker_rush == False:
