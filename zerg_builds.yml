@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - LingRoachMacroVsTerran
+            - VsReaperPressure
 
 
     Protoss:
@@ -113,10 +113,10 @@ BuildChoices:
         Cycle:
             - OppeningVsRoachRush
 
-    2cd4693c-81db-4dcb-850e-b511852996e0:
-        BotName: t-bone
-        Cycle:
-            - VsReaperPressure
+    #2cd4693c-81db-4dcb-850e-b511852996e0:
+        #BotName: t-bone
+        #Cycle:
+            #- VsReaperPressure
 
 
     8c6e0427-4960-47bc-8153-a434726739bd:
@@ -777,6 +777,7 @@ Builds:
             - 26 gas
             - 27 evolutionchamber
             - 26 overlord
+
 
 
 

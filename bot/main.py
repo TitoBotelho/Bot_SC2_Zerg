@@ -1268,7 +1268,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250318")
+            await self.chat_send("Tag: Version_250324f")
             
 
         # Send the second Overlord to scout on the third base
