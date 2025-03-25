@@ -174,6 +174,7 @@ class MyBot(AresBot):
         self.enemy_went_worker_rush = False
         self.bo_changed = False
         self.my_overlords = {}
+        self.build_order_completed = False
 
 
         self._commenced_attack: bool = False
@@ -372,6 +373,7 @@ class MyBot(AresBot):
             await self.is_3_base_terran()
             await self.is_worker_rush()
             #await self.build_hydra_den()
+            await self.force_complete_build_order()
 
 
 
@@ -1176,6 +1178,16 @@ class MyBot(AresBot):
         if self.bo_changed == False:
             self.build_order_runner.switch_opening("DefensiveVsProxyBarracks")
             self.bo_changed = True
+
+
+    async def force_complete_build_order(self):
+        if self.build_order_completed == False:
+            if self.time > 300:
+                self.build_order_runner.set_build_completed()
+                await self.chat_send("Tag: Build_Completed")
+                self.enemy_strategy.append("Force_Build_Completed")
+                self.build_order_completed = True
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
