@@ -170,11 +170,12 @@ class MyBot(AresBot):
         self.speedMiningOn = True
         self.enemy_has_3_bases = False
         self.scout_targets = {}  # Dicionário para armazenar os alvos dos scouts
+        self.mutalisk_targets = {}  # Dicionário para armazenar os alvos dos mutalisks
         self.enemies_on_creep = {}  # Dicionário para armazenar as unidades inimigas que estão no creep
         self.enemy_went_worker_rush = False
         self.bo_changed = False
         self.my_overlords = {}
-        self.build_order_completed = False
+
 
 
         self._commenced_attack: bool = False
@@ -312,7 +313,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
         self._macro()
@@ -374,6 +375,7 @@ class MyBot(AresBot):
             await self.is_worker_rush()
             #await self.build_hydra_den()
             await self.force_complete_build_order()
+            await self.mutalisk_attack()
 
 
 
@@ -1135,22 +1137,29 @@ class MyBot(AresBot):
 
     async def mutalisk_attack(self):
         mutalisks: Units = self.units(UnitID.MUTALISK)
-        
-        for mutalisk in mutalisks:
-            # Encontrar unidades inimigas voadoras
-            flying_enemies = [unit for unit in self.enemy_units if unit.is_flying]
-            
-            if flying_enemies:
-                # Atacar a primeira unidade voadora encontrada
-                target = flying_enemies[0]
-                mutalisk.attack(target)
-            else:
-                # Se não houver unidades voadoras, atacar a primeira estrutura inimiga
-                if self.enemy_structures:
-                    target = self.enemy_structures.first
-                    mutalisk.attack(target)
-
-
+    
+        # Atualizar a lista de mutalisk_targets com unidades voadoras
+        for unit in self.enemy_units:
+            if unit.is_flying and unit.tag not in self.mutalisk_targets:
+                self.mutalisk_targets[unit.tag] = unit
+    
+        # Adicionar estruturas inimigas à lista de mutalisk_targets
+        for structure in self.enemy_structures:
+            if structure.tag not in self.mutalisk_targets:
+                self.mutalisk_targets[structure.tag] = structure
+    
+        # Remover alvos que não estão mais em enemy_units ou enemy_structures
+        self.mutalisk_targets = {
+            tag: target
+            for tag, target in self.mutalisk_targets.items()
+            if target in self.enemy_units or target in self.enemy_structures
+        }
+    
+        # Se houver alvos em mutalisk_targets, atacar o primeiro
+        if self.mutalisk_targets:
+            first_target = next(iter(self.mutalisk_targets.values()))
+            for mutalisk in mutalisks:
+                mutalisk.attack(first_target)
 
     async def spread_overlords(self):
         expansion_locations = list(self.expansion_locations_list)
@@ -1181,12 +1190,12 @@ class MyBot(AresBot):
 
 
     async def force_complete_build_order(self):
-        if self.build_order_completed == False:
+        if self.build_order_runner.build_completed == False:
             if self.time > 300:
                 self.build_order_runner.set_build_completed()
                 await self.chat_send("Tag: Build_Completed")
                 self.enemy_strategy.append("Force_Build_Completed")
-                self.build_order_completed = True
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -1198,12 +1207,13 @@ class MyBot(AresBot):
             #print(self.mediator.get_all_enemy)
             #print("Enemy Race: ", self.EnemyRace)
             #print("Second Base: ", self.second_base)
-            print("Enemy Strategy: ", self.enemy_strategy)
+            #print("Enemy Strategy: ", self.enemy_strategy)
             #print("Creep Queens: ", self.creep_queen_tags)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
             print("Enemy Structures: ", self.enemy_structures)
             print("Enemy Units: ", self.enemy_units)
+            print("Mutalisk targets:", self.mutalisk_targets)
             #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
             #print("Enemy Start Location: ", self.enemy_start_locations[0])
             #print("Build Completed: ", self.build_order_runner.build_completed)
@@ -1212,7 +1222,7 @@ class MyBot(AresBot):
             #print("Creep queen tags:", self.creep_queen_tags)
             #print("Enemies on creep:", self.enemies_on_creep)
             #print("worker rush:", self.mediator.get_enemy_worker_rushed)
-            print("My Overlords:", self.my_overlords)
+            #print("My Overlords:", self.my_overlords)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
@@ -1280,7 +1290,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250324f")
+            await self.chat_send("Tag: Version_250324")
             
 
         # Send the second Overlord to scout on the third base
