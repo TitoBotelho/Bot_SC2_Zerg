@@ -182,7 +182,7 @@ class MyBot(AresBot):
 
 
         self.creep_queen_tags: Set[int] = set()
-        self.max_creep_queens: int = 1
+        self.max_creep_queens: int = 2
 
 
 
@@ -407,7 +407,6 @@ class MyBot(AresBot):
                 await self.build_spire()
                 #await self.build_second_gas()
                 await self.build_four_gas()
-                await self.mutalisk_attack()
                 await self.spread_overlords()
 
 
@@ -503,7 +502,7 @@ class MyBot(AresBot):
     async def build_queens(self):
         for th in self.townhalls.ready:
             # Check if the number of queens is less than the number of townhalls
-            if len(self.units(UnitID.QUEEN)) <= len(self.townhalls.ready):
+            if len(self.units(UnitID.QUEEN)) <= len(self.townhalls.ready) + 1:
                 # Check if we're not already training a queen
                 if not self.already_pending(UnitID.QUEEN):
                     # If we're not, train a queen
@@ -1208,18 +1207,17 @@ class MyBot(AresBot):
             #print("Enemy Race: ", self.EnemyRace)
             #print("Second Base: ", self.second_base)
             #print("Enemy Strategy: ", self.enemy_strategy)
-            #print("Creep Queens: ", self.creep_queen_tags)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
-            print("Enemy Structures: ", self.enemy_structures)
-            print("Enemy Units: ", self.enemy_units)
-            print("Mutalisk targets:", self.mutalisk_targets)
+            #print("Enemy Structures: ", self.enemy_structures)
+            #print("Enemy Units: ", self.enemy_units)
+            #print("Mutalisk targets:", self.mutalisk_targets)
             #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
             #print("Enemy Start Location: ", self.enemy_start_locations[0])
             #print("Build Completed: ", self.build_order_runner.build_completed)
             #print("Scout Targets", self.scout_targets)
             #print("Max creep queens:", self.max_creep_queens)
-            #print("Creep queen tags:", self.creep_queen_tags)
+            print("Creep queen tags:", self.creep_queen_tags)
             #print("Enemies on creep:", self.enemies_on_creep)
             #print("worker rush:", self.mediator.get_enemy_worker_rushed)
             #print("My Overlords:", self.my_overlords)
