@@ -1246,6 +1246,22 @@ class MyBot(AresBot):
             self.is_roach_attacking = True
              
 
+#_______________________________________________________________________________________________________________________
+#          ON UNIT TOOK DESTROYED
+#_______________________________________________________________________________________________________________________
+    async def on_unit_destroyed(self, unit_tag: int) -> None:
+        await super(MyBot, self).on_unit_destroyed(unit_tag)
+    
+
+        # checks if unit is a queen or th, library then handles appropriately
+        self.queens.remove_unit(unit_tag)
+
+        if unit_tag in self.creep_queen_tags:
+            self.creep_queen_tags.remove(unit_tag)
+            
+
+
+
 
 
 #_______________________________________________________________________________________________________________________
