@@ -182,6 +182,7 @@ class MyBot(AresBot):
 
 
         self.creep_queen_tags: Set[int] = set()
+        self.other_queen_tags: Set[int] = set()
         self.max_creep_queens: int = 2
 
 
@@ -475,20 +476,22 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
         queens: Units = self.units(UnitID.QUEEN)
-        # work out if more creep queen_control are required
+        
+        # Verificar se mais creep queens são necessárias
         if queens and len(self.creep_queen_tags) < self.max_creep_queens:
             queens_needed: int = self.max_creep_queens - len(self.creep_queen_tags)
             new_creep_queens: Units = queens.take(queens_needed)
             for queen in new_creep_queens:
                 self.creep_queen_tags.add(queen.tag)
-
-
-
-
-        # separate the queen units selection
+        
+        # Separar as creep queens das outras queens
         creep_queens: Units = queens.tags_in(self.creep_queen_tags)
         other_queens: Units = queens.tags_not_in(self.creep_queen_tags)
-        # call the queen library to handle our creep queen_control
+        
+        # Atualizar self.other_queen_tags com as tags das outras queens
+        self.other_queen_tags = {queen.tag for queen in other_queens}
+        
+        # Chamar a biblioteca de queens para gerenciar as creep queens
         await self.queens.manage_queens(iteration, creep_queens)
 
         # we have full control of the other queen_control
@@ -1218,6 +1221,7 @@ class MyBot(AresBot):
             #print("Scout Targets", self.scout_targets)
             #print("Max creep queens:", self.max_creep_queens)
             print("Creep queen tags:", self.creep_queen_tags)
+            print("Other Queens:", self.other_queen_tags)
             #print("Enemies on creep:", self.enemies_on_creep)
             #print("worker rush:", self.mediator.get_enemy_worker_rushed)
             #print("My Overlords:", self.my_overlords)
