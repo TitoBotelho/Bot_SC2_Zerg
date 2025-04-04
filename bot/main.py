@@ -188,21 +188,6 @@ class MyBot(AresBot):
 
 
 
-        self.creep_queen_policy: Dict = {
-            "creep_queens": {
-                "active": True,
-                "priority": 0,
-                "max": self.max_creep_queens,
-                "defend_against_air": True,
-                "defend_against_ground": True,
-            },
-            "inject_queens": {""
-                "active": True,
-                "priority": 1,
-            },
-            "defence_queens": {"active": False},
-        }
-        
 
     @property
     def attack_target(self) -> Point2:
@@ -241,7 +226,28 @@ class MyBot(AresBot):
         self.expansions_generator = cycle(
             [pos for pos in self.expansion_locations_list]
         )
-    
+
+
+
+        self.creep_queen_policy: Dict = {
+            "creep_queens": {
+                "active": True,
+                "priority": 0,
+                "max": self.max_creep_queens,
+                "defend_against_air": True,
+                "defend_against_ground": True,
+                "first_tumor_position": self.start_location.towards(self.main_base_ramp.top_center, 5),
+            },
+            "inject_queens": {""
+                "active": True,
+                "priority": 1,
+            },
+            "defence_queens": {"active": False},
+        }
+
+
+
+
         # Find the ID of the opponent    
         self.opponent = self.opponent_id
         if self.opponent_id is not None:
@@ -1206,22 +1212,23 @@ class MyBot(AresBot):
     async def debug_tool(self):
         current_time = time.time()
         if current_time - self.last_debug_time >= 1:  # Se passou mais de um segundo
+            print("Time: ", self.time)
             #print(self.mediator.get_all_enemy)
             #print("Enemy Race: ", self.EnemyRace)
             #print("Second Base: ", self.second_base)
             #print("Enemy Strategy: ", self.enemy_strategy)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
-            #print("Enemy Structures: ", self.enemy_structures)
-            #print("Enemy Units: ", self.enemy_units)
+            print("Enemy Structures: ", self.enemy_structures)
+            print("Enemy Units: ", self.enemy_units)
             #print("Mutalisk targets:", self.mutalisk_targets)
             #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
             #print("Enemy Start Location: ", self.enemy_start_locations[0])
             #print("Build Completed: ", self.build_order_runner.build_completed)
             #print("Scout Targets", self.scout_targets)
             #print("Max creep queens:", self.max_creep_queens)
-            print("Creep queen tags:", self.creep_queen_tags)
-            print("Other Queens:", self.other_queen_tags)
+            #print("Creep queen tags:", self.creep_queen_tags)
+            #print("Other Queens:", self.other_queen_tags)
             #print("Enemies on creep:", self.enemies_on_creep)
             #print("worker rush:", self.mediator.get_enemy_worker_rushed)
             #print("My Overlords:", self.my_overlords)
@@ -1308,7 +1315,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250324")
+            await self.chat_send("Tag: Version_250402")
             
 
         # Send the second Overlord to scout on the third base
