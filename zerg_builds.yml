@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - LingRoachMacroVsTerran
+            - PoolFirst
 
 
     Protoss:
@@ -398,7 +398,7 @@ Builds:
             - 22 drone
             - 23 drone
             - 19 drone
-            - 20 evolutionchamber
+
 
     OneOneRoaches:
         # Build constant workers till x supply

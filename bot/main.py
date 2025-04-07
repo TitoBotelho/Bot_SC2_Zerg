@@ -175,6 +175,8 @@ class MyBot(AresBot):
         self.enemy_went_worker_rush = False
         self.bo_changed = False
         self.my_overlords = {}
+        self.stop_getting_gas = False
+        self.workers_for_gas = 3
 
 
 
@@ -429,6 +431,7 @@ class MyBot(AresBot):
             await self.defend()
             await self.search_proxy_vs_protoss()
             await self.is_worker_rush()
+            await self.stop_collecting_gas()
 
             if "Protoss_Agressive" in self.enemy_strategy:
                 await self.build_spine_crawlers()
@@ -1205,6 +1208,17 @@ class MyBot(AresBot):
                 self.enemy_strategy.append("Force_Build_Completed")
 
 
+    async def stop_collecting_gas(self):
+        if self.stop_getting_gas == False:
+            if self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED):
+                print("Chamando set_workers_per_gas com amount=0")
+                self.mediator.set_workers_per_gas(amount=0)
+                self.workers_for_gas = 0
+                self.stop_getting_gas = True
+                #self.stop_getting_gas = True
+
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1387,7 +1401,7 @@ class MyBot(AresBot):
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/macro_behaviors.html#ares.behaviors.macro.mining.Mining
         
         if self.speedMiningOn == True:
-            self.register_behavior(Mining())
+            self.register_behavior(Mining(workers_per_gas = self.workers_for_gas))
 
         # MAKE SUPPLY
         # ares-sc2 AutoSupply
