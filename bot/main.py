@@ -236,7 +236,7 @@ class MyBot(AresBot):
                 "max": self.max_creep_queens,
                 "defend_against_air": True,
                 "defend_against_ground": True,
-                "first_tumor_position": self.start_location.towards(self.main_base_ramp.top_center, 5),
+                "first_tumor_position": self.mediator.get_own_nat.towards(self.game_info.map_center, 9),
             },
             "inject_queens": {""
                 "active": True,
