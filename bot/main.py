@@ -322,7 +322,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
         self._macro()
@@ -1168,9 +1168,17 @@ class MyBot(AresBot):
     
         # Se houver alvos em mutalisk_targets, atacar o primeiro
         if self.mutalisk_targets:
-            first_target = next(iter(self.mutalisk_targets.values()))
-            for mutalisk in mutalisks:
-                mutalisk.attack(first_target)
+            first_target_tag = next(iter(self.mutalisk_targets))
+            first_target = self.mutalisk_targets[first_target_tag]
+    
+            # Verificar se o alvo ainda está em enemy_units ou enemy_structures
+            if first_target in self.enemy_units or first_target in self.enemy_structures:
+                for mutalisk in mutalisks:
+                    mutalisk.attack(first_target)
+            else:
+                # Se o alvo não estiver mais presente, removê-lo da lista
+                del self.mutalisk_targets[first_target_tag]
+
 
     async def spread_overlords(self):
         expansion_locations = list(self.expansion_locations_list)

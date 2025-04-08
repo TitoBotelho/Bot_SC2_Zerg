@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - PoolFirst
+            - VsReaperPressure
 
 
     Protoss:
@@ -777,6 +777,22 @@ Builds:
             - 26 gas
             - 27 evolutionchamber
             - 26 overlord
+            - 27 drone
+            - 28 drone
+            - 29 drone
+            - 30 drone
+            - 31 drone
+            - 32 drone
+            - 33 drone
+            - 34 drone
+            - 35 drone
+            - 36 drone
+            - 36 overlord
+            - 37 gas
+            - 38 drone
+            - 39 drone
+            - 40 drone
+
 
 
 
