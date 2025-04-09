@@ -363,7 +363,7 @@ class MyBot(AresBot):
         
 
         if self.EnemyRace == Race.Terran:
-            await self.build_queens()
+            #await self.build_queens()
             await self.is_terran_agressive()
             await self.is_bunker_rush()
             await self.search_proxy_barracks()
@@ -1625,9 +1625,6 @@ class MyBot(AresBot):
             
             if (not self.already_pending_upgrade(UpgradeId.BURROW)):
                 self.research(UpgradeId.BURROW)
-
-            if (not self.already_pending_upgrade(UpgradeId.GLIALRECONSTITUTION)):
-                self.research(UpgradeId.GLIALRECONSTITUTION)
 
             if (not self.already_pending_upgrade(UpgradeId.TUNNELINGCLAWS)):
                 self.research(UpgradeId.TUNNELINGCLAWS)

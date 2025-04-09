@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - VsReaperPressure
+            - LingRoachMacroVsTerran
 
 
     Protoss:
@@ -351,6 +351,7 @@ Builds:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
         ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
         OpeningBuildOrder:
             - 12 worker_scout
             - 12 overlord
@@ -374,6 +375,7 @@ Builds:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
         ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
         OpeningBuildOrder:
             - 12 drone
             - 12 worker_scout:
@@ -398,12 +400,16 @@ Builds:
             - 22 drone
             - 23 drone
             - 19 drone
+            - 20 drone
+            - 20 drone
+            - 20 drone
 
 
     OneOneRoaches:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
         ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
         OpeningBuildOrder:
             - 12 overlord
             - 12 drone
@@ -645,6 +651,7 @@ Builds:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
         ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
         OpeningBuildOrder:
             - 12 overlord
             - 12 worker_scout:
@@ -663,8 +670,10 @@ Builds:
             - 17 drone
             - 18 overlord
             - 18 drone
+            - 18 queen
             - 17 drone
             - 18 drone
+            - 18 queen
             - 19 drone
             - 22 hatchery
             - 21 drone
@@ -700,16 +709,17 @@ Builds:
             - 42 drone
             - 42 drone
             - 42 drone
+            - 42 queen
             - 42 drone
             - 42 drone
             - 42 drone
-            - 42 TUNNELINGCLAWS
             - 42 gas
             - 42 overlord
             - 42 drone
             - 42 drone
             - 42 drone
             - 42 gas
+            - 42 INFESTATIONPIT
 
 
 
