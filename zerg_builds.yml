@@ -12,12 +12,13 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - OppeningVsLingRush
+            - LingRoachMacroVsTerran
+
 
     Protoss:
         BotName: ProtossRace
         Cycle:
-            - HatcheryFirst
+            - PoolFirst
 
     Random:
         BotName: RandomRace
@@ -27,12 +28,12 @@ BuildChoices:
     Terran:
         BotName: TerranRace
         Cycle:
-            - PoolFirst
+            - LingRoachMacroVsTerran
 
     Zerg:
         BotName: ZergRace
         Cycle:
-            - BurrowRoachRush
+            - OneOneRoaches
 
     # Can also use specific opponent ids (overrides race options above)
     #a_bot_opponent_id_from_aiarena:
@@ -42,16 +43,26 @@ BuildChoices:
 
 
 
-    c033a97a-667d-42e3-91e8-13528ac191ed:
-        BotName: Apidae
+
+
+    da0fe671-3f51-4c48-8ac2-252cb67ee545:
+        BotName: BotKiller
         Cycle:
             - TwelvePool
+
+
+    0d0d9c44-2520-457d-84ba-7f6ffe167a3e:
+        BotName: LiShiMinV2
+        Cycle:
+            - TwelvePool
+
 
 
     4a491758-76ff-40de-996c-018d49b6237f:
         BotName: 12PoolBot
         Cycle:
             - OppeningVsLingRush
+            
 
     81654bce-d0ae-4456-b987-2b585fe5a819:
         BotName: Tartarus
@@ -74,6 +85,60 @@ BuildChoices:
         BotName: BrazilianLingFloodBot
         Cycle:
             - OppeningVsLingRush
+
+    88b7a15a-b346-4426-9103-094a260b873c:
+        BotName: shyguy
+        Cycle:
+            - OppeningVsMarineRush
+
+    6b075187-e187-40d0-8721-1dc362805db5:
+        BotName: nida
+        Cycle:
+            - BlockingTheBase
+
+    48b23f2e-87ae-44be-bfce-d86386edadf7:
+        BotName: norman
+        Cycle:
+            - BlockingTheBase
+
+
+    7e234d60-12cf-46e0-ac7a-72e87f6edc53:
+        BotName: Zozo
+        Cycle:
+            - BlockingTheBase
+
+
+    6e570722-ceff-41a9-b07c-14041069a3d9:
+        BotName: Dodo
+        Cycle:
+            - OppeningVsRoachRush
+
+    2cd4693c-81db-4dcb-850e-b511852996e0:
+        BotName: t-bone
+        Cycle:
+            - VsReaperPressure
+
+
+    8c6e0427-4960-47bc-8153-a434726739bd:
+        BotName: muravevTerran
+        Cycle:
+            - VsmuravevTerran
+
+
+    745ab3e1-86ed-4090-b79c-1db199655a78:
+        BotName: Thheo
+        Cycle:
+            - OppeningVsLingRush
+
+
+    c033a97a-667d-42e3-91e8-13528ac191ed:
+        BotName: Apidae
+        Cycle:
+            - TwelvePool
+
+
+
+
 
 Builds:
     BurrowRoachRush:
@@ -200,7 +265,7 @@ Builds:
         OpeningBuildOrder:
             - 12 drone
             - 12 worker_scout:
-                [nat, third, fourth, fifth, sixth, map_center]
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
             - 13 drone
             - 13 hatchery
             - 13 overlord
@@ -232,6 +297,9 @@ Builds:
             - 12 drone
             - 13 overlord
             - 13 drone
+            - 14 overlord
+            - 14 zergling x60
+
 
 
     OppeningVsLingRush:
@@ -246,13 +314,15 @@ Builds:
             - 13 drone
             - 14 drone
             - 15 drone
+            - 16 queen
+            - 16 spinecrawler
+            - 16 spinecrawler
             - 16 drone
             - 17 drone
-            - 17 spinecrawler
-            - 17 spinecrawler
             - 17 gas
             - 17 drone
             - 17 roachwarren
+            - 17 queen
 
 
     AgressiveRoach:
@@ -281,6 +351,7 @@ Builds:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
         ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
         OpeningBuildOrder:
             - 12 worker_scout
             - 12 overlord
@@ -304,6 +375,7 @@ Builds:
         # Build constant workers till x supply
         # Turning this off here for a bit more precision in build
         ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
         OpeningBuildOrder:
             - 12 drone
             - 12 worker_scout:
@@ -323,8 +395,471 @@ Builds:
             - 16 drone
             - 17 drone
             - 20 drone
+            - 16 overlord
             - 21 drone
             - 22 drone
             - 23 drone
             - 19 drone
-            - 20 evolutionchamber
+            - 20 drone
+            - 20 drone
+            - 20 drone
+
+
+    OneOneRoaches:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
+        OpeningBuildOrder:
+            - 12 overlord
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 15 hatchery
+            - 15 drone
+            - 15 spawningpool
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 18 overlord
+            - 18 drone
+            - 19 queen
+            - 20 roachwarren
+            - 19 queen
+            - 22 drone
+            - 19 queen
+            - 25 drone
+            - 26 overlord
+            - 25 gas
+            - 25 drone
+            - 26 drone
+            - 27 drone
+            - 28 drone
+            - 29 drone
+            - 30 drone
+            - 31 drone
+            - 35 overlord
+            - 32 drone
+            - 33 drone
+            - 33 overlord
+            - 33 overlord
+            - 34 drone
+            - 35 drone
+            - 36 drone
+            - 37 drone
+            
+
+
+    OppeningVsMarineRush:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 spawningpool
+            - 11 drone
+            - 12 drone
+            - 13 overlord
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 spinecrawler
+            - 16 spinecrawler
+            - 16 spinecrawler
+            - 16 drone
+            - 17 drone
+            - 17 gas
+            - 17 drone
+            - 13 overlord
+            - 17 roachwarren
+            - 18 BURROW
+
+    MacroVsTerran:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 50
+        OpeningBuildOrder:
+            - 12 overlord
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 15 hatchery
+            - 14 drone
+            - 15 spawningpool
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 18 overlord
+            - 18 drone
+            - 19 drone
+            - 20 hatchery
+            - 20 overlord
+            - 19 drone
+            - 20 drone
+            - 21 drone
+            - 22 drone
+            - 22 overlord
+            - 23 drone
+            - 24 drone
+            - 25 drone
+            - 26 overlord
+            - 26 drone
+            - 27 drone
+            - 28 drone
+            - 29 drone
+            - 30 drone
+            - 31 drone
+            - 32 drone
+            - 33 drone
+            - 34 overlord
+            - 34 drone
+            - 35 drone
+            - 36 drone
+            - 37 drone
+            - 37 hatchery
+            - 38 overlord
+            - 38 drone
+            - 39 drone
+            - 40 overlord
+            - 40 drone
+            - 41 drone
+            - 42 evolutionchamber
+            - 42 hatchery
+            - 43 gas
+            - 44 gas
+
+
+    OppeningVs4gatewayZealotRush:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]        
+            - 12 spawningpool
+            - 11 drone
+            - 12 overlord
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 16 spinecrawler
+            - 16 spinecrawler
+            - 16 spinecrawler
+            - 16 drone
+            - 17 drone
+            - 17 gas
+            - 17 drone
+            - 13 overlord
+            - 17 roachwarren
+            - 18 BURROW
+
+
+    BlockingTheBase:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 31
+        OpeningBuildOrder:
+            - 11 hatchery
+            - 14 overlord
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 15 spawningpool
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 queen
+            - 16 queen
+            - 16 overlord
+
+    VsmuravevTerran:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 38
+        OpeningBuildOrder:
+            - 14 overlord
+            - 14 worker_scout:
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
+            - 14 drone
+            - 16 drone
+            - 16 spawningpool
+            - 15 drone
+            - 18 hatchery
+            - 18 overlord
+            - 17 gas
+            - 19 zergling
+            - 20 zergling
+            - 21 zergling
+            - 22 drone
+            - 25 drone
+            - 26 drone
+            - 26 roachwarren
+            - 26 drone
+            - 27 drone
+            - 28 drone
+            - 29 drone
+            - 25 hatchery
+            - 25 overlord
+            - 25 gas
+            - 25 overlord
+
+
+    OppeningVsRoachRush:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 11 spawningpool
+            - 11 drone
+            - 12 drone
+            - 13 drone
+            - 13 overlord
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 queen
+            - 17 spinecrawler
+            - 16 spinecrawler
+            - 15 sporecrawler
+            - 14 spinecrawler          
+            - 15 drone
+            - 16 drone
+            - 17 gas
+            - 16 drone
+            - 17 overlord
+            - 17 roachwarren
+            - 17 queen
+            - 16 drone
+            - 17 drone
+            - 18 drone
+            - 19 BURROW
+            - 19 gas
+
+
+    LingRoachMacroVsTerran:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
+        OpeningBuildOrder:
+            - 12 overlord
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 15 hatchery
+            - 15 drone
+            - 15 spawningpool
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 18 overlord
+            - 18 drone
+            - 18 queen
+            - 17 drone
+            - 18 drone
+            - 18 queen
+            - 19 drone
+            - 22 hatchery
+            - 21 drone
+            - 20 drone
+            - 21 drone
+            - 21 roachwarren
+            - 22 drone
+            - 21 overlord
+            - 23 drone
+            - 24 drone
+            - 25 drone
+            - 26 drone
+            - 27 drone
+            - 28 drone
+            - 29 drone
+            - 30 drone
+            - 31 drone
+            - 31 overlord
+            - 32 drone
+            - 33 drone
+            - 34 drone
+            - 38 overlord
+            - 38 drone
+            - 39 drone
+            - 40 overlord
+            - 40 drone
+            - 40 overlord
+            - 41 drone
+            - 42 evolutionchamber
+            - 41 gas
+            - 41 drone
+            - 42 drone
+            - 42 drone
+            - 42 drone
+            - 42 drone
+            - 42 queen
+            - 42 drone
+            - 42 drone
+            - 42 drone
+            - 42 gas
+            - 42 overlord
+            - 42 drone
+            - 42 drone
+            - 42 drone
+            - 42 gas
+            - 42 INFESTATIONPIT
+            - 42 gas
+            - 42 overlord
+
+
+
+    OppeningVsSharkling:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 spawningpool
+            - 6 drone
+            - 6 drone
+            - 6 drone
+            - 6 overlord
+            - 6 spinecrawler
+            - 6 spinecrawler
+            - 6 queen
+            - 6 zergling x4
+            - 6 overlord
+            - 6 queen
+            - 6 zergling x4
+            - 6 overlord
+            - 6 roachwarren
+            - 6 gas
+            - 6 zergling x4
+            - 6 overlord
+
+
+    VsReaperPressure:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 overlord
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 15 hatchery
+            - 14 spawningpool
+            - 13 gas
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 20 zergling
+            - 21 zergling
+            - 22 zergling
+            - 23 queen
+            - 25 ZERGLINGMOVEMENTSPEED
+            - 25 overlord
+            - 15 drone
+            - 15 drone
+            - 20 drone
+            - 21 overlord
+            - 21 drone
+            - 22 drone
+            - 16 roachwarren
+            - 23 drone
+            - 24 drone
+            - 25 hatchery
+            - 24 drone
+            - 25 drone
+            - 26 drone
+            - 26 gas
+            - 27 evolutionchamber
+            - 26 overlord
+            - 27 drone
+            - 28 drone
+            - 29 drone
+            - 30 drone
+            - 31 drone
+            - 32 drone
+            - 33 drone
+            - 34 drone
+            - 35 drone
+            - 36 drone
+            - 36 overlord
+            - 37 gas
+            - 38 drone
+            - 39 drone
+            - 40 drone
+
+
+
+
+
+
+    DefensiveVsProxyBarracks:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 overlord
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 15 hatchery
+            - 15 drone
+            - 15 spawningpool
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 18 overlord
+            - 18 drone
+            - 17 drone
+            - 18 drone
+            - 19 drone
+            - 21 drone
+            - 20 drone
+            - 21 drone
+            - 21 roachwarren
+            - 22 drone
+            - 21 overlord
+            - 23 drone
+            - 24 drone
+            - 25 drone
+            - 26 drone
+            - 27 drone
+            - 28 drone
+            - 29 drone
+            - 30 drone
+            - 31 drone
+            - 31 overlord
+            - 32 drone
+            - 33 drone
+            - 34 drone
+            - 38 overlord
+            - 40 overlord
+            - 40 drone
+            - 40 overlord
+            - 41 drone
+            - 41 gas
+            - 42 gas
+            - 42 gas
+
