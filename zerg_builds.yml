@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - LingRoachMacroVsTerran
+            - VsReaperPressure
 
 
     Protoss:
@@ -719,9 +719,10 @@ Builds:
             - 42 drone
             - 42 drone
             - 42 gas
-            - 42 INFESTATIONPIT
             - 42 gas
             - 42 overlord
+            - 42 INFESTATIONPIT
+
 
 
 
@@ -767,6 +768,7 @@ Builds:
             - 15 drone
             - 16 drone
             - 17 drone
+            - 18 queen
             - 20 zergling
             - 21 zergling
             - 22 zergling
@@ -800,10 +802,24 @@ Builds:
             - 35 drone
             - 36 drone
             - 36 overlord
-            - 37 gas
             - 38 drone
             - 39 drone
             - 40 drone
+            - 41 drone
+            - 42 drone
+            - 43 drone
+            - 43 overlord
+            - 44 drone
+            - 45 drone
+            - 46 drone
+            - 47 drone
+            - 48 drone
+            - 49 drone
+            - 50 drone
+            - 51 queen
+            - 51 overlord
+            - 51 INFESTATIONPIT
+            - 51 gas
 
 
 

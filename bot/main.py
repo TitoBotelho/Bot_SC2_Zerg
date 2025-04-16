@@ -86,7 +86,7 @@ ARMY_COMP_ROACHINFESTOR: dict[Race, dict] = {
 # against other races
 ARMY_COMP_LINGROACH: dict[Race, dict] = {
     Race.Zerg: {
-        UnitID.ZERGLING: {"proportion": 0.6, "priority": 0},
+        UnitID.ZERGLING: {"proportion": 0.6, "priority": 1},
         UnitID.ROACH: {"proportion": 0.4, "priority": 0},
 
     }
@@ -395,6 +395,7 @@ class MyBot(AresBot):
             await self.force_complete_build_order()
             await self.mutalisk_attack()
             await self.burrow_infestors()
+            await self.create_queens_after_build_order()
 
 
 
@@ -1247,6 +1248,16 @@ class MyBot(AresBot):
             if burrowed_infestor.energy > 75:
                 burrowed_infestor(AbilityId.BURROWUP_INFESTOR)
 
+
+    async def create_queens_after_build_order(self):
+        if self.build_order_runner.build_completed:
+            for th in self.townhalls.ready:
+                # Check if the number of queens is less than the number of townhalls
+                if len(self.units(UnitID.QUEEN)) <= len(self.townhalls.ready) + 1:
+                    # Check if we're not already training a queen
+                    if not self.already_pending(UnitID.QUEEN):
+                        # If we're not, train a queen
+                        self.do(th.train(UnitID.QUEEN))
 
 
 #_______________________________________________________________________________________________________________________
