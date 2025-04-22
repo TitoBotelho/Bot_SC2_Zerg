@@ -1370,7 +1370,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250415")
+            await self.chat_send("Tag: Version_250422")
             
 
         # Send the second Overlord to scout on the third base
@@ -1620,7 +1620,8 @@ class MyBot(AresBot):
                 if unit.type_id in [UnitID.INFESTOR]:
 
                     if self.enemy_units:
-                        fulgal_target = self.enemy_units.closest_to(unit)
+                        filtered_enemy_units = self.enemy_units.filter(lambda enemy: enemy.type_id != UnitID.SCV)
+
                         # Encontrar a unidade inimiga mais próxima
                         """
                         # Adicionar o comportamento de usar Fungal Growth na unidade mais próxima
@@ -1630,7 +1631,7 @@ class MyBot(AresBot):
 
                         """
                         attacking_maneuver.add(
-                            UseAOEAbility(unit=unit, ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH, targets=self.enemy_units,  min_targets=3)                       
+                            UseAOEAbility(unit=unit, ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH, targets=filtered_enemy_units,  min_targets=3)                       
                         )
 #_______________________________________________________________________________________________________________________
 #          INFESTOR BURROWED
