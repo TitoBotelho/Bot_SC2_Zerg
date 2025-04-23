@@ -481,6 +481,11 @@ class MyBot(AresBot):
                 await self.worker_defense()
                 await self.turnOnSpeedMiningAtTimeX(95)
 
+            if "Worker_Rush" in self.enemy_strategy:
+                await self.change_to_bo_TwelvePool()
+
+
+
 
         if self.EnemyRace == Race.Random:
             await self.build_queens()
@@ -1260,6 +1265,10 @@ class MyBot(AresBot):
                         self.do(th.train(UnitID.QUEEN))
 
 
+    async def change_to_bo_TwelvePool(self):
+        if self.bo_changed == False:
+            self.build_order_runner.switch_opening("TwelvePool")
+            self.bo_changed = True
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
