@@ -472,6 +472,7 @@ class MyBot(AresBot):
             await self.burrow_roaches()
             await self.find_mutalisks()
             await self.is_worker_rush()
+            await self.force_complete_build_order()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
@@ -839,9 +840,10 @@ class MyBot(AresBot):
             if self.spineCrawlerCheeseDetected == False:
                 for spinecrawler in self.enemy_structures(UnitID.SPINECRAWLER):
                     if spinecrawler.distance_to(self.first_base) < 20:
-                        self.spineCrawlerCheeseDetected = True
-                        await self.chat_send("Tag: Cheese Spine Crawler")
-                        self.enemy_strategy.append("Cheese_Spine_Crawler")
+                        if spinecrawler.distance_to(self.mediator.get_enemy_nat) > 30:
+                            self.spineCrawlerCheeseDetected = True
+                            await self.chat_send("Tag: Cheese Spine Crawler")
+                            self.enemy_strategy.append("Cheese_Spine_Crawler")
 
 
     async def burrow_roaches(self):
