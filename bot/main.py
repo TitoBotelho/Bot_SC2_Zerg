@@ -473,6 +473,7 @@ class MyBot(AresBot):
             await self.find_mutalisks()
             await self.is_worker_rush()
             await self.force_complete_build_order()
+            await self.build_roach_warren()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
