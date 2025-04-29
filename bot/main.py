@@ -1236,13 +1236,14 @@ class MyBot(AresBot):
 
 
     async def stop_collecting_gas(self):
-        if self.stop_getting_gas == False:
-            if self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED):
-                print("Chamando set_workers_per_gas com amount=0")
-                self.mediator.set_workers_per_gas(amount=0)
-                self.workers_for_gas = 0
-                self.stop_getting_gas = True
-                #self.stop_getting_gas = True
+        if not "2_Proxy_Gateway" in self.enemy_strategy:
+            if self.stop_getting_gas == False:
+                if self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED):
+                    print("Chamando set_workers_per_gas com amount=0")
+                    self.mediator.set_workers_per_gas(amount=0)
+                    self.workers_for_gas = 0
+                    self.stop_getting_gas = True
+                    #self.stop_getting_gas = True
 
 
     async def burrow_infestors(self):
