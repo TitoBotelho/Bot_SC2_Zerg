@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - VsReaperPressure
+            - PoolFirst
 
 
     Protoss:
@@ -379,7 +379,7 @@ Builds:
         OpeningBuildOrder:
             - 12 drone
             - 12 worker_scout:
-                [nat, third, fourth, fifth, sixth, map_center]
+                [nat, third, fourth, fifth, sixth, map_center, third, fourth]
             - 13 drone
             - 13 spawningpool
             - 13 overlord
