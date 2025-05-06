@@ -473,7 +473,8 @@ class MyBot(AresBot):
             await self.find_mutalisks()
             await self.is_worker_rush()
             await self.force_complete_build_order()
-            await self.build_roach_warren()
+            await self.zergling_scout()
+
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
@@ -485,6 +486,7 @@ class MyBot(AresBot):
 
             if "Worker_Rush" in self.enemy_strategy:
                 await self.change_to_bo_TwelvePool()
+                await self.build_roach_warren()
 
 
 
@@ -1273,6 +1275,11 @@ class MyBot(AresBot):
         if self.bo_changed == False:
             self.build_order_runner.switch_opening("TwelvePool")
             self.bo_changed = True
+
+    async def zergling_scout(self):
+        if self.time < 146:
+            for zergling in self.units(UnitID.ZERGLING):
+                zergling.move(self.enemy_start_locations[0])
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________

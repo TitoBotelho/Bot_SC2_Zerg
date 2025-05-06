@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - PoolFirst
+            - OneOneRoaches
 
 
     Protoss:
@@ -426,14 +426,20 @@ Builds:
             - 17 drone
             - 18 overlord
             - 18 drone
-            - 19 queen
-            - 20 roachwarren
-            - 19 queen
+            - 18 queen
+            - 17 zergling
+            - 18 drone
+            - 18 queen
+            - 19 drone
+            - 22 hatchery
+            - 21 drone
+            - 20 drone
+            - 21 drone
+            - 21 roachwarren
             - 22 drone
-            - 19 queen
-            - 25 drone
-            - 26 overlord
-            - 25 gas
+            - 21 overlord
+            - 23 drone
+            - 24 drone
             - 25 drone
             - 26 drone
             - 27 drone
@@ -441,15 +447,37 @@ Builds:
             - 29 drone
             - 30 drone
             - 31 drone
-            - 35 overlord
+            - 31 overlord
             - 32 drone
             - 33 drone
-            - 33 overlord
-            - 33 overlord
             - 34 drone
-            - 35 drone
-            - 36 drone
-            - 37 drone
+            - 38 overlord
+            - 38 drone
+            - 39 drone
+            - 40 overlord
+            - 40 drone
+            - 40 overlord
+            - 41 drone
+            - 42 evolutionchamber
+            - 41 gas
+            - 41 drone
+            - 42 drone
+            - 42 drone
+            - 42 drone
+            - 42 drone
+            - 42 queen
+            - 42 drone
+            - 42 drone
+            - 42 drone
+            - 42 gas
+            - 42 overlord
+            - 42 drone
+            - 42 drone
+            - 42 drone
+            - 42 gas
+            - 42 gas
+            - 42 overlord
+            - 42 INFESTATIONPIT
             
 
 
