@@ -1004,7 +1004,7 @@ class MyBot(AresBot):
 
 
     async def search_proxy_vs_protoss(self):
-        if self.time < 94:
+        if self.time < 120:
             if self.proxy_pylon_found == False:
                 for unit in self.enemy_structures:
                     if unit.name == 'Pylon':
