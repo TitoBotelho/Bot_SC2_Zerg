@@ -474,6 +474,8 @@ class MyBot(AresBot):
             await self.is_worker_rush()
             await self.force_complete_build_order()
             await self.zergling_scout()
+            await self.build_lair()
+            await self.make_overseer()
 
 
             if "Mutalisk" in self.enemy_strategy:
@@ -1280,6 +1282,16 @@ class MyBot(AresBot):
         if self.time < 146:
             for zergling in self.units(UnitID.ZERGLING):
                 zergling.move(self.enemy_start_locations[0])
+
+    async def make_overseer(self):
+        if self.structures(UnitID.LAIR):
+            if self.can_afford(UnitID.OVERSEER):
+                if self.units(UnitID.OVERSEER).ready.amount == 0 and not self.already_pending(UnitID.OVERSEER):
+                   overseer: Unit = self.units(UnitID.OVERLORD).random
+                   overseer(AbilityId.MORPH_OVERSEER)
+
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
