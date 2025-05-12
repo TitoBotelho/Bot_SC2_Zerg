@@ -186,6 +186,7 @@ class MyBot(AresBot):
         self.my_overlords = {}
         self.stop_getting_gas = False
         self.workers_for_gas = 3
+        self.tag_second_overlord = 0
 
 
 
@@ -331,7 +332,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
         self._macro()
@@ -1287,10 +1288,10 @@ class MyBot(AresBot):
         if self.structures(UnitID.LAIR):
             if self.can_afford(UnitID.OVERSEER):
                 if self.units(UnitID.OVERSEER).ready.amount == 0 and not self.already_pending(UnitID.OVERSEER):
-                   overseer: Unit = self.units(UnitID.OVERLORD).random
-                   overseer(AbilityId.MORPH_OVERSEER)
-
-
+                    # Encontrar o Overlord com a tag armazenada em self.tag_second_overlord
+                    overseer_candidate = self.units(UnitID.OVERLORD).find_by_tag(self.tag_second_overlord)
+                    if overseer_candidate:
+                        overseer_candidate(AbilityId.MORPH_OVERSEER)
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -1308,6 +1309,7 @@ class MyBot(AresBot):
             #print("RallyPointSet: ", self.rally_point_set)
             print("Enemy Structures: ", self.enemy_structures)
             print("Enemy Units: ", self.enemy_units)
+            print("Second Overlord: ", self.tag_second_overlord)
             #print("Mutalisk targets:", self.mutalisk_targets)
             #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
             #print("Enemy Start Location: ", self.enemy_start_locations[0])
@@ -1396,13 +1398,15 @@ class MyBot(AresBot):
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 2:
             my_base_location = self.mediator.get_own_nat
 
- 
+            # Atribuir a tag do segundo Overlord
+            self.tag_second_overlord = unit.tag
+
             # Send the second Overlord in front of second base to scout
             target = my_base_location.position.towards(self.game_info.map_center, 5)
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250422")
+            await self.chat_send("Tag: Version_250512")
             
 
         # Send the second Overlord to scout on the third base
