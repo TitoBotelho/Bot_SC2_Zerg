@@ -187,8 +187,8 @@ class MyBot(AresBot):
         self.stop_getting_gas = False
         self.workers_for_gas = 3
         self.tag_second_overlord = 0
-
-
+        self.my_roaches = {}
+        self.overseer_assigned = False
 
         self._commenced_attack: bool = False
 
@@ -477,6 +477,7 @@ class MyBot(AresBot):
             await self.zergling_scout()
             await self.build_lair()
             await self.make_overseer()
+            await self.assign_overseer()
 
 
             if "Mutalisk" in self.enemy_strategy:
@@ -1293,6 +1294,16 @@ class MyBot(AresBot):
                     if overseer_candidate:
                         overseer_candidate(AbilityId.MORPH_OVERSEER)
 
+    async def assign_overseer(self):
+        if not self.overseer_assigned:  # Verificar se o Overseer já foi atribuído
+            if self.my_roaches:  # Verificar se o dicionário de Roaches não está vazio
+                overseer = self.units(UnitID.OVERSEER).first if self.units(UnitID.OVERSEER) else None
+                if overseer:  # Verificar se há um Overseer disponível
+                    # Obter a primeira Roach do dicionário
+                    first_roach = next(iter(self.my_roaches.values()))
+                    # Fazer o Overseer se mover para a posição da primeira Roach
+                    overseer.smart(first_roach)
+                    self.overseer_assigned = True  # Marcar o Overseer como atribuído
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1321,6 +1332,7 @@ class MyBot(AresBot):
             #print("Enemies on creep:", self.enemies_on_creep)
             #print("worker rush:", self.mediator.get_enemy_worker_rushed)
             #print("My Overlords:", self.my_overlords)
+            print("My roaches:", self.my_roaches)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
@@ -1379,6 +1391,12 @@ class MyBot(AresBot):
         # Adicionar Overlords ao dicionário self.my_overlords
         if unit.type_id == UnitID.OVERLORD:
             self.my_overlords[unit.tag] = unit
+
+        # Adicionar Roaches ao dicionário self.my_roaches
+        if unit.type_id == UnitID.ROACH:
+            self.my_roaches[unit.tag] = unit
+
+
 
 
         # assign our forces ATTACKING by default
