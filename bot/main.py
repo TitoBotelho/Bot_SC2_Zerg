@@ -478,6 +478,7 @@ class MyBot(AresBot):
             await self.build_lair()
             await self.make_overseer()
             await self.assign_overseer()
+            await self.turnOffSpawningControllerOnEarlyGame()
 
 
             if "Mutalisk" in self.enemy_strategy:
@@ -1751,6 +1752,17 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Protoss:
             if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
                 self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)       
+
+
+        if self.EnemyRace == Race.Zerg:  
+            
+            if (not self.already_pending_upgrade(UpgradeId.BURROW)):
+                self.research(UpgradeId.BURROW)
+
+            if (not self.already_pending_upgrade(UpgradeId.TUNNELINGCLAWS)):
+                self.research(UpgradeId.TUNNELINGCLAWS)
+
+
         else:        
             if (
                 not self.already_pending_upgrade(UpgradeId.BURROW)
@@ -1759,6 +1771,8 @@ class MyBot(AresBot):
                 and self.can_afford(UpgradeId.BURROW)
             ):
                 self.research(UpgradeId.BURROW)
+
+       
     """
         for queen in self.mediator.get_own_army_dict[UnitID.QUEEN]:
             if queen.energy >= 25 and self.townhalls:
