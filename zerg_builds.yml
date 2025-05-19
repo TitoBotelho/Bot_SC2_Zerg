@@ -451,31 +451,12 @@ Builds:
             - 32 drone
             - 33 drone
             - 34 drone
-            - 38 overlord
-            - 38 drone
-            - 39 drone
-            - 40 overlord
-            - 40 drone
-            - 40 overlord
-            - 41 drone
-            - 41 gas
-            - 41 drone
-            - 42 drone
-            - 42 drone
-            - 42 drone
-            - 42 drone
-            - 42 queen
-            - 42 drone
-            - 42 drone
-            - 42 drone
-            - 42 gas
-            - 42 overlord
-            - 42 drone
-            - 42 drone
-            - 42 drone
-            - 42 gas
-            - 42 gas
-            - 42 overlord
+            - 35 gas
+            - 35 queen
+            - 36 drone
+            - 36 drone
+            - 36 drone
+
             
 
 

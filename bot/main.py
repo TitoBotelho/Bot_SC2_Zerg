@@ -332,7 +332,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
         self._macro()
@@ -479,7 +479,7 @@ class MyBot(AresBot):
             await self.make_overseer()
             await self.assign_overseer()
             await self.turnOffSpawningControllerOnEarlyGame()
-
+            await self.build_spine_crawlers()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
