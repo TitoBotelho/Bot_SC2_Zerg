@@ -479,7 +479,7 @@ class MyBot(AresBot):
             await self.make_overseer()
             await self.assign_overseer()
             await self.turnOffSpawningControllerOnEarlyGame()
-            await self.build_spine_crawlers()
+            await self.build_one_spine_crawler()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
@@ -1305,6 +1305,25 @@ class MyBot(AresBot):
                     # Fazer o Overseer se mover para a posição da primeira Roach
                     overseer.smart(first_roach)
                     self.overseer_assigned = True  # Marcar o Overseer como atribuído
+
+
+
+    async def build_one_spine_crawler(self):
+        if self.rally_point_set == True:
+            if self.structures(UnitID.SPINECRAWLER).amount == 0 and not self.already_pending(UnitID.SPINECRAWLER):
+                if self.tag_worker_build_spine_crawler == 0:
+                    if self.can_afford(UnitID.SPINECRAWLER):
+                        my_base_location = self.mediator.get_own_nat
+                        # Send the second Overlord in front of second base to scout
+                        target = my_base_location.position.towards(self.game_info.map_center, 6)                   
+                        #await self.build(UnitID.HYDRALISKDEN, near=target)
+                        if worker := self.mediator.select_worker(target_position=target):                
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_build_spine_crawler = worker
+                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+                            print("first Spine Crawler")
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
