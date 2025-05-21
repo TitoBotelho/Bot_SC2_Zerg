@@ -480,6 +480,7 @@ class MyBot(AresBot):
             await self.assign_overseer()
             await self.turnOffSpawningControllerOnEarlyGame()
             await self.build_one_spine_crawler()
+            await self.make_changeling()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
@@ -1323,6 +1324,13 @@ class MyBot(AresBot):
                             #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
                             print("first Spine Crawler")
+
+    async def make_changeling(self):
+        if self.units(UnitID.OVERSEER).amount > 0:
+            for overseer in self.units(UnitID.OVERSEER):
+                if overseer.energy > 50:
+                    overseer(AbilityId.SPAWNCHANGELING_SPAWNCHANGELING)
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
