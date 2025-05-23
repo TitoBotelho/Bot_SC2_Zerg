@@ -481,6 +481,7 @@ class MyBot(AresBot):
             await self.turnOffSpawningControllerOnEarlyGame()
             await self.build_one_spine_crawler()
             await self.make_changeling()
+            await self.move_changeling()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
@@ -1331,6 +1332,13 @@ class MyBot(AresBot):
                 if overseer.energy > 50:
                     overseer(AbilityId.SPAWNCHANGELING_SPAWNCHANGELING)
 
+    async def move_changeling(self):
+        for changeling in self.units(UnitID.CHANGELING):
+            if changeling.distance_to(self.enemy_start_locations[0]) > 20:
+                changeling.move(self.enemy_start_locations[0])
+            else:
+                changeling.move(self.game_info.map_center)
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -1433,6 +1441,7 @@ class MyBot(AresBot):
             UnitID.MULE,
             UnitID.OVERLORD,
             UnitID.MUTALISK,
+            UnitID.CHANGELING,
         }:
             # here we are making a request to an ares manager via the mediator
             # See https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html
