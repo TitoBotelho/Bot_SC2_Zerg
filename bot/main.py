@@ -945,15 +945,30 @@ class MyBot(AresBot):
 
         if self.tag_worker_build_spine_crawler != 0:
             if self.can_afford(UnitID.SPINECRAWLER):
-                my_ramp = self.main_base_ramp.top_center
-                reference = my_ramp.position.towards(self.first_base, 6)
-                target = reference.towards(self.game_info.map_center, 2)
+                # Tente construir próximo ao hatchery, onde sempre há creep
+                hatchery = self.first_base
+                # Pegue posições em volta do hatchery (raio 6 a 8)
+                for distance in range(4, 9):
+                    candidate = hatchery.position.towards(self.game_info.map_center, distance)
+                    # Verifique se a posição está sobre a creep
+                    if self.has_creep(candidate):
+                        target = candidate
+                        break
+                else:
+                    # fallback: posição antiga
+                    my_ramp = self.main_base_ramp.top_center
+                    reference = my_ramp.position.towards(self.first_base, 6)
+                    target = reference.towards(self.game_info.map_center, 2)
+        
                 if worker := self.mediator.select_worker(target_position=target):                
                     self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
                     self.tag_worker_build_2nd_spine_crawler = worker
-                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                    self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-
+                    self.mediator.build_with_specific_worker(
+                        worker=self.tag_worker_build_2nd_spine_crawler,
+                        structure_type=UnitID.SPINECRAWLER,
+                        pos=target,
+                        building_purpose=BuildingPurpose.NORMAL_BUILDING
+                    )
 
         if self.tag_worker_build_2nd_spine_crawler != 0:
             if self.can_afford(UnitID.SPINECRAWLER):
