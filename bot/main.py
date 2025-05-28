@@ -1342,10 +1342,10 @@ class MyBot(AresBot):
                             print("first Spine Crawler")
 
     async def make_changeling(self):
-        if self.units(UnitID.OVERSEER).amount > 0:
-            for overseer in self.units(UnitID.OVERSEER):
-                if overseer.energy > 50:
-                    overseer(AbilityId.SPAWNCHANGELING_SPAWNCHANGELING)
+        # Filtra apenas overseers prontos e com energia suficiente
+        for overseer in self.units(UnitID.OVERSEER).ready:
+            if overseer.energy > 50 and overseer.is_ready:
+                overseer(AbilityId.SPAWNCHANGELING_SPAWNCHANGELING)
 
     async def move_changeling(self):
         for changeling in self.units(UnitID.CHANGELING):
