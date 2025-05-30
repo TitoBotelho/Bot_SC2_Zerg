@@ -281,6 +281,9 @@ class MyBot(AresBot):
         elif self.opponent_id == "0d0d9c44-2520-457d-84ba-7f6ffe167a3e":
             self._begin_attack_at_supply = 1
     
+        elif "2_Proxy_Gateway" in self.enemy_strategy:
+            self._begin_attack_at_supply = 1
+
         else:
             if self.EnemyRace == Race.Terran:
                 self._begin_attack_at_supply = 40
