@@ -319,7 +319,7 @@ class MyBot(AresBot):
         # Get the enemy's start location
         #enemy_natural_location = self.mediator.get_enemy_nat
         #target = self.mediator.get_closest_overlord_spot(from_pos=enemy_natural_location)
-        target = enemy_natural_location.position.towards(self.game_info.map_center, 13)
+        target = enemy_natural_location.position.towards(self.game_info.map_center, 12)
         # Send the Overlord to the new position
         self.do(overlord.move(target))
         hg_spot = self.mediator.get_closest_overlord_spot(
@@ -447,6 +447,10 @@ class MyBot(AresBot):
                 #await self.build_second_gas()
                 await self.build_four_gas()
                 await self.spread_overlords()
+
+            if "Terran_Agressive" in self.enemy_strategy:
+                await self.build_roach_warren()
+                await self.one_base_terran_protocol()
 
 
             #if "3_Base_Terran" in self.enemy_strategy:
@@ -1371,6 +1375,13 @@ class MyBot(AresBot):
                 changeling.move(self.enemy_start_locations[0])
             else:
                 changeling.move(self.game_info.map_center)
+
+
+    async def one_base_terran_protocol(self):
+        if self.build_order_runner.build_completed == False:
+            self.build_order_runner.set_build_completed()
+            await self.chat_send("Tag: Build_Completed")
+            self.enemy_strategy.append("Force_Build_Completed")
 
 
 #_______________________________________________________________________________________________________________________
