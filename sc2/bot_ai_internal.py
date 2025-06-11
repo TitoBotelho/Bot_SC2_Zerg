@@ -541,7 +541,7 @@ class BotAIInternal(ABC):
         self.army_count: int = state.common.army_count
 
         self._unit_abilities = await self.client.query_available_abilities_with_tag(
-            self.units,
+            self.all_units,
             ignore_resource_requirements=False,
         )
 

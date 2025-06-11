@@ -10,10 +10,7 @@ from sc2.ids.upgrade_id import UpgradeId
 # from sc2.ids.buff_id import BuffId
 # from sc2.ids.effect_id import EffectId
 
-RESEARCH_INFO: Dict[
-    UnitTypeId,
-    Dict[UpgradeId, Dict[str, Union[AbilityId, bool, UnitTypeId, UpgradeId]]],
-] = {
+RESEARCH_INFO: Dict[UnitTypeId, Dict[UpgradeId, Dict[str, Union[AbilityId, bool, UnitTypeId, UpgradeId]]]] = {
     UnitTypeId.ARMORY: {
         UpgradeId.TERRANSHIPWEAPONSLEVEL1: {
             'ability': AbilityId.ARMORYRESEARCH_TERRANSHIPWEAPONSLEVEL1

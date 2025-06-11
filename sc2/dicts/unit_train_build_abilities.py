@@ -9,9 +9,7 @@ from sc2.ids.unit_typeid import UnitTypeId
 # from sc2.ids.buff_id import BuffId
 # from sc2.ids.effect_id import EffectId
 
-TRAIN_INFO: Dict[
-    UnitTypeId, Dict[UnitTypeId, Dict[str, Union[AbilityId, bool, UnitTypeId]]]
-] = {
+TRAIN_INFO: Dict[UnitTypeId, Dict[UnitTypeId, Dict[str, Union[AbilityId, bool, UnitTypeId]]]] = {
     UnitTypeId.BARRACKS: {
         UnitTypeId.GHOST: {
             'ability': AbilityId.BARRACKSTRAIN_GHOST,
@@ -48,15 +46,15 @@ TRAIN_INFO: Dict[
             'required_building': UnitTypeId.GREATERSPIRE
         }
     },
-    UnitTypeId.CREEPTUMORBURROWED: {
+    UnitTypeId.CREEPTUMOR: {
         UnitTypeId.CREEPTUMOR: {
-            'ability': AbilityId.BUILD_CREEPTUMOR,
+            'ability': AbilityId.BUILD_CREEPTUMOR_TUMOR,
             'requires_placement_position': True
         }
     },
-    UnitTypeId.CREEPTUMORQUEEN: {
+    UnitTypeId.CREEPTUMORBURROWED: {
         UnitTypeId.CREEPTUMOR: {
-            'ability': AbilityId.BUILD_CREEPTUMOR_TUMOR,
+            'ability': AbilityId.BUILD_CREEPTUMOR,
             'requires_placement_position': True
         }
     },

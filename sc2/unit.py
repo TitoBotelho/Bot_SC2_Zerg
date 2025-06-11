@@ -659,7 +659,7 @@ class Unit:
         target: Unit,
         ignore_armor: bool = False,
         include_overkill_damage: bool = True,
-    ) -> Tuple[float, float, float]:
+    ) -> tuple[float, float, float]:
         """Returns a tuple of: [potential damage against target, attack speed, attack range]
         Returns the properly calculated damage per full-attack against the target unit.
         Returns (0, 0, 0) if this unit can't attack the target unit.
@@ -697,7 +697,8 @@ class Unit:
             enemy_shield_armor = target.shield_upgrade_level
             # Ultralisk armor upgrade, only works if target belongs to the bot calling this function
             if (
-                target.type_id in {UnitTypeId.ULTRALISK, UnitTypeId.ULTRALISKBURROWED} and target.is_mine
+                target.type_id in {UnitTypeId.ULTRALISK, UnitTypeId.ULTRALISKBURROWED}
+                and target.is_mine
                 and UpgradeId.CHITINOUSPLATING in target._bot_object.state.upgrades
             ):
                 enemy_armor += 2
@@ -719,20 +720,22 @@ class Unit:
             return weapon_damage, 0.224, 6
 
         # Fast return for bunkers, since they don't have a weapon similar to BCs
-        if self.type_id == UnitTypeId.BUNKER:
-            if self.is_enemy:
-                if self.is_active:
-                    # Expect fully loaded bunker with marines
-                    return (24, 0.854, 6)
-                return (0, 0, 0)
+        if self.type_id == UnitTypeId.BUNKER and self.is_enemy:
+            if self.is_active:
+                # Expect fully loaded bunker with marines
+                return (24, 0.854, 6)
+            return (0, 0, 0)
             # TODO if bunker belongs to us, use passengers and upgrade level to calculate damage
 
-        required_target_type: Set[int] = (
+        required_target_type: set[int] = (
             TARGET_BOTH
-            if target.type_id == UnitTypeId.COLOSSUS else TARGET_GROUND if not target.is_flying else TARGET_AIR
+            if target.type_id == UnitTypeId.COLOSSUS
+            else TARGET_GROUND
+            if not target.is_flying
+            else TARGET_AIR
         )
         # Contains total damage, attack speed and attack range
-        damages: List[Tuple[float, float, float]] = []
+        damages: list[tuple[float, float, float]] = []
         for weapon in self._weapons:
             if weapon.type not in required_target_type:
                 continue
@@ -742,33 +745,34 @@ class Unit:
             weapon_speed: float = weapon.speed
             weapon_range: float = weapon.range
             bonus_damage_per_upgrade = (
-                0 if not self.attack_upgrade_level else
-                DAMAGE_BONUS_PER_UPGRADE.get(self.type_id, {}).get(weapon.type, {}).get(None, 1)
+                0
+                if not self.attack_upgrade_level
+                else DAMAGE_BONUS_PER_UPGRADE.get(self.type_id, {}).get(weapon.type, {}).get(None, 1)
             )
+            damage_per_attack: float = weapon.damage + self.attack_upgrade_level * bonus_damage_per_upgrade
             # Remaining damage after all damage is dealt to shield
             remaining_damage: float = 0
 
             # Calculate bonus damage against target
-            boni: List[float] = []
+            boni: list[float] = []
             # TODO: hardcode hellbats when they have blueflame or attack upgrades
             for bonus in weapon.damage_bonus:
                 # More about damage bonus https://github.com/Blizzard/s2client-proto/blob/b73eb59ac7f2c52b2ca585db4399f2d3202e102a/s2clientprotocol/data.proto#L55
                 if bonus.attribute in target._type_data.attributes:
                     bonus_damage_per_upgrade = (
-                        0 if not self.attack_upgrade_level else
-                        DAMAGE_BONUS_PER_UPGRADE.get(self.type_id, {}).get(weapon.type, {}).get(bonus.attribute, 0)
+                        0
+                        if not self.attack_upgrade_level
+                        else DAMAGE_BONUS_PER_UPGRADE.get(self.type_id, {}).get(weapon.type, {}).get(bonus.attribute, 0)
                     )
                     # Hardcode blueflame damage bonus from hellions
                     if (
-                        bonus.attribute == IS_LIGHT and self.type_id == UnitTypeId.HELLION
+                        bonus.attribute == IS_LIGHT
+                        and self.type_id == UnitTypeId.HELLION
                         and UpgradeId.HIGHCAPACITYBARRELS in self._bot_object.state.upgrades
                     ):
                         bonus_damage_per_upgrade += 5
                     # TODO buffs e.g. void ray charge beam vs armored
-                    boni.append(
-                        bonus.bonus
-                        + self.attack_upgrade_level * bonus_damage_per_upgrade
-                    )
+                    boni.append(bonus.bonus + self.attack_upgrade_level * bonus_damage_per_upgrade)
             if boni:
                 damage_per_attack += max(boni)
 
@@ -776,16 +780,12 @@ class Unit:
             if target.shield > 0:
                 # Fix for ranged units + guardian shield
                 enemy_shield_armor_temp = (
-                    enemy_shield_armor + 2
-                    if target_has_guardian_shield and weapon_range >= 2
-                    else enemy_shield_armor
+                    enemy_shield_armor + 2 if target_has_guardian_shield and weapon_range >= 2 else enemy_shield_armor
                 )
                 # Shield-armor has to be applied
                 while total_attacks > 0 and enemy_shield > 0:
                     # Guardian shield correction
-                    enemy_shield -= max(
-                        0.5, damage_per_attack - enemy_shield_armor_temp
-                    )
+                    enemy_shield -= max(0.5, damage_per_attack - enemy_shield_armor_temp)
                     total_attacks -= 1
                 if enemy_shield < 0:
                     remaining_damage = -enemy_shield
@@ -793,11 +793,7 @@ class Unit:
 
             # TODO roach and hydra in melee range are not affected by guardian shield
             # Fix for ranged units if enemy has guardian shield buff
-            enemy_armor_temp = (
-                enemy_armor + 2
-                if target_has_guardian_shield and weapon_range >= 2
-                else enemy_armor
-            )
+            enemy_armor_temp = enemy_armor + 2 if target_has_guardian_shield and weapon_range >= 2 else enemy_armor
             # Subtract enemy unit's HP
             if remaining_damage > 0:
                 enemy_health -= max(0.5, remaining_damage - enemy_armor_temp)
@@ -810,9 +806,7 @@ class Unit:
             if not include_overkill_damage:
                 enemy_health = max(0, enemy_health)
                 enemy_shield = max(0, enemy_shield)
-            total_damage_dealt = (
-                target.health + target.shield - enemy_health - enemy_shield
-            )
+            total_damage_dealt = target.health + target.shield - enemy_health - enemy_shield
             # Unit modifiers: buffs and upgrades that affect weapon speed and weapon range
             if self.type_id in {
                 UnitTypeId.ZERGLING,
@@ -825,11 +819,12 @@ class Unit:
                 UnitTypeId.MISSILETURRET,
                 UnitTypeId.AUTOTURRET,
             }:
-                upgrades: Set[UpgradeId] = self._bot_object.state.upgrades
+                upgrades: set[UpgradeId] = self._bot_object.state.upgrades
                 if (
                     self.type_id == UnitTypeId.ZERGLING
                     # Attack speed calculation only works for our unit
-                    and self.is_mine and UpgradeId.ZERGLINGATTACKSPEED in upgrades
+                    and self.is_mine
+                    and UpgradeId.ZERGLINGATTACKSPEED in upgrades
                 ):
                     # 0.696044921875 for zerglings divided through 1.4 equals (+40% attack speed bonus from the upgrade):
                     weapon_speed /= 1.4
@@ -839,30 +834,22 @@ class Unit:
                 ):
                     # TODO next patch: if self.type_id is adept: check if attack speed buff is active, instead of upgrade
                     weapon_speed /= 1.45
-                elif (
-                    self.type_id == UnitTypeId.MARINE and BuffId.STIMPACK in self.buffs
-                ):
+                elif self.type_id == UnitTypeId.MARINE and BuffId.STIMPACK in self.buffs:
                     # Marine and marauder receive 50% attack speed bonus from stim
                     weapon_speed /= 1.5
-                elif (
-                    self.type_id == UnitTypeId.MARAUDER
-                    and BuffId.STIMPACKMARAUDER in self.buffs
-                ):
+                elif self.type_id == UnitTypeId.MARAUDER and BuffId.STIMPACKMARAUDER in self.buffs:
                     weapon_speed /= 1.5
                 elif (
                     # TODO always assume that the enemy has the range upgrade researched
                     self.type_id == UnitTypeId.HYDRALISK and self.is_mine and UpgradeId.EVOLVEGROOVEDSPINES in upgrades
                 ):
                     weapon_range += 1
-                elif (
-                    self.type_id == UnitTypeId.PHOENIX
-                    and self.is_mine
-                    and UpgradeId.PHOENIXRANGEUPGRADE in upgrades
-                ):
+                elif self.type_id == UnitTypeId.PHOENIX and self.is_mine and UpgradeId.PHOENIXRANGEUPGRADE in upgrades:
                     weapon_range += 2
                 elif (
                     self.type_id in {UnitTypeId.PLANETARYFORTRESS, UnitTypeId.MISSILETURRET, UnitTypeId.AUTOTURRET}
-                    and self.is_mine and UpgradeId.HISECAUTOTRACKING in upgrades
+                    and self.is_mine
+                    and UpgradeId.HISECAUTOTRACKING in upgrades
                 ):
                     weapon_range += 1
 
