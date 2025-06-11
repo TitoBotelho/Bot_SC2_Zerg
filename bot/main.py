@@ -86,7 +86,7 @@ ARMY_COMP_ROACHINFESTOR: dict[Race, dict] = {
 # against other races
 ARMY_COMP_LINGROACH: dict[Race, dict] = {
     Race.Zerg: {
-        UnitID.ZERGLING: {"proportion": 0.6, "priority": 0},
+        UnitID.ZERGLING: {"proportion": 0.6, "priority": 1},
         UnitID.ROACH: {"proportion": 0.4, "priority": 0},
 
     }
@@ -186,8 +186,9 @@ class MyBot(AresBot):
         self.my_overlords = {}
         self.stop_getting_gas = False
         self.workers_for_gas = 3
-
-
+        self.tag_second_overlord = 0
+        self.my_roaches = {}
+        self.overseer_assigned = False
 
         self._commenced_attack: bool = False
 
@@ -280,6 +281,9 @@ class MyBot(AresBot):
         elif self.opponent_id == "0d0d9c44-2520-457d-84ba-7f6ffe167a3e":
             self._begin_attack_at_supply = 1
     
+        elif "2_Proxy_Gateway" in self.enemy_strategy:
+            self._begin_attack_at_supply = 1
+
         else:
             if self.EnemyRace == Race.Terran:
                 self._begin_attack_at_supply = 40
@@ -315,7 +319,7 @@ class MyBot(AresBot):
         # Get the enemy's start location
         #enemy_natural_location = self.mediator.get_enemy_nat
         #target = self.mediator.get_closest_overlord_spot(from_pos=enemy_natural_location)
-        target = enemy_natural_location.position.towards(self.game_info.map_center, 13)
+        target = enemy_natural_location.position.towards(self.game_info.map_center, 12)
         # Send the Overlord to the new position
         self.do(overlord.move(target))
         hg_spot = self.mediator.get_closest_overlord_spot(
@@ -347,29 +351,44 @@ class MyBot(AresBot):
         elif self.get_total_supply(forces) >= self._begin_attack_at_supply:
             self._commenced_attack = True
 
-        if self._commenced_attack == True:
-            # If we don't have enough army, stop attacking and build more units
 
-            #RETURN TO BASE
-            if self.get_total_supply(forces) < self._begin_attack_at_supply:
-                self._commenced_attack = False
-                self.is_roach_attacking = False
-                # If the army is not atacking and is far form the base, move it to the base
-                for unit in forces:
-                    bases = self.structures(UnitID.HATCHERY).ready
-                    if bases.amount >= 2:
-                        # In the file where distance_math_hypot is called, ensure the arguments are not None
-                        if unit.position_tuple is not None and self.mediator.get_own_nat.towards(self.game_info.map_center, 6) is not None:
-                            if unit.distance_to(self.mediator.get_own_nat) > 30:
-                                if not unit.is_attacking:
-                                    unit.move(self.mediator.get_own_nat.towards(self.game_info.map_center, 6))
-                        else:
-                            # Handle the case where one of the positions is None, e.g., log a warning or take alternative action
-                            print("Warning: One of the positions is None")
-                    else:
-                        unit.move(self.first_base.position.towards(self.game_info.map_center, 3))
+
+#_______________________________________________________________________________________________________________________
+#          RETURN TO BASE
+#_______________________________________________________________________________________________________________________
 
         
+        if self._commenced_attack == True:
+            # If we don't have enough army, stop attacking and build more units
+        
+            # RETURN TO BASE
+            if self.get_total_supply(forces) < self._begin_attack_at_supply:
+                # Escolhe a base de referência: se houver 2 ou mais hatcheries, usa a segunda base; senão, usa a primeira
+                bases = self.structures(UnitID.HATCHERY).ready
+                if bases.amount >= 2 and self.second_base is not None:
+                    base_ref = self.second_base
+                else:
+                    base_ref = self.first_base
+        
+                # Verifica se há inimigos próximos da base de referência ou na creep
+                base_under_attack = False
+                for enemy in self.enemy_units:
+                    if enemy.distance_to(base_ref.position) < 18 or self.has_creep(enemy.position):
+                        base_under_attack = True
+                        break
+        
+                if base_under_attack:
+                    # Atacar o inimigo mais próximo da base de referência
+                    self._commenced_attack = True
+                    # Mantém o modo ataque
+                else:
+                    self._commenced_attack = False
+                    self.is_roach_attacking = False
+                    for unit in forces:
+                        # Move para a base de referência
+                        unit.move(base_ref.position.towards(self.game_info.map_center, 6))
+
+
 
         if self.EnemyRace == Race.Terran:
             #await self.build_queens()
@@ -395,6 +414,7 @@ class MyBot(AresBot):
             await self.force_complete_build_order()
             await self.mutalisk_attack()
             await self.burrow_infestors()
+            await self.create_queens_after_build_order()
 
 
 
@@ -427,6 +447,10 @@ class MyBot(AresBot):
                 #await self.build_second_gas()
                 await self.build_four_gas()
                 await self.spread_overlords()
+
+            if "Terran_Agressive" in self.enemy_strategy:
+                await self.build_roach_warren()
+                await self.one_base_terran_protocol()
 
 
             #if "3_Base_Terran" in self.enemy_strategy:
@@ -471,6 +495,15 @@ class MyBot(AresBot):
             await self.burrow_roaches()
             await self.find_mutalisks()
             await self.is_worker_rush()
+            await self.force_complete_build_order()
+            await self.zergling_scout()
+            await self.build_lair()
+            await self.make_overseer()
+            await self.assign_overseer()
+            await self.turnOffSpawningControllerOnEarlyGame()
+            await self.build_one_spine_crawler()
+            await self.make_changeling()
+            await self.move_changeling()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
@@ -479,6 +512,12 @@ class MyBot(AresBot):
                 await self.turnOffSpeedMining()
                 await self.worker_defense()
                 await self.turnOnSpeedMiningAtTimeX(95)
+
+            if "Worker_Rush" in self.enemy_strategy:
+                await self.change_to_bo_TwelvePool()
+                await self.build_roach_warren()
+
+
 
 
         if self.EnemyRace == Race.Random:
@@ -833,9 +872,10 @@ class MyBot(AresBot):
             if self.spineCrawlerCheeseDetected == False:
                 for spinecrawler in self.enemy_structures(UnitID.SPINECRAWLER):
                     if spinecrawler.distance_to(self.first_base) < 20:
-                        self.spineCrawlerCheeseDetected = True
-                        await self.chat_send("Tag: Cheese Spine Crawler")
-                        self.enemy_strategy.append("Cheese_Spine_Crawler")
+                        if spinecrawler.distance_to(self.mediator.get_enemy_nat) > 30:
+                            self.spineCrawlerCheeseDetected = True
+                            await self.chat_send("Tag: Cheese Spine Crawler")
+                            self.enemy_strategy.append("Cheese_Spine_Crawler")
 
 
     async def burrow_roaches(self):
@@ -927,14 +967,29 @@ class MyBot(AresBot):
 
         if self.tag_worker_build_spine_crawler != 0:
             if self.can_afford(UnitID.SPINECRAWLER):
+                # Primeiro tente a posição antiga (perto da rampa)
                 my_ramp = self.main_base_ramp.top_center
                 reference = my_ramp.position.towards(self.first_base, 6)
-                target = reference.towards(self.game_info.map_center, 2)
+                target = reference.towards(self.game_info.map_center, -5)
+        
+                # Se a posição não tiver creep, tente ao redor do hatchery
+                if not self.has_creep(target):
+                    hatchery = self.first_base
+                    for distance in range(4, 9):
+                        candidate = hatchery.position.towards(self.game_info.map_center, distance)
+                        if self.has_creep(candidate):
+                            target = candidate
+                            break
+        
                 if worker := self.mediator.select_worker(target_position=target):                
                     self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
                     self.tag_worker_build_2nd_spine_crawler = worker
-                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                    self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+                    self.mediator.build_with_specific_worker(
+                        worker=self.tag_worker_build_2nd_spine_crawler,
+                        structure_type=UnitID.SPINECRAWLER,
+                        pos=target,
+                        building_purpose=BuildingPurpose.NORMAL_BUILDING
+                    )           
 
 
         if self.tag_worker_build_2nd_spine_crawler != 0:
@@ -993,7 +1048,7 @@ class MyBot(AresBot):
 
 
     async def search_proxy_vs_protoss(self):
-        if self.time < 94:
+        if self.time < 120:
             if self.proxy_pylon_found == False:
                 for unit in self.enemy_structures:
                     if unit.name == 'Pylon':
@@ -1227,13 +1282,14 @@ class MyBot(AresBot):
 
 
     async def stop_collecting_gas(self):
-        if self.stop_getting_gas == False:
-            if self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED):
-                print("Chamando set_workers_per_gas com amount=0")
-                self.mediator.set_workers_per_gas(amount=0)
-                self.workers_for_gas = 0
-                self.stop_getting_gas = True
-                #self.stop_getting_gas = True
+        if not "2_Proxy_Gateway" in self.enemy_strategy:
+            if self.stop_getting_gas == False:
+                if self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED):
+                    print("Chamando set_workers_per_gas com amount=0")
+                    self.mediator.set_workers_per_gas(amount=0)
+                    self.workers_for_gas = 0
+                    self.stop_getting_gas = True
+                    #self.stop_getting_gas = True
 
 
     async def burrow_infestors(self):
@@ -1247,6 +1303,85 @@ class MyBot(AresBot):
             if burrowed_infestor.energy > 75:
                 burrowed_infestor(AbilityId.BURROWUP_INFESTOR)
 
+
+    async def create_queens_after_build_order(self):
+        if self.build_order_runner.build_completed:
+            for th in self.townhalls.ready:
+                # Check if the number of queens is less than the number of townhalls
+                if len(self.units(UnitID.QUEEN)) <= len(self.townhalls.ready) + 1:
+                    # Check if we're not already training a queen
+                    if not self.already_pending(UnitID.QUEEN):
+                        # If we're not, train a queen
+                        self.do(th.train(UnitID.QUEEN))
+
+
+    async def change_to_bo_TwelvePool(self):
+        if self.bo_changed == False:
+            self.build_order_runner.switch_opening("TwelvePool")
+            self.bo_changed = True
+
+    async def zergling_scout(self):
+        if self.time < 146:
+            for zergling in self.units(UnitID.ZERGLING):
+                zergling.move(self.enemy_start_locations[0])
+
+    async def make_overseer(self):
+        if self.structures(UnitID.LAIR):
+            if self.can_afford(UnitID.OVERSEER):
+                if self.units(UnitID.OVERSEER).ready.amount == 0 and not self.already_pending(UnitID.OVERSEER):
+                    # Encontrar o Overlord com a tag armazenada em self.tag_second_overlord
+                    overseer_candidate = self.units(UnitID.OVERLORD).find_by_tag(self.tag_second_overlord)
+                    if overseer_candidate:
+                        overseer_candidate(AbilityId.MORPH_OVERSEER)
+
+    async def assign_overseer(self):
+        if not self.overseer_assigned:  # Verificar se o Overseer já foi atribuído
+            if self.my_roaches:  # Verificar se o dicionário de Roaches não está vazio
+                overseer = self.units(UnitID.OVERSEER).first if self.units(UnitID.OVERSEER) else None
+                if overseer:  # Verificar se há um Overseer disponível
+                    # Obter a primeira Roach do dicionário
+                    first_roach = next(iter(self.my_roaches.values()))
+                    # Fazer o Overseer se mover para a posição da primeira Roach
+                    overseer.smart(first_roach)
+                    self.overseer_assigned = True  # Marcar o Overseer como atribuído
+
+
+
+    async def build_one_spine_crawler(self):
+        if self.rally_point_set == True:
+            if self.structures(UnitID.SPINECRAWLER).amount == 0 and not self.already_pending(UnitID.SPINECRAWLER):
+                if self.tag_worker_build_spine_crawler == 0:
+                    if self.can_afford(UnitID.SPINECRAWLER):
+                        my_base_location = self.mediator.get_own_nat
+                        # Send the second Overlord in front of second base to scout
+                        target = my_base_location.position.towards(self.game_info.map_center, 6)                   
+                        #await self.build(UnitID.HYDRALISKDEN, near=target)
+                        if worker := self.mediator.select_worker(target_position=target):                
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_build_spine_crawler = worker
+                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+                            print("first Spine Crawler")
+
+    async def make_changeling(self):
+        # Filtra apenas overseers prontos e com energia suficiente
+        for overseer in self.units(UnitID.OVERSEER).ready:
+            if overseer.energy > 50 and overseer.is_ready:
+                overseer(AbilityId.SPAWNCHANGELING_SPAWNCHANGELING)
+
+    async def move_changeling(self):
+        for changeling in self.units(UnitID.CHANGELING):
+            if changeling.distance_to(self.enemy_start_locations[0]) > 20:
+                changeling.move(self.enemy_start_locations[0])
+            else:
+                changeling.move(self.game_info.map_center)
+
+
+    async def one_base_terran_protocol(self):
+        if self.build_order_runner.build_completed == False:
+            self.build_order_runner.set_build_completed()
+            await self.chat_send("Tag: Build_Completed")
+            self.enemy_strategy.append("Force_Build_Completed")
 
 
 #_______________________________________________________________________________________________________________________
@@ -1265,6 +1400,7 @@ class MyBot(AresBot):
             #print("RallyPointSet: ", self.rally_point_set)
             print("Enemy Structures: ", self.enemy_structures)
             print("Enemy Units: ", self.enemy_units)
+            print("Second Overlord: ", self.tag_second_overlord)
             #print("Mutalisk targets:", self.mutalisk_targets)
             #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
             #print("Enemy Start Location: ", self.enemy_start_locations[0])
@@ -1276,6 +1412,7 @@ class MyBot(AresBot):
             #print("Enemies on creep:", self.enemies_on_creep)
             #print("worker rush:", self.mediator.get_enemy_worker_rushed)
             #print("My Overlords:", self.my_overlords)
+            print("My roaches:", self.my_roaches)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
@@ -1335,6 +1472,12 @@ class MyBot(AresBot):
         if unit.type_id == UnitID.OVERLORD:
             self.my_overlords[unit.tag] = unit
 
+        # Adicionar Roaches ao dicionário self.my_roaches
+        if unit.type_id == UnitID.ROACH:
+            self.my_roaches[unit.tag] = unit
+
+
+
 
         # assign our forces ATTACKING by default
         if unit.type_id not in WORKER_TYPES and unit.type_id not in {
@@ -1342,6 +1485,7 @@ class MyBot(AresBot):
             UnitID.MULE,
             UnitID.OVERLORD,
             UnitID.MUTALISK,
+            UnitID.CHANGELING,
         }:
             # here we are making a request to an ares manager via the mediator
             # See https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html
@@ -1353,13 +1497,15 @@ class MyBot(AresBot):
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 2:
             my_base_location = self.mediator.get_own_nat
 
- 
+            # Atribuir a tag do segundo Overlord
+            self.tag_second_overlord = unit.tag
+
             # Send the second Overlord in front of second base to scout
             target = my_base_location.position.towards(self.game_info.map_center, 5)
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250415")
+            await self.chat_send("Tag: Version_250512")
             
 
         # Send the second Overlord to scout on the third base
@@ -1609,7 +1755,8 @@ class MyBot(AresBot):
                 if unit.type_id in [UnitID.INFESTOR]:
 
                     if self.enemy_units:
-                        fulgal_target = self.enemy_units.closest_to(unit)
+                        filtered_enemy_units = self.enemy_units.filter(lambda enemy: enemy.type_id != UnitID.SCV)
+
                         # Encontrar a unidade inimiga mais próxima
                         """
                         # Adicionar o comportamento de usar Fungal Growth na unidade mais próxima
@@ -1619,7 +1766,7 @@ class MyBot(AresBot):
 
                         """
                         attacking_maneuver.add(
-                            UseAOEAbility(unit=unit, ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH, targets=self.enemy_units,  min_targets=3)                       
+                            UseAOEAbility(unit=unit, ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH, targets=filtered_enemy_units,  min_targets=3)                       
                         )
 #_______________________________________________________________________________________________________________________
 #          INFESTOR BURROWED
@@ -1685,6 +1832,17 @@ class MyBot(AresBot):
         if self.EnemyRace == Race.Protoss:
             if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
                 self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)       
+
+
+        if self.EnemyRace == Race.Zerg:  
+            
+            if (not self.already_pending_upgrade(UpgradeId.BURROW)):
+                self.research(UpgradeId.BURROW)
+
+            if (not self.already_pending_upgrade(UpgradeId.TUNNELINGCLAWS)):
+                self.research(UpgradeId.TUNNELINGCLAWS)
+
+
         else:        
             if (
                 not self.already_pending_upgrade(UpgradeId.BURROW)
@@ -1693,6 +1851,8 @@ class MyBot(AresBot):
                 and self.can_afford(UpgradeId.BURROW)
             ):
                 self.research(UpgradeId.BURROW)
+
+       
     """
         for queen in self.mediator.get_own_army_dict[UnitID.QUEEN]:
             if queen.energy >= 25 and self.townhalls:

@@ -379,7 +379,7 @@ Builds:
         OpeningBuildOrder:
             - 12 drone
             - 12 worker_scout:
-                [nat, third, fourth, fifth, sixth, map_center]
+                [nat, third, fourth, fifth, sixth, map_center, third, fourth]
             - 13 drone
             - 13 spawningpool
             - 13 overlord
@@ -426,14 +426,20 @@ Builds:
             - 17 drone
             - 18 overlord
             - 18 drone
-            - 19 queen
-            - 20 roachwarren
-            - 19 queen
+            - 18 queen
+            - 17 zergling
+            - 18 drone
+            - 18 queen
+            - 19 drone
+            - 22 hatchery
+            - 21 drone
+            - 20 drone
+            - 21 drone
+            - 21 roachwarren
             - 22 drone
-            - 19 queen
-            - 25 drone
-            - 26 overlord
-            - 25 gas
+            - 21 overlord
+            - 23 drone
+            - 24 drone
             - 25 drone
             - 26 drone
             - 27 drone
@@ -441,15 +447,20 @@ Builds:
             - 29 drone
             - 30 drone
             - 31 drone
-            - 35 overlord
+            - 31 overlord
             - 32 drone
             - 33 drone
-            - 33 overlord
-            - 33 overlord
             - 34 drone
-            - 35 drone
+            - 35 gas
+            - 35 queen
             - 36 drone
-            - 37 drone
+            - 36 drone
+            - 36 drone
+            - 36 drone
+            - 36 gas
+            - 36 drone
+            - 36 drone
+            - 36 drone
             
 
 
@@ -675,10 +686,10 @@ Builds:
             - 18 drone
             - 18 queen
             - 19 drone
-            - 22 hatchery
             - 21 drone
             - 20 drone
             - 21 drone
+            - 22 hatchery
             - 21 roachwarren
             - 22 drone
             - 21 overlord
@@ -719,9 +730,10 @@ Builds:
             - 42 drone
             - 42 drone
             - 42 gas
-            - 42 INFESTATIONPIT
             - 42 gas
             - 42 overlord
+            - 42 INFESTATIONPIT
+
 
 
 
@@ -767,6 +779,7 @@ Builds:
             - 15 drone
             - 16 drone
             - 17 drone
+            - 18 queen
             - 20 zergling
             - 21 zergling
             - 22 zergling
@@ -800,10 +813,24 @@ Builds:
             - 35 drone
             - 36 drone
             - 36 overlord
-            - 37 gas
             - 38 drone
             - 39 drone
             - 40 drone
+            - 41 drone
+            - 42 drone
+            - 43 drone
+            - 43 overlord
+            - 44 drone
+            - 45 drone
+            - 46 drone
+            - 47 drone
+            - 48 drone
+            - 49 drone
+            - 50 drone
+            - 51 queen
+            - 51 overlord
+            - 51 INFESTATIONPIT
+            - 51 gas
 
 
 

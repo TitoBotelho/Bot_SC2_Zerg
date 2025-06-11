@@ -78,7 +78,7 @@ def main():
                 Computer(random_race, Difficulty.CheatVision, ai_build=AIBuild.Macro),
                 #Computer(random_race, Difficulty.CheatVision, ai_build=AIBuild.RandomBuild),
             ],
-            realtime=False,
+            realtime=True,
         )
 
 
