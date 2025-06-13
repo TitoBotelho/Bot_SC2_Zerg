@@ -182,6 +182,7 @@ class MyBot(AresBot):
         self.mutalisk_targets = {}  # Dicionário para armazenar os alvos dos mutalisks
         self.enemies_on_creep = {}  # Dicionário para armazenar as unidades inimigas que estão no creep
         self.enemy_went_worker_rush = False
+        self.enemy_went_ling_rush = False
         self.bo_changed = False
         self.my_overlords = {}
         self.stop_getting_gas = False
@@ -504,6 +505,7 @@ class MyBot(AresBot):
             await self.build_one_spine_crawler()
             await self.make_changeling()
             await self.move_changeling()
+            await self.is_ling_rush()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
@@ -1383,6 +1385,14 @@ class MyBot(AresBot):
             await self.chat_send("Tag: Build_Completed")
             self.enemy_strategy.append("Force_Build_Completed")
 
+
+
+    async def is_ling_rush(self):
+        if self.enemy_went_ling_rush == False:
+            if self.mediator.get_enemy_ling_rushed == True:
+                await self.chat_send("Tag: Ling_Rush")
+                self.enemy_strategy.append("Ling_Rush")
+                self.enemy_went_ling_rush = True
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
