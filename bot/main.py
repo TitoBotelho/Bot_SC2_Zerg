@@ -519,6 +519,11 @@ class MyBot(AresBot):
                 await self.change_to_bo_TwelvePool()
                 await self.build_roach_warren()
 
+            if "Ling_Rush" in self.enemy_strategy:
+                await self.make_spines_on_main()
+                await self.build_roach_warren()
+                await self.stop_build_order()
+                await self.build_second_gas()
 
 
 
@@ -1393,6 +1398,13 @@ class MyBot(AresBot):
                 await self.chat_send("Tag: Ling_Rush")
                 self.enemy_strategy.append("Ling_Rush")
                 self.enemy_went_ling_rush = True
+
+
+    async def stop_build_order(self):
+        if self.build_order_runner.build_completed == False:
+            self.build_order_runner.set_build_completed()
+            await self.chat_send("Tag: Build_Completed")
+            self.enemy_strategy.append("Force_Build_Completed")
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
