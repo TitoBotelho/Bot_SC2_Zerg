@@ -520,10 +520,10 @@ class MyBot(AresBot):
                 await self.build_roach_warren()
 
             if "Ling_Rush" in self.enemy_strategy:
-                await self.make_spines_on_main()
                 await self.build_roach_warren()
                 await self.stop_build_order()
                 await self.build_second_gas()
+                await self.build_spine_crawlers()
 
 
 
@@ -1527,7 +1527,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250512")
+            await self.chat_send("Tag: Version_250617")
             
 
         # Send the second Overlord to scout on the third base
