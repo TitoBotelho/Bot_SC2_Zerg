@@ -1056,28 +1056,32 @@ class MyBot(AresBot):
 
     async def search_proxy_vs_protoss(self):
         if self.time < 120:
+            enemy_natural_location = self.mediator.get_enemy_nat
             if self.proxy_pylon_found == False:
                 for unit in self.enemy_structures:
                     if unit.name == 'Pylon':
-                        self.proxy_pylon_found = True
-                        await self.chat_send("Tag: Proxy_Pylon")
-                        self.enemy_strategy.append("Proxy_Pylon")
-                        break
+                        if unit.distance_to(enemy_natural_location) > 20:
+                            self.proxy_pylon_found = True
+                            await self.chat_send("Tag: Proxy_Pylon")
+                            self.enemy_strategy.append("Proxy_Pylon")
+                            break
 
             if self.one_proxy_gateWay_found == False:
                 for unit in self.enemy_structures:
                     if unit.name == 'Gateway':
-                        self.one_proxy_gateWay_found = True
-                        await self.chat_send("Tag: Proxy_Gateway")
-                        self.enemy_strategy.append("Proxy_Gateway")
-                        break
+                        if unit.distance_to(enemy_natural_location) > 20:
+                            self.one_proxy_gateWay_found = True
+                            await self.chat_send("Tag: Proxy_Gateway")
+                            self.enemy_strategy.append("Proxy_Gateway")
+                            break
 
             if self.two_proxy_gateWay_found == False:
                 gateWays_count = sum(1 for structure in self.enemy_structures if structure.name == "Gateway")
                 if gateWays_count > 1:
-                    await self.chat_send("Tag: 2_Proxy_Gateway")
-                    self.enemy_strategy.append("2_Proxy_Gateway")
-                    self.two_proxy_gateWay_found = True
+                    if "Proxy_Gateway" in self.enemy_strategy:
+                        await self.chat_send("Tag: 2_Proxy_Gateway")
+                        self.enemy_strategy.append("2_Proxy_Gateway")
+                        self.two_proxy_gateWay_found = True
 
             if self.photon_cannon_found == False:
                 for unit in self.enemy_structures:
@@ -1527,7 +1531,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250617")
+            await self.chat_send("Tag: Version_250623")
             
 
         # Send the second Overlord to scout on the third base
