@@ -535,6 +535,12 @@ class MyBot(AresBot):
             await self.defend()
             await self.is_worker_rush()
 
+            if "Random_Protoss" in self.enemy_strategy:
+                await self.is_protoss_agressive()
+                
+            if "Random_Terran" in self.enemy_strategy:
+                await self.is_terran_agressive()
+
 
 #_______________________________________________________________________________________________________________________
 #          QUEENS
