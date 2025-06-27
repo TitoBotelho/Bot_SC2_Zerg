@@ -762,14 +762,15 @@ class MyBot(AresBot):
                     self.enemy_strategy.append("2_Base_Terran")
 
     async def is_protoss_agressive(self):
-        if not self.enemy_strategy:
+        if "2_Base_Protoss" not in self.enemy_strategy and "Protoss_Agressive" not in self.enemy_strategy:
         #verify if the protoss opponent has only one base. If so, it is an agressive terran and build a spine crawler
             if self.time > 142 and self.time < 143:
                 found_nexus = False
                 for unit in self.enemy_structures:
                     if unit.name == 'Nexus':
-                        found_nexus = True
-                        break  # Breake the loop if find the Nexus
+                        if unit.distance_to(self.mediator.get_enemy_nat) <3 :
+                            found_nexus = True
+                            break  # Breake the loop if find the Nexus
                 if not found_nexus:
                     await self.chat_send("Tag: Protoss_Agressive")
                     self.enemy_strategy.append("Protoss_Agressive")
@@ -780,14 +781,15 @@ class MyBot(AresBot):
 
 
     async def is_bunker_rush(self):
-        if not self.enemy_strategy:
+        if not "Bunker_Rush" in self.enemy_strategy:
         #verify if the protoss opponent has only one base. If so, it is an agressive terran and build a spine crawler
             if self.time > 114 and self.time < 115:
                 found_bunker = False
                 for unit in self.enemy_structures:
                     if unit.name == 'Bunker':
-                        found_bunker = True
-                        break  # Breake the loop if find the Nexus
+                        if unit.distance_to(self.mediator.get_enemy_nat) > 20:
+                            found_bunker = True
+                            break  # Breake the loop if find the Nexus
                 if found_bunker:
                     await self.chat_send("Tag: Bunker_Rush")
                     self.enemy_strategy.append("Bunker_Rush")
