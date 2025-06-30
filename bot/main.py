@@ -534,12 +534,17 @@ class MyBot(AresBot):
             await self.burrow_roaches()
             await self.defend()
             await self.is_worker_rush()
+            
 
             if "Random_Protoss" in self.enemy_strategy:
                 await self.is_protoss_agressive()
                 
             if "Random_Terran" in self.enemy_strategy:
                 await self.is_terran_agressive()
+
+            if "Random_Zerg" in self.enemy_strategy:
+                await self.is_twelve_pool()
+                
 
 
 #_______________________________________________________________________________________________________________________
@@ -1417,6 +1422,25 @@ class MyBot(AresBot):
             self.build_order_runner.set_build_completed()
             await self.chat_send("Tag: Build_Completed")
             self.enemy_strategy.append("Force_Build_Completed")
+
+
+
+    async def is_twelve_pool(self):
+        if "12_Pool" not in self.enemy_strategy:
+        #verify if the protoss opponent has only one base. If so, it is an agressive terran and build a spine crawler
+            if self.time < 82:
+                found_pool = False
+                for unit in self.enemy_structures:
+                    if unit.name == 'SpawningPool':
+                        if unit.build_progress == 1:
+                            found_pool = True
+                            break  # Breake the loop if find the Nexus
+                if found_pool:
+                    await self.chat_send("Tag: 12_Pool")
+                    self.enemy_strategy.append("12_Pool")
+
+
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
