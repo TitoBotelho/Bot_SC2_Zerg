@@ -506,6 +506,7 @@ class MyBot(AresBot):
             await self.make_changeling()
             await self.move_changeling()
             await self.is_ling_rush()
+            await self.is_twelve_pool()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
