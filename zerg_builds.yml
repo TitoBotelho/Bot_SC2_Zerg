@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - OneOneRoaches
+            - VsOneBaseRandomProtoss
 
 
     Protoss:
@@ -891,3 +891,30 @@ Builds:
             - 42 gas
             - 42 gas
 
+
+
+    VsOneBaseRandomProtoss:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
+        OpeningBuildOrder:
+            - 12 worker_scout
+            - 12 overlord
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 13 hatchery
+            - 14 drone
+            - 14 spawningpool
+            - 15 gas
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 16 drone
+            - 16 drone
+            - 17 drone
+            - 20 drone
+            - 21 overlord

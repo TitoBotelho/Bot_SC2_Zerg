@@ -539,6 +539,7 @@ class MyBot(AresBot):
 
             if "Random_Protoss" in self.enemy_strategy:
                 await self.is_protoss_agressive()
+                await self.stop_collecting_gas()
                 
             if "Random_Terran" in self.enemy_strategy:
                 await self.is_terran_agressive()
@@ -1677,7 +1678,10 @@ class MyBot(AresBot):
                 self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
             
             elif self.EnemyRace == Race.Random:
-                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+                if "Random_Protoss" in self.enemy_strategy:
+                    self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
+                else:
+                    self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
 
         # see also `ProductionController` for ongoing generic production, not needed here
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/macro_behaviors.html#ares.behaviors.macro.spawn_controller.ProductionController
@@ -1902,16 +1906,16 @@ class MyBot(AresBot):
                 self.research(UpgradeId.TUNNELINGCLAWS)
 
 
-        else:        
-            if (
-                not self.already_pending_upgrade(UpgradeId.BURROW)
-                and self.townhalls.idle
-                and self.build_order_runner.build_completed
-                and self.can_afford(UpgradeId.BURROW)
-            ):
-                self.research(UpgradeId.BURROW)
+        if self.EnemyRace == Race.Random:
+            if "Random_Protoss" in self.enemy_strategy:
+                if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
+                    self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
 
-       
+            else:
+                if (not self.already_pending_upgrade(UpgradeId.BURROW)):
+                    self.research(UpgradeId.BURROW)
+
+
     """
         for queen in self.mediator.get_own_army_dict[UnitID.QUEEN]:
             if queen.energy >= 25 and self.townhalls:
