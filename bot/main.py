@@ -540,6 +540,7 @@ class MyBot(AresBot):
             if "Random_Protoss" in self.enemy_strategy:
                 await self.is_protoss_agressive()
                 await self.stop_collecting_gas()
+                await self.change_to_bo_VsOneBaseRandomProtoss()
                 
             if "Random_Terran" in self.enemy_strategy:
                 await self.is_terran_agressive()
@@ -1442,6 +1443,11 @@ class MyBot(AresBot):
                     self.enemy_strategy.append("12_Pool")
 
 
+
+    async def change_to_bo_VsOneBaseRandomProtoss(self):
+        if self.bo_changed == False:
+            self.build_order_runner.switch_opening("VsOneBaseRandomProtoss")
+            self.bo_changed = True
 
 
 #_______________________________________________________________________________________________________________________
