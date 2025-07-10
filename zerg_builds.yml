@@ -108,11 +108,6 @@ BuildChoices:
             - BlockingTheBase
 
 
-    6e570722-ceff-41a9-b07c-14041069a3d9:
-        BotName: Dodo
-        Cycle:
-            - OppeningVsRoachRush
-
     2cd4693c-81db-4dcb-850e-b511852996e0:
         BotName: t-bone
         Cycle:
