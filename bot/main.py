@@ -343,7 +343,7 @@ class MyBot(AresBot):
 
 
         # https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html#ares.managers.manager_mediator.ManagerMediator.get_units_from_role
-        # see `self.on_unit_created` where we originally assigned units ATTACKING role
+        # see `self.on_unit_created` where we originally assigned units ATTACKING role //
         forces: Units = self.mediator.get_units_from_role(role=UnitRole.ATTACKING)
 
         if self._commenced_attack:
