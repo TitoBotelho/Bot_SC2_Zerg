@@ -507,6 +507,7 @@ class MyBot(AresBot):
             await self.move_changeling()
             await self.is_ling_rush()
             await self.is_twelve_pool()
+            await self.build_roach_warren_failed()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
@@ -1450,6 +1451,25 @@ class MyBot(AresBot):
             self.bo_changed = True
 
 
+    async def build_roach_warren_failed(self):
+        if self.time > 190:
+            if self.structures(UnitID.SPAWNINGPOOL).ready:
+                if self.structures(UnitID.ROACHWARREN).amount == 0 and not self.already_pending(UnitID.ROACHWARREN):
+                    if self.tag_worker_build_roach_warren == 0:
+                        if self.can_afford(UnitID.ROACHWARREN):
+                            map_center = self.game_info.map_center
+                            position_towards_map_center = self.start_location.towards(map_center, distance=5)
+                            target = await self.find_placement(UnitID.ROACHWARREN, near=position_towards_map_center, placement_step=1)
+                            #await self.build(UnitID.HYDRALISKDEN, near=target)
+                            if worker := self.mediator.select_worker(target_position=target):                
+                                self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                                self.tag_worker_build_roach_warren = worker
+                                #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                                self.mediator.build_with_specific_worker(worker=self.tag_worker_build_roach_warren, structure_type=UnitID.ROACHWARREN, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1571,7 +1591,7 @@ class MyBot(AresBot):
         
             # Send the Overlord to the new position
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250623")
+            await self.chat_send("Tag: Version_250714")
             
 
         # Send the second Overlord to scout on the third base
