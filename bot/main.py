@@ -189,7 +189,6 @@ class MyBot(AresBot):
         self.workers_for_gas = 3
         self.tag_second_overlord = 0
         self.my_roaches = {}
-        self.overseer_assigned = False
 
         self._commenced_attack: bool = False
 
@@ -492,6 +491,7 @@ class MyBot(AresBot):
 
 
         if self.EnemyRace == Race.Zerg:
+            await self.assign_overseer()
             await self.find_cheese_spine_crawler()
             await self.burrow_roaches()
             await self.find_mutalisks()
@@ -500,7 +500,6 @@ class MyBot(AresBot):
             await self.zergling_scout()
             await self.build_lair()
             await self.make_overseer()
-            await self.assign_overseer()
             await self.turnOffSpawningControllerOnEarlyGame()
             await self.build_one_spine_crawler()
             await self.make_changeling()
@@ -1362,17 +1361,18 @@ class MyBot(AresBot):
                     if overseer_candidate:
                         overseer_candidate(AbilityId.MORPH_OVERSEER)
 
-    async def assign_overseer(self):
-        if not self.overseer_assigned:  # Verificar se o Overseer já foi atribuído
-            if self.my_roaches:  # Verificar se o dicionário de Roaches não está vazio
-                overseer = self.units(UnitID.OVERSEER).first if self.units(UnitID.OVERSEER) else None
-                if overseer:  # Verificar se há um Overseer disponível
-                    # Obter a primeira Roach do dicionário
-                    first_roach = next(iter(self.my_roaches.values()))
-                    # Fazer o Overseer se mover para a posição da primeira Roach
-                    overseer.smart(first_roach)
-                    self.overseer_assigned = True  # Marcar o Overseer como atribuído
 
+    async def assign_overseer(self):
+        # Faz o overseer seguir a roach mais próxima da base principal inimiga, a cada ciclo
+        overseers = self.units(UnitID.OVERSEER).ready
+        roaches = self.units(UnitID.ROACH).ready
+        if roaches and overseers:
+            # Escolhe a roach mais próxima da base principal inimiga
+            enemy_main = self.enemy_start_locations[0]
+            target_roach = min(roaches, key=lambda r: r.distance_to(enemy_main))
+            for overseer in overseers:
+                if overseer.distance_to(target_roach) > 2:
+                    self.do(overseer.move(target_roach.position))
 
 
     async def build_one_spine_crawler(self):
