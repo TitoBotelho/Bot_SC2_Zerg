@@ -434,6 +434,9 @@ class MyBot(AresBot):
 
             if "Banshee" in self.enemy_strategy:
                 await self.make_spores()
+                await self.make_overseer()
+                await self.make_changeling()
+                await self.move_changeling()
 
             if "Liberator" in self.enemy_strategy:
                 await self.make_spores()
@@ -825,22 +828,29 @@ class MyBot(AresBot):
                     self.research(UpgradeId.BURROW)
 
 
+
     async def search_proxy_barracks(self):
         if self.time < 94:
             if self.one_proxy_barracks_found == False:
                 for unit in self.enemy_structures:
                     if unit.name == 'Barracks':
-                        self.one_proxy_barracks_found = True
-                        await self.chat_send("Tag: Proxy_Barracks")
-                        self.enemy_strategy.append("Proxy_Barracks")
-                        break
-
+                        if unit.distance_to(self.mediator.get_enemy_nat) > 30:
+                            self.one_proxy_barracks_found = True
+                            await self.chat_send("Tag: Proxy_Barracks")
+                            self.enemy_strategy.append("Proxy_Barracks")
+                            break
+    
             if self.two_proxy_barracks_found == False:
-                barracks_count = sum(1 for structure in self.enemy_structures if structure.name == "Barracks")
-                if barracks_count > 1:
+                # Filtra todos os barracks a mais de 30 do enemy nat
+                proxy_barracks = [
+                    structure for structure in self.enemy_structures
+                    if structure.name == "Barracks" and structure.distance_to(self.mediator.get_enemy_nat) > 30
+                ]
+                if len(proxy_barracks) >= 2:
                     await self.chat_send("Tag: 2 Proxy_Barracks")
                     self.enemy_strategy.append("2_Proxy_Barracks")
                     self.two_proxy_barracks_found = True
+
 
 
     async def build_second_gas(self):
