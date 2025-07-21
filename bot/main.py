@@ -437,6 +437,7 @@ class MyBot(AresBot):
                 await self.make_overseer()
                 await self.make_changeling()
                 await self.move_changeling()
+                await self.assign_overseer()
 
             if "Liberator" in self.enemy_strategy:
                 await self.make_spores()
@@ -1372,12 +1373,25 @@ class MyBot(AresBot):
                         overseer_candidate(AbilityId.MORPH_OVERSEER)
 
 
+ 
+
     async def assign_overseer(self):
-        # Faz o overseer seguir a roach mais próxima da base principal inimiga, a cada ciclo
         overseers = self.units(UnitID.OVERSEER).ready
+        if not overseers:
+            return
+
+        # 1. Se houver banshee, siga apenas a banshee mais próxima (ignora roach)
+        banshees = [unit for unit in self.enemy_units if unit.name == 'Banshee']
+        if banshees:
+            for overseer in overseers:
+                target_banshee = min(banshees, key=lambda b: overseer.distance_to(b))
+                if overseer.distance_to(target_banshee) > 2:
+                    self.do(overseer.move(target_banshee.position))
+            return  # Sai da função, não executa o código das roaches
+
+        # 2. Caso contrário, siga a roach mais próxima da base inimiga
         roaches = self.units(UnitID.ROACH).ready
-        if roaches and overseers:
-            # Escolhe a roach mais próxima da base principal inimiga
+        if roaches:
             enemy_main = self.enemy_start_locations[0]
             target_roach = min(roaches, key=lambda r: r.distance_to(enemy_main))
             for overseer in overseers:
@@ -1476,7 +1490,6 @@ class MyBot(AresBot):
                                 self.tag_worker_build_roach_warren = worker
                                 #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                                 self.mediator.build_with_specific_worker(worker=self.tag_worker_build_roach_warren, structure_type=UnitID.ROACHWARREN, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-
 
 
 
@@ -1589,46 +1602,26 @@ class MyBot(AresBot):
 
 
 
-        # Send the second Overlord to scout on the second base
+
+        # Exemplo para a segunda base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 2:
-            my_base_location = self.mediator.get_own_nat
-
-            # Atribuir a tag do segundo Overlord
             self.tag_second_overlord = unit.tag
-
-            # Send the second Overlord in front of second base to scout
+            my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
-        
-            # Send the Overlord to the new position
             self.do(unit.move(target))
             await self.chat_send("Tag: Version_250714")
-            
-
-        # Send the second Overlord to scout on the third base
+        
+        # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
             enemy_third = self.mediator.get_enemy_third
-
- 
-            # Send the second Overlord in front of second base to scout
             target = enemy_third.position.towards(self.game_info.map_center, 9)
-        
-            # Send the Overlord to the new position
             self.do(unit.move(target))
-
-
-        # Send the second Overlord to scout on the fourth base
+        
+        # Exemplo para a quarta base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 4:
             enemy_fourth = self.mediator.get_enemy_fourth
-
- 
-            # Send the second Overlord in front of second base to scout
             target = enemy_fourth.position.towards(self.game_info.map_center, 9)
-        
-            # Send the Overlord to the new position
             self.do(unit.move(target))
-
-
-
 
 
         # For the third Overlord and beyond, send them behind the first base
