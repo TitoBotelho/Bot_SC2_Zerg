@@ -415,6 +415,7 @@ class MyBot(AresBot):
             await self.mutalisk_attack()
             await self.burrow_infestors()
             await self.create_queens_after_build_order()
+            await self.is_mass_marauder()
 
 
 
@@ -455,6 +456,7 @@ class MyBot(AresBot):
             if "Terran_Agressive" in self.enemy_strategy:
                 await self.build_roach_warren()
                 await self.one_base_terran_protocol()
+                await self.build_one_spine_crawler()
 
 
             #if "3_Base_Terran" in self.enemy_strategy:
@@ -1492,6 +1494,12 @@ class MyBot(AresBot):
                                 self.mediator.build_with_specific_worker(worker=self.tag_worker_build_roach_warren, structure_type=UnitID.ROACHWARREN, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
 
+    async def is_mass_marauder(self):
+        if "Mass_Marauder" not in self.enemy_strategy:
+            marauder_count = sum(1 for unit in self.enemy_units if unit.name == 'Marauder')
+            if marauder_count >= 3:
+                await self.chat_send("Tag: Mass_Marauder")
+                self.enemy_strategy.append("Mass_Marauder")
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
