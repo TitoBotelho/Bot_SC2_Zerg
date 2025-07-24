@@ -416,7 +416,7 @@ class MyBot(AresBot):
             await self.burrow_infestors()
             await self.create_queens_after_build_order()
             await self.is_mass_marauder()
-
+            await self.build_3rd_base()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -1500,6 +1500,20 @@ class MyBot(AresBot):
             if marauder_count >= 3:
                 await self.chat_send("Tag: Mass_Marauder")
                 self.enemy_strategy.append("Mass_Marauder")
+
+
+
+    async def build_3rd_base(self):
+        if self.time > 360:
+            if len(self.townhalls.ready) == 2:
+                target = await self.get_next_expansion()
+                if self.tag_worker_build_3rd_base == 0:
+                    if worker := self.mediator.select_worker(target_position=target):                
+                        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                        self.tag_worker_build_3rd_base = worker
+                        #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                        self.mediator.build_with_specific_worker(worker=self.tag_worker_build_3rd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
