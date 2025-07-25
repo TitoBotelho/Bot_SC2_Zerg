@@ -417,6 +417,7 @@ class MyBot(AresBot):
             await self.create_queens_after_build_order()
             await self.is_mass_marauder()
             await self.build_3rd_base()
+            await self.is_mass_liberator()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -1514,6 +1515,13 @@ class MyBot(AresBot):
                         #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                         self.mediator.build_with_specific_worker(worker=self.tag_worker_build_3rd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
+
+    async def is_mass_liberator(self):
+        if "Mass_Liberator" not in self.enemy_strategy:
+            liberator_count = sum(1 for unit in self.enemy_units if unit.name == 'Liberator')
+            if liberator_count >= 2:
+                await self.chat_send("Tag: Mass_Liberator")
+                self.enemy_strategy.append("Mass_Liberator")
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
