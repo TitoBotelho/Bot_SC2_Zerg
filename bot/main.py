@@ -763,9 +763,10 @@ class MyBot(AresBot):
             found_command_center = False
             for unit in self.enemy_structures:
                 if unit.name == 'CommandCenter':
-                    found_command_center = True
-                    break  # Break the loop if find the Command Center
-            
+                    if unit.distance_to(self.mediator.get_enemy_nat) < 3:
+                        found_command_center = True
+                        break  # Break the loop if find the Command Center
+                
             if not found_command_center:
                 if "Terran_Agressive" not in self.enemy_strategy:
                     await self.chat_send("Tag: Terran_Agressive")
@@ -1639,7 +1640,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250714")
+            await self.chat_send("Tag: Version_250804")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
