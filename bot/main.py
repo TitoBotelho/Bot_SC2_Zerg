@@ -418,6 +418,7 @@ class MyBot(AresBot):
             await self.is_mass_marauder()
             await self.build_3rd_base()
             await self.is_mass_liberator()
+            await self.make_ravagers()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -1523,6 +1524,18 @@ class MyBot(AresBot):
             if liberator_count >= 2:
                 await self.chat_send("Tag: Mass_Liberator")
                 self.enemy_strategy.append("Mass_Liberator")
+
+
+    async def make_ravagers(self):
+        if self.vespene > 300:
+            if self.structures(UnitID.ROACHWARREN).ready:
+                if self.units(UnitID.ROACH).amount >= 10:
+                    for roach in self.units(UnitID.ROACH):
+                        roach(AbilityId.MORPHTORAVAGER_RAVAGER)
+                        if "Ravager" not in self.enemy_strategy:
+                            await self.chat_send("Tag: Ravager")
+                            self.enemy_strategy.append("Ravager")
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
