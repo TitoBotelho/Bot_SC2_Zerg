@@ -1530,11 +1530,12 @@ class MyBot(AresBot):
         if self.vespene > 300:
             if self.structures(UnitID.ROACHWARREN).ready:
                 if self.units(UnitID.ROACH).amount >= 10:
-                    for roach in self.units(UnitID.ROACH):
-                        roach(AbilityId.MORPHTORAVAGER_RAVAGER)
-                        if "Ravager" not in self.enemy_strategy:
-                            await self.chat_send("Tag: Ravager")
-                            self.enemy_strategy.append("Ravager")
+                    if not "Flying_Structures" in self.enemy_strategy:
+                        for roach in self.units(UnitID.ROACH):
+                            roach(AbilityId.MORPHTORAVAGER_RAVAGER)
+                            if "Ravager" not in self.enemy_strategy:
+                                await self.chat_send("Tag: Ravager")
+                                self.enemy_strategy.append("Ravager")
 
 
 #_______________________________________________________________________________________________________________________
@@ -1912,6 +1913,44 @@ class MyBot(AresBot):
 
                     
                     attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
+                    
+
+
+#_______________________________________________________________________________________________________________________
+#          RAVAGER
+#_______________________________________________________________________________________________________________________
+
+                if unit.type_id in [UnitID.RAVAGER]:
+                    if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
+                        # `ShootTargetInRange` will check weapon is ready
+                        # otherwise it will not execute
+
+                        
+                        if AbilityId.EFFECT_CORROSIVEBILE in unit.abilities:
+                            attacking_maneuver.add(
+                            UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=in_attack_range[0].position)
+                            )
+
+                        attacking_maneuver.add(
+                            ShootTargetInRange(unit=unit, targets=in_attack_range)
+                        )
+                    # then enemy structures
+                    elif in_attack_range := cy_in_attack_range(unit, all_close):
+                        attacking_maneuver.add(
+                            ShootTargetInRange(unit=unit, targets=in_attack_range)
+                        )
+
+                    enemy_target: Unit = cy_pick_enemy_target(all_close)
+
+                    # low shield, keep protoss units safe
+                    if self.race == Race.Protoss and unit.shield_percentage < 0.3:
+                        attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
+
+                    else:
+                        attacking_maneuver.add(
+                            StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
+                        )
+
 
 #_______________________________________________________________________________________________________________________
 #          OTHER UNITS
