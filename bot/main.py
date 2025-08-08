@@ -1925,10 +1925,16 @@ class MyBot(AresBot):
                         # `ShootTargetInRange` will check weapon is ready
                         # otherwise it will not execute
 
-                        
+
+                        bile_target: Point2 = in_attack_range[0].position
+                        for enemy_unit in self.enemy_units:
+                            if enemy_unit.name == 'Marine':
+                                bile_target = enemy_unit.position
+                                break
+
                         if AbilityId.EFFECT_CORROSIVEBILE in unit.abilities:
                             attacking_maneuver.add(
-                            UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=in_attack_range[0].position)
+                            UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
                             )
 
                         attacking_maneuver.add(
