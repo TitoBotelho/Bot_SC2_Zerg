@@ -1654,7 +1654,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250804")
+            await self.chat_send("Tag: Version_250811")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -1926,11 +1926,13 @@ class MyBot(AresBot):
                         # otherwise it will not execute
 
 
-                        bile_target: Point2 = in_attack_range[0].position
+                        closest_enemy = min(in_attack_range, key=lambda u: unit.distance_to(u))
+                        bile_target: Point2 = closest_enemy.position  # Corrigido para posição
                         for enemy_unit in self.enemy_units:
-                            if enemy_unit.name == 'Marine':
+                            if enemy_unit.name == 'SIEGETANKSIEGED':
                                 bile_target = enemy_unit.position
                                 break
+
 
                         if AbilityId.EFFECT_CORROSIVEBILE in unit.abilities:
                             attacking_maneuver.add(
