@@ -1944,6 +1944,11 @@ class MyBot(AresBot):
                         )
                     # then enemy structures
                     elif in_attack_range := cy_in_attack_range(unit, all_close):
+
+                        bile_target = in_attack_range[0].position
+                        attacking_maneuver.add(
+                            UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
+                        )
                         attacking_maneuver.add(
                             ShootTargetInRange(unit=unit, targets=in_attack_range)
                         )
