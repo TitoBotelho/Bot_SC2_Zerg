@@ -1654,7 +1654,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250811")
+            await self.chat_send("Tag: Version_250818")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -1890,21 +1890,22 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
                 if unit.type_id in [UnitID.INFESTOR]:
-
                     if self.enemy_units:
                         filtered_enemy_units = self.enemy_units.filter(lambda enemy: enemy.type_id != UnitID.SCV)
+                        # Ordena por distância e pega até 2 inimigos mais próximos
+                        sorted_enemies = sorted(filtered_enemy_units, key=lambda u: unit.distance_to(u))
+                        targets = sorted_enemies[:2]  # Pega até 2 alvos mais próximos
+                
+                        if len(targets) >= 2:
+                            attacking_maneuver.add(
+                                UseAOEAbility(
+                                    unit=unit,
+                                    ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH,
+                                    targets=targets,
+                                    min_targets=2
+                                )
+                            )
 
-                        # Encontrar a unidade inimiga mais próxima
-                        """
-                        # Adicionar o comportamento de usar Fungal Growth na unidade mais próxima
-                        attacking_maneuver.add(
-                            UseAbility(AbilityId.FUNGALGROWTH_FUNGALGROWTH, unit=unit, target=fulgal_target.position)
-                        )
-
-                        """
-                        attacking_maneuver.add(
-                            UseAOEAbility(unit=unit, ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH, targets=filtered_enemy_units,  min_targets=3)                       
-                        )
 #_______________________________________________________________________________________________________________________
 #          INFESTOR BURROWED
 #_______________________________________________________________________________________________________________________
