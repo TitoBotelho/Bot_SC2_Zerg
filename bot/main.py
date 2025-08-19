@@ -1593,11 +1593,17 @@ class MyBot(AresBot):
              
 
 #_______________________________________________________________________________________________________________________
-#          ON UNIT TOOK DESTROYED
+#          ON UNIT DESTROYED
 #_______________________________________________________________________________________________________________________
     async def on_unit_destroyed(self, unit_tag: int) -> None:
         await super(MyBot, self).on_unit_destroyed(unit_tag)
     
+        # Verifica se o primeiro overlord morreu antes de 1 minuto
+        if hasattr(self, "first_overlord") and self.first_overlord is not None:
+            if unit_tag == self.first_overlord.tag and self.time < 160:
+                await self.chat_send("Tag: First_Overlord_Killed")
+
+
 
         # checks if unit is a queen or th, library then handles appropriately
         self.queens.remove_unit(unit_tag)
@@ -1699,6 +1705,8 @@ class MyBot(AresBot):
 
                 for hatcherys in self.structures(UnitID.HATCHERY).ready:
                     self.do(hatcherys(AbilityId.RALLY_HATCHERY_UNITS, rally_point))
+
+
 
 
 #_______________________________________________________________________________________________________________________

@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - OneOneRoaches
+            - LingRoachMacroVsTerran
 
 
     Protoss:
@@ -661,10 +661,10 @@ Builds:
         ShouldHandleGasSteal: False
         OpeningBuildOrder:
             - 12 overlord
-            - 12 worker_scout:
-                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
             - 12 drone
             - 13 drone
+            - 13 worker_scout:
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
             - 14 drone
             - 15 drone
             - 15 hatchery
