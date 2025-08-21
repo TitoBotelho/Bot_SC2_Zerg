@@ -419,6 +419,7 @@ class MyBot(AresBot):
             await self.build_3rd_base()
             await self.is_mass_liberator()
             await self.make_ravagers()
+            await self.build_plus_one_roach_armor()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -1536,6 +1537,20 @@ class MyBot(AresBot):
                             if "Ravager" not in self.enemy_strategy:
                                 await self.chat_send("Tag: Ravager")
                                 self.enemy_strategy.append("Ravager")
+
+
+    async def build_plus_one_roach_armor(self):
+        # Se já pesquisou ZERGMISSILEWEAPONSLEVEL1, desliga o SpawnController até pesquisar ZERGGROUNDARMORSLEVEL1
+        if self.structures(UnitID.EVOLUTIONCHAMBER).ready and self.structures(UnitID.SPAWNINGPOOL).ready:
+            if UpgradeId.ZERGMISSILEWEAPONSLEVEL1 in self.state.upgrades:
+                # Desliga o SpawnController enquanto não pesquisa a armadura
+                if UpgradeId.ZERGGROUNDARMORSLEVEL1 not in self.state.upgrades:
+                    self.SapwnControllerOn = False
+                    if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL1) and not self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL1):
+                        self.research(UpgradeId.ZERGGROUNDARMORSLEVEL1)
+                        self.SapwnControllerOn = True
+                    return  # Não tenta pesquisar outros upgrades enquanto espera a armadura
+
 
 
 #_______________________________________________________________________________________________________________________
