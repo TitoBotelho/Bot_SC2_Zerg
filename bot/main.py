@@ -189,6 +189,7 @@ class MyBot(AresBot):
         self.workers_for_gas = 3
         self.tag_second_overlord = 0
         self.my_roaches = {}
+        self.enemy_widow_mines = {}
 
         self._commenced_attack: bool = False
 
@@ -420,6 +421,7 @@ class MyBot(AresBot):
             await self.is_mass_liberator()
             await self.make_ravagers()
             await self.build_plus_one_roach_armor()
+            await self.is_mass_widow_mine()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -1553,6 +1555,18 @@ class MyBot(AresBot):
 
 
 
+
+    async def is_mass_widow_mine(self):
+        if "Mass_Widow_Mine" not in self.enemy_strategy:
+            for unit in self.enemy_units:
+                if unit.name == 'WidowMine':
+                    self.enemy_widow_mines[unit.tag] = unit.name
+    
+            if len(self.enemy_widow_mines) >= 3:
+                await self.chat_send("Tag: Mass_Widow_Mine")
+                self.enemy_strategy.append("Mass_Widow_Mine")
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1567,9 +1581,9 @@ class MyBot(AresBot):
             #print("Enemy Strategy: ", self.enemy_strategy)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
-            print("Enemy Structures: ", self.enemy_structures)
+            #print("Enemy Structures: ", self.enemy_structures)
             print("Enemy Units: ", self.enemy_units)
-            print("Second Overlord: ", self.tag_second_overlord)
+            #print("Second Overlord: ", self.tag_second_overlord)
             #print("Mutalisk targets:", self.mutalisk_targets)
             #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
             #print("Enemy Start Location: ", self.enemy_start_locations[0])
@@ -1581,9 +1595,10 @@ class MyBot(AresBot):
             #print("Enemies on creep:", self.enemies_on_creep)
             #print("worker rush:", self.mediator.get_enemy_worker_rushed)
             #print("My Overlords:", self.my_overlords)
-            print("My roaches:", self.my_roaches)
+            #print("My roaches:", self.my_roaches)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
+            print("Enemy Widow Mines: ", self.enemy_widow_mines)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
 
 
