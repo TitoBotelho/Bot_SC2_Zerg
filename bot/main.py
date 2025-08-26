@@ -1959,45 +1959,52 @@ class MyBot(AresBot):
 #          RAVAGER
 #_______________________________________________________________________________________________________________________
 
+
                 if unit.type_id in [UnitID.RAVAGER]:
-                    if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
-                        # `ShootTargetInRange` will check weapon is ready
-                        # otherwise it will not execute
+                    # Busca inimigos no alcance da ARMA (para disparar ataques normais)
+                    in_attack_range = cy_in_attack_range(unit, only_enemy_units)
 
+                    # 1) Candidatos a bile (Liberator tem prioridade, depois Tank sieged, depois qualquer inimigo em alcance de arma)
+                    bile_target = None
 
-                        closest_enemy = min(in_attack_range, key=lambda u: unit.distance_to(u))
-                        bile_target: Point2 = closest_enemy.position  # Corrigido para posição
-                        for enemy_unit in self.enemy_units:
-                            if enemy_unit.name == 'SIEGETANKSIEGED':
-                                bile_target = enemy_unit.position
-                                break
+                    # Liberators (modo normal ou modo AG) dentro do range de bile (9)
+                    liberators_close = self.enemy_units.filter(
+                        lambda e: e.type_id in {UnitID.LIBERATORAG} and unit.distance_to(e) <= 9
+                    )
+                    if liberators_close:
+                        bile_target = cy_closest_to(unit.position, liberators_close).position
+                    else:
+                        # Siege Tank sieged dentro de 9
+                        tanks_sieged_close = self.enemy_units.filter(
+                            lambda e: e.type_id == UnitID.SIEGETANKSIEGED and unit.distance_to(e) <= 9
+                        )
+                        if tanks_sieged_close:
+                            bile_target = cy_closest_to(unit.position, tanks_sieged_close).position
+                        elif in_attack_range:
+                            # fallback: qualquer inimigo de ground em range da arma
+                            closest_enemy = min(in_attack_range, key=lambda u: unit.distance_to(u))
+                            bile_target = closest_enemy.position
 
-
-                        if AbilityId.EFFECT_CORROSIVEBILE in unit.abilities:
-                            attacking_maneuver.add(
+                    # 2) Lança bile se puder e se definimos um alvo
+                    if bile_target and AbilityId.EFFECT_CORROSIVEBILE in unit.abilities:
+                        attacking_maneuver.add(
                             UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
-                            )
+                        )
 
+                    # 3) Ataque normal (arma) se houver algo em alcance de arma
+                    if in_attack_range:
                         attacking_maneuver.add(
                             ShootTargetInRange(unit=unit, targets=in_attack_range)
                         )
-                    # then enemy structures
                     elif in_attack_range := cy_in_attack_range(unit, all_close):
-
-                        bile_target = in_attack_range[0].position
-                        attacking_maneuver.add(
-                            UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
-                        )
+                        # estruturas se não havia unidades
                         attacking_maneuver.add(
                             ShootTargetInRange(unit=unit, targets=in_attack_range)
                         )
 
                     enemy_target: Unit = cy_pick_enemy_target(all_close)
-
-                    # low shield, keep protoss units safe
                     if self.race == Race.Protoss and unit.shield_percentage < 0.3:
                         attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
-
                     else:
                         attacking_maneuver.add(
                             StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
