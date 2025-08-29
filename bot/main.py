@@ -336,7 +336,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
         self._macro()
@@ -972,14 +972,21 @@ class MyBot(AresBot):
     async def make_spores(self):
         if self.tag_worker_build_first_spore == 0:
             if self.can_afford(UnitID.SPORECRAWLER):
-                my_base_location = self.first_base
-                # Send the second Overlord in front of second base to scout
-                target = my_base_location.position.towards(self.game_info.map_center, -5)                   
-                if worker := self.mediator.select_worker(target_position=target):                
-                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                    self.tag_worker_build_first_spore = worker
-                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                    self.mediator.build_with_specific_worker(worker=self.tag_worker_build_first_spore, structure_type=UnitID.SPORECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+                positions = self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position)
+                if positions:
+                    # usa a segunda posição se existir, senão a primeira
+                    pos = positions[1] if len(positions) > 1 else positions[0]
+                    target = pos.towards(self.first_base, -1)
+                    if worker := self.mediator.select_worker(target_position=target):
+                        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                        self.tag_worker_build_first_spore = worker
+                        self.mediator.build_with_specific_worker(
+                            worker=self.tag_worker_build_first_spore,
+                            structure_type=UnitID.SPORECRAWLER,
+                            pos=target,
+                            building_purpose=BuildingPurpose.NORMAL_BUILDING
+                        )
+
 
         if self.tag_worker_build_second_spore == 0:
             if self.second_base is not None:
@@ -1585,7 +1592,7 @@ class MyBot(AresBot):
             print("Enemy Units: ", self.enemy_units)
             #print("Second Overlord: ", self.tag_second_overlord)
             #print("Mutalisk targets:", self.mutalisk_targets)
-            #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
+            print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
             #print("Enemy Start Location: ", self.enemy_start_locations[0])
             #print("Build Completed: ", self.build_order_runner.build_completed)
             #print("Scout Targets", self.scout_targets)
