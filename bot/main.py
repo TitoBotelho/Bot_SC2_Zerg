@@ -1564,14 +1564,23 @@ class MyBot(AresBot):
 
 
     async def is_mass_widow_mine(self):
-        if "Mass_Widow_Mine" not in self.enemy_strategy:
-            for unit in self.enemy_units:
-                if unit.name == 'WidowMine':
-                    self.enemy_widow_mines[unit.tag] = unit.name
-    
-            if len(self.enemy_widow_mines) >= 3:
-                await self.chat_send("Tag: Mass_Widow_Mine")
-                self.enemy_strategy.append("Mass_Widow_Mine")
+        """
+        Registra cada Widow Mine (burrowed ou não) apenas uma vez pelo tag.
+        A mesma unidade ao alternar entre WIDOWMINE <-> WIDOWMINEBURROWED mantém o mesmo tag.
+        """
+        if "Mass_Widow_Mine" in self.enemy_strategy:
+            return
+
+        # Itera minas vistas neste frame
+        for enemy in self.enemy_units.of_type({UnitID.WIDOWMINE, UnitID.WIDOWMINEBURROWED}):
+            if enemy.tag not in self.enemy_widow_mines:
+                # registra primeira vez que vimos essa mina
+                self.enemy_widow_mines[enemy.tag] = enemy.type_id
+
+        if len(self.enemy_widow_mines) >= 3:
+            await self.chat_send("Tag: Mass_Widow_Mine")
+            self.enemy_strategy.append("Mass_Widow_Mine")
+
 
 
 #_______________________________________________________________________________________________________________________
