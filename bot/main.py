@@ -463,6 +463,12 @@ class MyBot(AresBot):
                 await self.one_base_terran_protocol()
                 await self.build_one_spine_crawler()
 
+            if "Mass_Widow_Mine" in self.enemy_strategy:
+                await self.make_overseer()
+                await self.assign_overseer()
+                await self.make_changeling()
+                await self.move_changeling()
+
 
             #if "3_Base_Terran" in self.enemy_strategy:
                 #await self.macro_protocol()
@@ -1977,46 +1983,46 @@ class MyBot(AresBot):
 
 
                 if unit.type_id in [UnitID.RAVAGER]:
-                    # Busca inimigos no alcance da ARMA (para disparar ataques normais)
                     in_attack_range = cy_in_attack_range(unit, only_enemy_units)
-
-                    # 1) Candidatos a bile (Liberator tem prioridade, depois Tank sieged, depois qualquer inimigo em alcance de arma)
                     bile_target = None
 
-                    # Liberators (modo normal ou modo AG) dentro do range de bile (9)
+                    # 1. Liberators (normal ou AG) dentro do range da bile (9)
                     liberators_close = self.enemy_units.filter(
                         lambda e: e.type_id in {UnitID.LIBERATORAG} and unit.distance_to(e) <= 9
                     )
                     if liberators_close:
                         bile_target = cy_closest_to(unit.position, liberators_close).position
                     else:
-                        # Siege Tank sieged dentro de 9
+                        # 2. Siege Tank sieged
                         tanks_sieged_close = self.enemy_units.filter(
                             lambda e: e.type_id == UnitID.SIEGETANKSIEGED and unit.distance_to(e) <= 9
                         )
                         if tanks_sieged_close:
                             bile_target = cy_closest_to(unit.position, tanks_sieged_close).position
-                        elif in_attack_range:
-                            # fallback: qualquer inimigo de ground em range da arma
-                            closest_enemy = min(in_attack_range, key=lambda u: unit.distance_to(u))
-                            bile_target = closest_enemy.position
+                        else:
+                            # 3. Widow Mine enterrada
+                            widowmines_burrowed_close = self.enemy_units.filter(
+                                lambda e: e.type_id == UnitID.WIDOWMINEBURROWED and unit.distance_to(e) <= 9
+                            )
+                            if widowmines_burrowed_close:
+                                bile_target = cy_closest_to(unit.position, widowmines_burrowed_close).position
+                            else:
+                                # 4. Fallback: inimigo mais próximo em alcance de arma
+                                if in_attack_range:
+                                    closest_enemy = min(in_attack_range, key=lambda u: unit.distance_to(u))
+                                    bile_target = closest_enemy.position
 
-                    # 2) Lança bile se puder e se definimos um alvo
+                    # Lança bile se puder (evita spam checando se habilidade disponível)
                     if bile_target and AbilityId.EFFECT_CORROSIVEBILE in unit.abilities:
                         attacking_maneuver.add(
                             UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
                         )
 
-                    # 3) Ataque normal (arma) se houver algo em alcance de arma
+                    # Ataque normal (arma)
                     if in_attack_range:
-                        attacking_maneuver.add(
-                            ShootTargetInRange(unit=unit, targets=in_attack_range)
-                        )
+                        attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
                     elif in_attack_range := cy_in_attack_range(unit, all_close):
-                        # estruturas se não havia unidades
-                        attacking_maneuver.add(
-                            ShootTargetInRange(unit=unit, targets=in_attack_range)
-                        )
+                        attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
 
                     enemy_target: Unit = cy_pick_enemy_target(all_close)
                     if self.race == Race.Protoss and unit.shield_percentage < 0.3:
@@ -2025,7 +2031,6 @@ class MyBot(AresBot):
                         attacking_maneuver.add(
                             StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
                         )
-
 
 #_______________________________________________________________________________________________________________________
 #          OTHER UNITS
