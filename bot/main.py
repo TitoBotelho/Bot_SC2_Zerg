@@ -336,7 +336,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
         self._macro()
@@ -460,8 +460,8 @@ class MyBot(AresBot):
 
             if "Terran_Agressive" in self.enemy_strategy:
                 await self.build_roach_warren()
-                await self.one_base_terran_protocol()
                 await self.build_one_spine_crawler()
+                await self.change_to_bo_Terran_Agressive()
 
             if "Mass_Widow_Mine" in self.enemy_strategy:
                 await self.make_overseer()
@@ -1450,12 +1450,6 @@ class MyBot(AresBot):
                 changeling.move(self.game_info.map_center)
 
 
-    async def one_base_terran_protocol(self):
-        if self.build_order_runner.build_completed == False:
-            self.build_order_runner.set_build_completed()
-            await self.chat_send("Tag: Build_Completed")
-            self.enemy_strategy.append("Force_Build_Completed")
-
 
 
     async def is_ling_rush(self):
@@ -1586,6 +1580,12 @@ class MyBot(AresBot):
         if len(self.enemy_widow_mines) >= 3:
             await self.chat_send("Tag: Mass_Widow_Mine")
             self.enemy_strategy.append("Mass_Widow_Mine")
+
+
+    async def change_to_bo_Terran_Agressive(self):
+        if self.bo_changed == False:
+            self.build_order_runner.switch_opening("TerranAgressive")
+            self.bo_changed = True
 
 
 
