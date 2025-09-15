@@ -424,6 +424,7 @@ class MyBot(AresBot):
             await self.build_plus_one_roach_armor()
             await self.is_mass_widow_mine()
             await self.is_late_game()
+            await self.make_roach_speed()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -786,7 +787,7 @@ class MyBot(AresBot):
                 if "Terran_Agressive" not in self.enemy_strategy:
                     await self.chat_send("Tag: Terran_Agressive")
                     self.enemy_strategy.append("Terran_Agressive")
-                    #await self.build_spine_crawlers()
+                    
             else:
                 if "2_Base_Terran" not in self.enemy_strategy:
                     await self.chat_send("Tag: 2_Base_Terran")
@@ -820,7 +821,7 @@ class MyBot(AresBot):
                     if unit.name == 'Bunker':
                         if unit.distance_to(self.mediator.get_enemy_nat) > 20:
                             found_bunker = True
-                            break  # Breake the loop if find the Nexus
+                            break  
                 if found_bunker:
                     await self.chat_send("Tag: Bunker_Rush")
                     self.enemy_strategy.append("Bunker_Rush")
@@ -1613,6 +1614,16 @@ class MyBot(AresBot):
 
             else:
                 self.SapwnControllerOn = True
+
+    async def make_roach_speed(self):
+        if UpgradeId.TUNNELINGCLAWS in self.state.upgrades:
+            if UpgradeId.GLIALRECONSTITUTION not in self.state.upgrades or not self.already_pending_upgrade(UpgradeId.GLIALRECONSTITUTION):
+                self.SapwnControllerOn = False
+                self.research(UpgradeId.GLIALRECONSTITUTION)
+
+            else:
+                self.SapwnControllerOn = True
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1736,7 +1747,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250909")
+            await self.chat_send("Tag: Version_250915")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
