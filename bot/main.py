@@ -1617,11 +1617,19 @@ class MyBot(AresBot):
 
     async def make_roach_speed(self):
         if UpgradeId.TUNNELINGCLAWS in self.state.upgrades:
-            if UpgradeId.GLIALRECONSTITUTION not in self.state.upgrades or not self.already_pending_upgrade(UpgradeId.GLIALRECONSTITUTION):
-                self.SapwnControllerOn = False
-                self.research(UpgradeId.GLIALRECONSTITUTION)
+            have_rw = self.structures(UnitID.ROACHWARREN).ready
+            pending_or_done = (
+                UpgradeId.GLIALRECONSTITUTION in self.state.upgrades
+                or self.already_pending_upgrade(UpgradeId.GLIALRECONSTITUTION)
+            )
 
+            if not pending_or_done:
+                # ainda não pesquisado e não pendente: desligar e tentar iniciar
+                self.SapwnControllerOn = False
+                if have_rw and self.can_afford(UpgradeId.GLIALRECONSTITUTION):
+                    self.research(UpgradeId.GLIALRECONSTITUTION)
             else:
+                # já pendente ou concluído: religar
                 self.SapwnControllerOn = True
 
 #_______________________________________________________________________________________________________________________
