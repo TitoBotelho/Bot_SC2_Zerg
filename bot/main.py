@@ -190,7 +190,6 @@ class MyBot(AresBot):
         self.tag_second_overlord = 0
         self.my_roaches = {}
         self.enemy_widow_mines = {}
-        self.late_game = False
 
         self._commenced_attack: bool = False
 
@@ -423,8 +422,7 @@ class MyBot(AresBot):
             await self.make_ravagers()
             await self.build_plus_one_roach_armor()
             await self.is_mass_widow_mine()
-            await self.is_late_game()
-            #await self.make_roach_speed()
+            await self.make_roach_speed()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -471,9 +469,6 @@ class MyBot(AresBot):
                 await self.assign_overseer()
                 await self.make_changeling()
                 await self.move_changeling()
-
-            if "Late_Game" in self.enemy_strategy:
-                await self.late_game_protocol()
 
 
             #if "3_Base_Terran" in self.enemy_strategy:
@@ -787,7 +782,7 @@ class MyBot(AresBot):
                 if "Terran_Agressive" not in self.enemy_strategy:
                     await self.chat_send("Tag: Terran_Agressive")
                     self.enemy_strategy.append("Terran_Agressive")
-                    
+                    #await self.build_spine_crawlers()
             else:
                 if "2_Base_Terran" not in self.enemy_strategy:
                     await self.chat_send("Tag: 2_Base_Terran")
@@ -821,7 +816,7 @@ class MyBot(AresBot):
                     if unit.name == 'Bunker':
                         if unit.distance_to(self.mediator.get_enemy_nat) > 20:
                             found_bunker = True
-                            break  
+                            break  # Breake the loop if find the Nexus
                 if found_bunker:
                     await self.chat_send("Tag: Bunker_Rush")
                     self.enemy_strategy.append("Bunker_Rush")
@@ -1594,27 +1589,6 @@ class MyBot(AresBot):
             self.bo_changed = True
 
 
-    async def is_late_game(self):
-        if self.time > 600:
-            if self.late_game == False:
-                await self.chat_send("Tag: Late_Game")
-                self.enemy_strategy.append("Late_Game")
-                self.late_game = True
-
-
-    async def late_game_protocol(self):
-        if self.late_game:
-            bases = self.townhalls.ready
-            if self.workers.amount < 60 or bases.amount < 4:
-                if not self.already_pending(UnitID.HATCHERY):
-                    self.SapwnControllerOn = False
-                    self.register_behavior(ExpansionController(to_count=6, max_pending=2))
-                    self.register_behavior(BuildWorkers(to_count=60))           
-                    self.register_behavior(GasBuildingController(to_count=5, max_pending=2))
-
-            else:
-                self.SapwnControllerOn = True
-
     async def make_roach_speed(self):
         if UpgradeId.TUNNELINGCLAWS in self.state.upgrades:
             have_rw = self.structures(UnitID.ROACHWARREN).ready
@@ -1631,6 +1605,7 @@ class MyBot(AresBot):
             else:
                 # já pendente ou concluído: religar
                 self.SapwnControllerOn = True
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -1755,7 +1730,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250915")
+            await self.chat_send("Tag: Version_250818")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
