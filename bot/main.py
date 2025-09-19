@@ -422,7 +422,6 @@ class MyBot(AresBot):
             await self.make_ravagers()
             await self.build_plus_one_roach_armor()
             await self.is_mass_widow_mine()
-            #await self.make_roach_speed()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -1588,23 +1587,6 @@ class MyBot(AresBot):
             self.build_order_runner.switch_opening("TerranAgressive")
             self.bo_changed = True
 
-
-    async def make_roach_speed(self):
-        if UpgradeId.TUNNELINGCLAWS in self.state.upgrades:
-            have_rw = self.structures(UnitID.ROACHWARREN).ready
-            pending_or_done = (
-                UpgradeId.GLIALRECONSTITUTION in self.state.upgrades
-                or self.already_pending_upgrade(UpgradeId.GLIALRECONSTITUTION)
-            )
-
-            if not pending_or_done:
-                # ainda não pesquisado e não pendente: desligar e tentar iniciar
-                self.SapwnControllerOn = False
-                if have_rw and self.can_afford(UpgradeId.GLIALRECONSTITUTION):
-                    self.research(UpgradeId.GLIALRECONSTITUTION)
-            else:
-                # já pendente ou concluído: religar
-                self.SapwnControllerOn = True
 
 
 #_______________________________________________________________________________________________________________________
