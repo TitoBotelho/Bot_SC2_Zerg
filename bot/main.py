@@ -10,16 +10,13 @@ https://github.com/AresSC2/ares-random-example
 
 Using the Queens framework
 
-
-
-
 https://github.com/raspersc2/queens-sc2
 
 """
 
 
 from itertools import cycle
-from typing import Optional
+from typing import Optional, Dict, Set
 
 import numpy as np
 from ares import AresBot
@@ -200,6 +197,8 @@ class MyBot(AresBot):
         self.creep_queen_tags: Set[int] = set()
         self.other_queen_tags: Set[int] = set()
         self.max_creep_queens: int = 2
+        # Throttled caster debug timestamps per unit tag
+        self._caster_log_last = {}
 
 
 
@@ -1952,23 +1951,20 @@ class MyBot(AresBot):
 #          INFESTOR
 #_______________________________________________________________________________________________________________________
 
-                if unit.type_id in [UnitID.INFESTOR]:
-                    if self.enemy_units:
-                        filtered_enemy_units = self.enemy_units.filter(lambda enemy: enemy.type_id != UnitID.SCV)
-                        # Ordena por distância e pega até 2 inimigos mais próximos
-                        sorted_enemies = sorted(filtered_enemy_units, key=lambda u: unit.distance_to(u))
-                        targets = sorted_enemies[:2]  # Pega até 2 alvos mais próximos
-                
-                        if len(targets) >= 2:
-                            attacking_maneuver.add(
-                                UseAOEAbility(
-                                    unit=unit,
-                                    ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH,
-                                    targets=targets,
-                                    min_targets=2
-                                )
-                            )
 
+
+                if unit.type_id in [UnitID.INFESTOR]:
+                    # could also filter enemy units to be even closer
+                    # fungal_targets: Units = only_enemy_units.filter(lambda u: cy_distance_to(unit.position, u.position) < 10.0)
+                    if only_enemy_units:
+                        attacking_maneuver.add(
+                            UseAOEAbility(
+                                unit=unit,
+                                ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH,
+                                targets=only_enemy_units,
+                                min_targets=2
+                            )
+                        )
 #_______________________________________________________________________________________________________________________
 #          INFESTOR BURROWED
 #_______________________________________________________________________________________________________________________
@@ -2016,6 +2012,11 @@ class MyBot(AresBot):
                                     bile_target = closest_enemy.position
 
                     # Lança bile se puder (evita spam checando se habilidade disponível)
+                    if bile_target:
+                        try:
+                            self._log_caster(unit, unit.abilities, "RAVAGER has_bile_target")
+                        except Exception:
+                            pass
                     if bile_target and AbilityId.EFFECT_CORROSIVEBILE in unit.abilities:
                         attacking_maneuver.add(
                             UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
@@ -2053,6 +2054,23 @@ class MyBot(AresBot):
 
             # DON'T FORGET TO REGISTER OUR COMBAT MANEUVER!!
             self.register_behavior(attacking_maneuver)
+
+    def _log_caster(self, unit: Unit, abilities: Set[AbilityId], context: str = "") -> None:
+        """Emit a throttled debug line for a spellcaster to check ability cache on ladder."""
+        now = time.time()
+        last = self._caster_log_last.get(unit.tag, 0)
+        if now - last < 2.0:
+            return
+        self._caster_log_last[unit.tag] = now
+        try:
+            abil_list = [getattr(a, "name", str(a)) for a in abilities]
+        except Exception:
+            abil_list = list(abilities)
+        try:
+            unit_name = unit.type_id.name
+        except Exception:
+            unit_name = str(unit.type_id)
+        print(f"[Caster] t={self.time_formatted} {unit_name} tag={unit.tag} energy={getattr(unit, 'energy', 0):.1f} abilities={abil_list} ctx={context}")
 
     def burrow_behavior(self, roach: Unit) -> CombatManeuver:
         """
