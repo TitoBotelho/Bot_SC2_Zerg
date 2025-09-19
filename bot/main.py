@@ -1860,6 +1860,12 @@ class MyBot(AresBot):
             first_enemy_on_creep = next(iter(self.enemies_on_creep.values()))
             target = first_enemy_on_creep.position
 
+        # Ensure caster logs and bile cooldown maps exist (robust on ladder)
+        if not hasattr(self, "_caster_log_last"):
+            self._caster_log_last = {}
+        if not hasattr(self, "_last_ravager_bile"):
+            self._last_ravager_bile = {}
+
 
         # use `ares-sc2` combat maneuver system
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/combat_behaviors.html
@@ -1987,7 +1993,7 @@ class MyBot(AresBot):
 
                     # 1. Liberators (normal ou AG) dentro do range da bile (9)
                     liberators_close = self.enemy_units.filter(
-                        lambda e: e.type_id in {UnitID.LIBERATORAG} and unit.distance_to(e) <= 9
+                        lambda e: e.type_id in {UnitID.LIBERATOR, UnitID.LIBERATORAG} and unit.distance_to(e) <= 9
                     )
                     if liberators_close:
                         bile_target = cy_closest_to(unit.position, liberators_close).position
@@ -2011,16 +2017,27 @@ class MyBot(AresBot):
                                     closest_enemy = min(in_attack_range, key=lambda u: unit.distance_to(u))
                                     bile_target = closest_enemy.position
 
-                    # Lança bile se puder (evita spam checando se habilidade disponível)
+                    # Lança bile com fallback que não depende de unit.abilities (algumas ladders retornam lista vazia)
                     if bile_target:
+                        # Log diagnóstico (throttle interno)
                         try:
                             self._log_caster(unit, unit.abilities, "RAVAGER has_bile_target")
                         except Exception:
                             pass
-                    if bile_target and AbilityId.EFFECT_CORROSIVEBILE in unit.abilities:
-                        attacking_maneuver.add(
-                            UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
-                        )
+
+                        # Debounce por unidade: cooldown aproximado da bile ~10s
+                        last_cast_time = self._last_ravager_bile.get(unit.tag, -999.0)
+                        if (self.time - last_cast_time) >= 9.8:
+                            attacking_maneuver.add(
+                                UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
+                            )
+                            # Atualiza timestamp para evitar spam caso a ladder ignore o comando em cooldown
+                            self._last_ravager_bile[unit.tag] = self.time
+                            # Log opcional simples (não crítico se falhar)
+                            try:
+                                print(f"[Caster] t={self.time_formatted} RAVAGER tag={unit.tag} scheduled_bile target={getattr(bile_target, 'to2', lambda: bile_target)() if hasattr(bile_target, 'to2') else bile_target}")
+                            except Exception:
+                                pass
 
                     # Ataque normal (arma)
                     if in_attack_range:
