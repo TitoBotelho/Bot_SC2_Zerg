@@ -460,14 +460,8 @@ class MyBot(AresBot):
 
             if "Terran_Agressive" in self.enemy_strategy:
                 await self.build_roach_warren()
+                await self.one_base_terran_protocol()
                 await self.build_one_spine_crawler()
-                await self.change_to_bo_Terran_Agressive()
-
-            if "Mass_Widow_Mine" in self.enemy_strategy:
-                await self.make_overseer()
-                await self.assign_overseer()
-                await self.make_changeling()
-                await self.move_changeling()
 
 
             #if "3_Base_Terran" in self.enemy_strategy:
@@ -978,21 +972,14 @@ class MyBot(AresBot):
     async def make_spores(self):
         if self.tag_worker_build_first_spore == 0:
             if self.can_afford(UnitID.SPORECRAWLER):
-                positions = self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position)
-                if positions:
-                    # usa a segunda posição se existir, senão a primeira
-                    pos = positions[1] if len(positions) > 1 else positions[0]
-                    target = pos.towards(self.first_base, -1)
-                    if worker := self.mediator.select_worker(target_position=target):
-                        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                        self.tag_worker_build_first_spore = worker
-                        self.mediator.build_with_specific_worker(
-                            worker=self.tag_worker_build_first_spore,
-                            structure_type=UnitID.SPORECRAWLER,
-                            pos=target,
-                            building_purpose=BuildingPurpose.NORMAL_BUILDING
-                        )
-
+                my_base_location = self.first_base
+                # Send the second Overlord in front of second base to scout
+                target = my_base_location.position.towards(self.game_info.map_center, -5)                   
+                if worker := self.mediator.select_worker(target_position=target):                
+                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                    self.tag_worker_build_first_spore = worker
+                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                    self.mediator.build_with_specific_worker(worker=self.tag_worker_build_first_spore, structure_type=UnitID.SPORECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
         if self.tag_worker_build_second_spore == 0:
             if self.second_base is not None:
@@ -1450,6 +1437,12 @@ class MyBot(AresBot):
                 changeling.move(self.game_info.map_center)
 
 
+    async def one_base_terran_protocol(self):
+        if self.build_order_runner.build_completed == False:
+            self.build_order_runner.set_build_completed()
+            await self.chat_send("Tag: Build_Completed")
+            self.enemy_strategy.append("Force_Build_Completed")
+
 
 
     async def is_ling_rush(self):
@@ -1564,29 +1557,14 @@ class MyBot(AresBot):
 
 
     async def is_mass_widow_mine(self):
-        """
-        Registra cada Widow Mine (burrowed ou não) apenas uma vez pelo tag.
-        A mesma unidade ao alternar entre WIDOWMINE <-> WIDOWMINEBURROWED mantém o mesmo tag.
-        """
-        if "Mass_Widow_Mine" in self.enemy_strategy:
-            return
-
-        # Itera minas vistas neste frame
-        for enemy in self.enemy_units.of_type({UnitID.WIDOWMINE, UnitID.WIDOWMINEBURROWED}):
-            if enemy.tag not in self.enemy_widow_mines:
-                # registra primeira vez que vimos essa mina
-                self.enemy_widow_mines[enemy.tag] = enemy.type_id
-
-        if len(self.enemy_widow_mines) >= 3:
-            await self.chat_send("Tag: Mass_Widow_Mine")
-            self.enemy_strategy.append("Mass_Widow_Mine")
-
-
-    async def change_to_bo_Terran_Agressive(self):
-        if self.bo_changed == False:
-            self.build_order_runner.switch_opening("TerranAgressive")
-            self.bo_changed = True
-
+        if "Mass_Widow_Mine" not in self.enemy_strategy:
+            for unit in self.enemy_units:
+                if unit.name == 'WidowMine':
+                    self.enemy_widow_mines[unit.tag] = unit.name
+    
+            if len(self.enemy_widow_mines) >= 3:
+                await self.chat_send("Tag: Mass_Widow_Mine")
+                self.enemy_strategy.append("Mass_Widow_Mine")
 
 
 #_______________________________________________________________________________________________________________________
@@ -1607,7 +1585,7 @@ class MyBot(AresBot):
             print("Enemy Units: ", self.enemy_units)
             #print("Second Overlord: ", self.tag_second_overlord)
             #print("Mutalisk targets:", self.mutalisk_targets)
-            print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
+            #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
             #print("Enemy Start Location: ", self.enemy_start_locations[0])
             #print("Build Completed: ", self.build_order_runner.build_completed)
             #print("Scout Targets", self.scout_targets)
@@ -1949,23 +1927,19 @@ class MyBot(AresBot):
 #          INFESTOR
 #_______________________________________________________________________________________________________________________
 
-                if unit.type_id in [UnitID.INFESTOR]:
-                    if self.enemy_units:
-                        filtered_enemy_units = self.enemy_units.filter(lambda enemy: enemy.type_id != UnitID.SCV)
-                        # Ordena por distância e pega até 2 inimigos mais próximos
-                        sorted_enemies = sorted(filtered_enemy_units, key=lambda u: unit.distance_to(u))
-                        targets = sorted_enemies[:2]  # Pega até 2 alvos mais próximos
-                
-                        if len(targets) >= 2:
-                            attacking_maneuver.add(
-                                UseAOEAbility(
-                                    unit=unit,
-                                    ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH,
-                                    targets=targets,
-                                    min_targets=2
-                                )
-                            )
 
+                if unit.type_id in [UnitID.INFESTOR]:
+                    # could also filter enemy units to be even closer
+                    # fungal_targets: Units = only_enemy_units.filter(lambda u: cy_distance_to(unit.position, u.position) < 10.0)
+                    if only_enemy_units:
+                        attacking_maneuver.add(
+                            UseAOEAbility(
+                                unit=unit,
+                                ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH,
+                                targets=only_enemy_units,
+                                min_targets=2
+                            )
+                        )
 #_______________________________________________________________________________________________________________________
 #          INFESTOR BURROWED
 #_______________________________________________________________________________________________________________________
@@ -1981,56 +1955,50 @@ class MyBot(AresBot):
 #          RAVAGER
 #_______________________________________________________________________________________________________________________
 
-
                 if unit.type_id in [UnitID.RAVAGER]:
-                    in_attack_range = cy_in_attack_range(unit, only_enemy_units)
-                    bile_target = None
+                    if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
+                        # `ShootTargetInRange` will check weapon is ready
+                        # otherwise it will not execute
 
-                    # 1. Liberators (normal ou AG) dentro do range da bile (9)
-                    liberators_close = self.enemy_units.filter(
-                        lambda e: e.type_id in {UnitID.LIBERATORAG} and unit.distance_to(e) <= 9
-                    )
-                    if liberators_close:
-                        bile_target = cy_closest_to(unit.position, liberators_close).position
-                    else:
-                        # 2. Siege Tank sieged
-                        tanks_sieged_close = self.enemy_units.filter(
-                            lambda e: e.type_id == UnitID.SIEGETANKSIEGED and unit.distance_to(e) <= 9
-                        )
-                        if tanks_sieged_close:
-                            bile_target = cy_closest_to(unit.position, tanks_sieged_close).position
-                        else:
-                            # 3. Widow Mine enterrada
-                            widowmines_burrowed_close = self.enemy_units.filter(
-                                lambda e: e.type_id == UnitID.WIDOWMINEBURROWED and unit.distance_to(e) <= 9
+
+                        closest_enemy = min(in_attack_range, key=lambda u: unit.distance_to(u))
+                        bile_target: Point2 = closest_enemy.position  # Corrigido para posição
+                        for enemy_unit in self.enemy_units:
+                            if enemy_unit.name == 'SIEGETANKSIEGED':
+                                bile_target = enemy_unit.position
+                                break
+
+
+                        if AbilityId.EFFECT_CORROSIVEBILE in unit.abilities:
+                            attacking_maneuver.add(
+                            UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
                             )
-                            if widowmines_burrowed_close:
-                                bile_target = cy_closest_to(unit.position, widowmines_burrowed_close).position
-                            else:
-                                # 4. Fallback: inimigo mais próximo em alcance de arma
-                                if in_attack_range:
-                                    closest_enemy = min(in_attack_range, key=lambda u: unit.distance_to(u))
-                                    bile_target = closest_enemy.position
 
-                    # Lança bile se puder (evita spam checando se habilidade disponível)
-                    if bile_target and AbilityId.EFFECT_CORROSIVEBILE in unit.abilities:
+                        attacking_maneuver.add(
+                            ShootTargetInRange(unit=unit, targets=in_attack_range)
+                        )
+                    # then enemy structures
+                    elif in_attack_range := cy_in_attack_range(unit, all_close):
+
+                        bile_target = in_attack_range[0].position
                         attacking_maneuver.add(
                             UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
                         )
-
-                    # Ataque normal (arma)
-                    if in_attack_range:
-                        attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
-                    elif in_attack_range := cy_in_attack_range(unit, all_close):
-                        attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
+                        attacking_maneuver.add(
+                            ShootTargetInRange(unit=unit, targets=in_attack_range)
+                        )
 
                     enemy_target: Unit = cy_pick_enemy_target(all_close)
+
+                    # low shield, keep protoss units safe
                     if self.race == Race.Protoss and unit.shield_percentage < 0.3:
                         attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
+
                     else:
                         attacking_maneuver.add(
                             StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
                         )
+
 
 #_______________________________________________________________________________________________________________________
 #          OTHER UNITS
