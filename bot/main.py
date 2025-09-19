@@ -2027,15 +2027,47 @@ class MyBot(AresBot):
 
                         # Debounce por unidade: cooldown aproximado da bile ~10s
                         last_cast_time = self._last_ravager_bile.get(unit.tag, -999.0)
-                        if (self.time - last_cast_time) >= 9.8:
-                            attacking_maneuver.add(
-                                UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
-                            )
-                            # Atualiza timestamp para evitar spam caso a ladder ignore o comando em cooldown
+                        dt = self.time - last_cast_time
+                        # Medidas auxiliares
+                        try:
+                            dist = unit.distance_to(bile_target)
+                        except Exception:
+                            dist = 0.0
+                        # Log de diagnóstico de decisão
+                        try:
+                            print(f"[Caster] bile_dbg t={self.time_formatted} tag={unit.tag} dt={dt:.1f} dist={dist:.1f}")
+                        except Exception:
+                            pass
+
+                        if dist > 9.0:
+                            # Fora do alcance da bile
+                            try:
+                                print(f"[Caster] bile_dbg skip: out_of_range dist={dist:.2f}")
+                            except Exception:
+                                pass
+                        elif dt >= 9.8:
+                            # Emite ordem direta para contornar checagens internas de habilidade
+                            try:
+                                self.do(unit(AbilityId.EFFECT_CORROSIVEBILE, bile_target))
+                                issued = True
+                            except Exception:
+                                issued = False
+                            if not issued:
+                                # Fallback: ainda tenta via behavior
+                                attacking_maneuver.add(
+                                    UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
+                                )
+                            # Atualiza timestamp para evitar spam
                             self._last_ravager_bile[unit.tag] = self.time
                             # Log opcional simples (não crítico se falhar)
                             try:
-                                print(f"[Caster] t={self.time_formatted} RAVAGER tag={unit.tag} scheduled_bile target={getattr(bile_target, 'to2', lambda: bile_target)() if hasattr(bile_target, 'to2') else bile_target}")
+                                print(f"[Caster] t={self.time_formatted} RAVAGER tag={unit.tag} issued_bile={issued} target={getattr(bile_target, 'to2', lambda: bile_target)() if hasattr(bile_target, 'to2') else bile_target}")
+                            except Exception:
+                                pass
+                        else:
+                            # Em cooldown
+                            try:
+                                print(f"[Caster] bile_dbg skip: cooldown dt={dt:.2f}")
                             except Exception:
                                 pass
 
