@@ -1991,23 +1991,23 @@ class MyBot(AresBot):
                     in_attack_range = cy_in_attack_range(unit, only_enemy_units)
                     bile_target = None
 
-                    # 1. Liberators (normal ou AG) dentro do range da bile (9)
+                    # 1. Liberators (normal ou AG) visíveis dentro do range da bile (9)
                     liberators_close = self.enemy_units.filter(
-                        lambda e: e.type_id in {UnitID.LIBERATOR, UnitID.LIBERATORAG} and unit.distance_to(e) <= 9
+                        lambda e: (not getattr(e, "is_memory", False)) and e.type_id in {UnitID.LIBERATOR, UnitID.LIBERATORAG} and unit.distance_to(e) <= 9
                     )
                     if liberators_close:
                         bile_target = cy_closest_to(unit.position, liberators_close).position
                     else:
                         # 2. Siege Tank sieged
                         tanks_sieged_close = self.enemy_units.filter(
-                            lambda e: e.type_id == UnitID.SIEGETANKSIEGED and unit.distance_to(e) <= 9
+                            lambda e: (not getattr(e, "is_memory", False)) and e.type_id == UnitID.SIEGETANKSIEGED and unit.distance_to(e) <= 9
                         )
                         if tanks_sieged_close:
                             bile_target = cy_closest_to(unit.position, tanks_sieged_close).position
                         else:
                             # 3. Widow Mine enterrada
                             widowmines_burrowed_close = self.enemy_units.filter(
-                                lambda e: e.type_id == UnitID.WIDOWMINEBURROWED and unit.distance_to(e) <= 9
+                                lambda e: (not getattr(e, "is_memory", False)) and e.type_id == UnitID.WIDOWMINEBURROWED and unit.distance_to(e) <= 9
                             )
                             if widowmines_burrowed_close:
                                 bile_target = cy_closest_to(unit.position, widowmines_burrowed_close).position
@@ -2018,6 +2018,7 @@ class MyBot(AresBot):
                                     bile_target = closest_enemy.position
 
                     # Lança bile com fallback que não depende de unit.abilities (algumas ladders retornam lista vazia)
+                    scheduled_bile: bool = False
                     if bile_target:
                         # Log diagnóstico (throttle interno)
                         try:
@@ -2025,9 +2026,10 @@ class MyBot(AresBot):
                         except Exception:
                             pass
 
-                        # Debounce por unidade: cooldown aproximado da bile ~10s
+                        # Debounce por unidade: cooldown aproximado da bile ~10s (ajustado p/ AI Arena)
                         last_cast_time = self._last_ravager_bile.get(unit.tag, -999.0)
                         dt = self.time - last_cast_time
+                        cooldown_threshold = 9.2
                         # Medidas auxiliares
                         try:
                             dist = unit.distance_to(bile_target)
@@ -2045,23 +2047,19 @@ class MyBot(AresBot):
                                 print(f"[Caster] bile_dbg skip: out_of_range dist={dist:.2f}")
                             except Exception:
                                 pass
-                        elif dt >= 9.8:
-                            # Emite ordem direta para contornar checagens internas de habilidade
-                            try:
-                                self.do(unit(AbilityId.EFFECT_CORROSIVEBILE, bile_target))
-                                issued = True
-                            except Exception:
-                                issued = False
-                            if not issued:
-                                # Fallback: ainda tenta via behavior
-                                attacking_maneuver.add(
-                                    UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
-                                )
-                            # Atualiza timestamp para evitar spam
+                        elif dt >= cooldown_threshold:
+                            # Agenda o cast via CombatManeuver (evita ser sobrescrito por outras ordens do mesmo frame)
+                            attacking_maneuver.add(
+                                UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
+                            )
+                            scheduled_bile = True
+                            # Atualiza timestamp local
                             self._last_ravager_bile[unit.tag] = self.time
-                            # Log opcional simples (não crítico se falhar)
+                            # Log simples
                             try:
-                                print(f"[Caster] t={self.time_formatted} RAVAGER tag={unit.tag} issued_bile={issued} target={getattr(bile_target, 'to2', lambda: bile_target)() if hasattr(bile_target, 'to2') else bile_target}")
+                                tx = getattr(bile_target, 'x', None)
+                                ty = getattr(bile_target, 'y', None)
+                                print(f"[Caster] t={self.time_formatted} RAVAGER tag={unit.tag} scheduled_bile target=({tx},{ty}) dt={dt:.2f}")
                             except Exception:
                                 pass
                         else:
@@ -2071,19 +2069,21 @@ class MyBot(AresBot):
                             except Exception:
                                 pass
 
-                    # Ataque normal (arma)
-                    if in_attack_range:
-                        attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
-                    elif in_attack_range := cy_in_attack_range(unit, all_close):
-                        attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
+                    # Se agendou bile, pula o restante das ações desse frame para evitar conflito
+                    if not scheduled_bile:
+                        # Ataque normal (arma)
+                        if in_attack_range:
+                            attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
+                        elif in_attack_range := cy_in_attack_range(unit, all_close):
+                            attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
 
-                    enemy_target: Unit = cy_pick_enemy_target(all_close)
-                    if self.race == Race.Protoss and unit.shield_percentage < 0.3:
-                        attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
-                    else:
-                        attacking_maneuver.add(
-                            StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
-                        )
+                        enemy_target: Unit = cy_pick_enemy_target(all_close)
+                        if self.race == Race.Protoss and unit.shield_percentage < 0.3:
+                            attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
+                        else:
+                            attacking_maneuver.add(
+                                StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
+                            )
 
 #_______________________________________________________________________________________________________________________
 #          OTHER UNITS
