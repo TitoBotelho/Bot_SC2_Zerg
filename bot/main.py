@@ -197,8 +197,11 @@ class MyBot(AresBot):
         self.creep_queen_tags: Set[int] = set()
         self.other_queen_tags: Set[int] = set()
         self.max_creep_queens: int = 2
-        # Throttled caster debug timestamps per unit tag
-        self._caster_log_last = {}
+        # Throttled caster debug timestamps per unit tag (legacy system)
+        # self._caster_log_last = {}
+
+        # Legacy ravager bile tracking - no longer needed with new system
+        # self._last_ravager_bile = {}
 
 
 
@@ -1860,11 +1863,11 @@ class MyBot(AresBot):
             first_enemy_on_creep = next(iter(self.enemies_on_creep.values()))
             target = first_enemy_on_creep.position
 
-        # Ensure caster logs and bile cooldown maps exist (robust on ladder)
-        if not hasattr(self, "_caster_log_last"):
-            self._caster_log_last = {}
-        if not hasattr(self, "_last_ravager_bile"):
-            self._last_ravager_bile = {}
+        # Legacy caster logs and bile cooldown maps (no longer needed)
+        # if not hasattr(self, "_caster_log_last"):
+        #     self._caster_log_last = {}
+        # if not hasattr(self, "_last_ravager_bile"):
+        #     self._last_ravager_bile = {}
 
 
         # use `ares-sc2` combat maneuver system
@@ -1983,107 +1986,12 @@ class MyBot(AresBot):
 
 
 #_______________________________________________________________________________________________________________________
-#          RAVAGER
+#          RAVAGER - New Implementation
 #_______________________________________________________________________________________________________________________
 
-
                 if unit.type_id in [UnitID.RAVAGER]:
-                    in_attack_range = cy_in_attack_range(unit, only_enemy_units)
-                    bile_target = None
-
-                    # 1. Liberators (normal ou AG) visíveis dentro do range da bile (9)
-                    liberators_close = self.enemy_units.filter(
-                        lambda e: (not getattr(e, "is_memory", False)) and e.type_id in {UnitID.LIBERATOR, UnitID.LIBERATORAG} and unit.distance_to(e) <= 9
-                    )
-                    if liberators_close:
-                        bile_target = cy_closest_to(unit.position, liberators_close).position
-                    else:
-                        # 2. Siege Tank sieged
-                        tanks_sieged_close = self.enemy_units.filter(
-                            lambda e: (not getattr(e, "is_memory", False)) and e.type_id == UnitID.SIEGETANKSIEGED and unit.distance_to(e) <= 9
-                        )
-                        if tanks_sieged_close:
-                            bile_target = cy_closest_to(unit.position, tanks_sieged_close).position
-                        else:
-                            # 3. Widow Mine enterrada
-                            widowmines_burrowed_close = self.enemy_units.filter(
-                                lambda e: (not getattr(e, "is_memory", False)) and e.type_id == UnitID.WIDOWMINEBURROWED and unit.distance_to(e) <= 9
-                            )
-                            if widowmines_burrowed_close:
-                                bile_target = cy_closest_to(unit.position, widowmines_burrowed_close).position
-                            else:
-                                # 4. Fallback: inimigo mais próximo em alcance de arma
-                                if in_attack_range:
-                                    closest_enemy = min(in_attack_range, key=lambda u: unit.distance_to(u))
-                                    bile_target = closest_enemy.position
-
-                    # Lança bile com fallback que não depende de unit.abilities (algumas ladders retornam lista vazia)
-                    scheduled_bile: bool = False
-                    if bile_target:
-                        # Log diagnóstico (throttle interno)
-                        try:
-                            self._log_caster(unit, unit.abilities, "RAVAGER has_bile_target")
-                        except Exception:
-                            pass
-
-                        # Debounce por unidade: cooldown aproximado da bile ~10s (ajustado p/ AI Arena)
-                        last_cast_time = self._last_ravager_bile.get(unit.tag, -999.0)
-                        dt = self.time - last_cast_time
-                        cooldown_threshold = 9.2
-                        # Medidas auxiliares
-                        try:
-                            dist = unit.distance_to(bile_target)
-                        except Exception:
-                            dist = 0.0
-                        # Log de diagnóstico de decisão
-                        try:
-                            print(f"[Caster] bile_dbg t={self.time_formatted} tag={unit.tag} dt={dt:.1f} dist={dist:.1f}")
-                        except Exception:
-                            pass
-
-                        if dist > 9.0:
-                            # Fora do alcance da bile
-                            try:
-                                print(f"[Caster] bile_dbg skip: out_of_range dist={dist:.2f}")
-                            except Exception:
-                                pass
-                        elif dt >= cooldown_threshold:
-                            # Agenda o cast via CombatManeuver (evita ser sobrescrito por outras ordens do mesmo frame)
-                            attacking_maneuver.add(
-                                UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
-                            )
-                            scheduled_bile = True
-                            # Atualiza timestamp local
-                            self._last_ravager_bile[unit.tag] = self.time
-                            # Log simples
-                            try:
-                                tx = getattr(bile_target, 'x', None)
-                                ty = getattr(bile_target, 'y', None)
-                                print(f"[Caster] t={self.time_formatted} RAVAGER tag={unit.tag} scheduled_bile target=({tx},{ty}) dt={dt:.2f}")
-                            except Exception:
-                                pass
-                        else:
-                            # Em cooldown
-                            try:
-                                print(f"[Caster] bile_dbg skip: cooldown dt={dt:.2f}")
-                            except Exception:
-                                pass
-
-                    # Se agendou bile, pula o restante das ações desse frame para evitar conflito
-                    if not scheduled_bile:
-                        # Ataque normal (arma)
-                        if in_attack_range:
-                            attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
-                        elif in_attack_range := cy_in_attack_range(unit, all_close):
-                            attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
-
-                        enemy_target: Unit = cy_pick_enemy_target(all_close)
-                        if self.race == Race.Protoss and unit.shield_percentage < 0.3:
-                            attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
-                        else:
-                            attacking_maneuver.add(
-                                StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
-                            )
+                    # This ravager is handled by the new system below
+                    pass
 
 #_______________________________________________________________________________________________________________________
 #          OTHER UNITS
@@ -2104,22 +2012,65 @@ class MyBot(AresBot):
             # DON'T FORGET TO REGISTER OUR COMBAT MANEUVER!!
             self.register_behavior(attacking_maneuver)
 
-    def _log_caster(self, unit: Unit, abilities: Set[AbilityId], context: str = "") -> None:
-        """Emit a throttled debug line for a spellcaster to check ability cache on ladder."""
-        now = time.time()
-        last = self._caster_log_last.get(unit.tag, 0)
-        if now - last < 2.0:
-            return
-        self._caster_log_last[unit.tag] = now
-        try:
-            abil_list = [getattr(a, "name", str(a)) for a in abilities]
-        except Exception:
-            abil_list = list(abilities)
-        try:
-            unit_name = unit.type_id.name
-        except Exception:
-            unit_name = str(unit.type_id)
-        print(f"[Caster] t={self.time_formatted} {unit_name} tag={unit.tag} energy={getattr(unit, 'energy', 0):.1f} abilities={abil_list} ctx={context}")
+        # New Ravager Implementation - Based on creator's working code
+        self._handle_ravagers()
+
+    def _handle_ravagers(self) -> None:
+        """Handle ravager behavior using the framework creator's working implementation"""
+        ravagers: Units = self.mediator.get_own_army_dict[UnitID.RAVAGER]
+
+        all_close_enemy: dict[int, Units] = self.mediator.get_units_in_range(
+            start_points=ravagers,
+            distances=10.5,
+            query_tree=UnitTreeQueryType.AllEnemy,
+            return_as_dict=True,
+        )
+        grid: np.ndarray = self.mediator.get_ground_grid
+
+        for ravager in ravagers:
+            close_enemy: Units = all_close_enemy[ravager.tag]
+            only_ground: list[Unit] = [u for u in close_enemy if not u.is_flying]
+
+            combat_maneuver: CombatManeuver = CombatManeuver()
+
+            if close_enemy:
+                combat_maneuver.add(
+                    UseAOEAbility(
+                        ravager,
+                        AbilityId.EFFECT_CORROSIVEBILE,
+                        close_enemy,
+                        min_targets=1,
+                    )
+                )
+
+            if only_ground:
+                combat_maneuver.add(
+                    StutterUnitBack(
+                        ravager, cy_closest_to(ravager.position, only_ground), grid=grid
+                    )
+                )
+            else:
+                combat_maneuver.add(AMove(ravager, self.enemy_start_locations[0]))
+
+            self.register_behavior(combat_maneuver)
+
+    # Legacy caster logging method - no longer needed with new ravager system
+    # def _log_caster(self, unit: Unit, abilities: Set[AbilityId], context: str = "") -> None:
+    #     """Emit a throttled debug line for a spellcaster to check ability cache on ladder."""
+    #     now = time.time()
+    #     last = self._caster_log_last.get(unit.tag, 0)
+    #     if now - last < 2.0:
+    #         return
+    #     self._caster_log_last[unit.tag] = now
+    #     try:
+    #         abil_list = [getattr(a, "name", str(a)) for a in abilities]
+    #     except Exception:
+    #         abil_list = list(abilities)
+    #     try:
+    #         unit_name = unit.type_id.name
+    #     except Exception:
+    #         unit_name = str(unit.type_id)
+    #     print(f"[Caster] t={self.time_formatted} {unit_name} tag={unit.tag} energy={getattr(unit, 'energy', 0):.1f} abilities={abil_list} ctx={context}")
 
     def burrow_behavior(self, roach: Unit) -> CombatManeuver:
         """
