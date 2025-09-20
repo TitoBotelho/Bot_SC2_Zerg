@@ -2114,6 +2114,21 @@ class MyBot(AresBot):
                         f"only_ground={len(only_ground)} [{_fmt_units(only_ground)}]"
                     )
 
+                    # Log current orders for visibility on ladder
+                    try:
+                        ords = getattr(rav, "orders", [])
+                        ords_fmt = []
+                        for o in ords:
+                            try:
+                                abil_name = getattr(getattr(o, "ability", None), "name", str(getattr(o, "ability", None)))
+                                tgt = getattr(o, "target", None)
+                                ords_fmt.append((abil_name, tgt))
+                            except Exception:
+                                ords_fmt.append("<unrepr order>")
+                        log(f"{prefix} | orders={ords_fmt}")
+                    except Exception as e:
+                        log(f"{prefix} | ERROR reading orders: {e}")
+
                     combat_maneuver: CombatManeuver = CombatManeuver()
 
                     # Try to bile if there is anything close
@@ -2161,7 +2176,6 @@ class MyBot(AresBot):
             log(f"FATAL in _handle_ravagers: {e}")
             print(traceback.format_exc())
 
-            self.register_behavior(combat_maneuver)
 
     # Legacy caster logging method - no longer needed with new ravager system
     # def _log_caster(self, unit: Unit, abilities: Set[AbilityId], context: str = "") -> None:
