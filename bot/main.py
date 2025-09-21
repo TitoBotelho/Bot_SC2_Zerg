@@ -1836,7 +1836,7 @@ class MyBot(AresBot):
 
     def _micro(self, forces: Units) -> None:
         # New Ravager Implementation - Based on creator's working code
-        self._handle_ravagers()
+
         # make a fast batch distance query to enemy units for all our units
         # key: unit tag, value: units in range of that unit tag
         # https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html#ares.managers.manager_mediator.ManagerMediator.get_units_in_range
@@ -1992,9 +1992,45 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
                 if unit.type_id in [UnitID.RAVAGER]:
+                    ravagers: Units = self.mediator.get_own_army_dict[UnitID.RAVAGER]
+
+                    all_close_enemy: dict[int, Units] = self.mediator.get_units_in_range(
+                        start_points=ravagers,
+                        distances=10.5,
+                        query_tree=UnitTreeQueryType.AllEnemy,
+                        return_as_dict=True,
+                    )
+                    grid: np.ndarray = self.mediator.get_ground_grid
+
+                    for ravager in ravagers:
+                        close_enemy: Units = all_close_enemy[ravager.tag]
+                        only_ground: list[Unit] = [u for u in close_enemy if not u.is_flying]
+
+                        combat_maneuver: CombatManeuver = CombatManeuver()
+
+                        if close_enemy:
+                            combat_maneuver.add(
+                                UseAOEAbility(
+                                    ravager,
+                                    AbilityId.EFFECT_CORROSIVEBILE,
+                                    close_enemy,
+                                    min_targets=1,
+                                )
+                            )
+
+                        if only_ground:
+                            combat_maneuver.add(
+                                StutterUnitBack(
+                                    ravager, cy_closest_to(ravager.position, only_ground), grid=grid
+                                )
+                            )
+                        else:
+                            combat_maneuver.add(AMove(ravager, self.enemy_start_locations[0]))
+
+                        self.register_behavior(combat_maneuver)
                     # Ravagers are handled by the separate _handle_ravagers() method
                     # which processes all ravagers at once, so we skip individual processing here
-                    pass
+                    #pass
 
 #_______________________________________________________________________________________________________________________
 #          OTHER UNITS
@@ -2015,166 +2051,6 @@ class MyBot(AresBot):
             # DON'T FORGET TO REGISTER OUR COMBAT MANEUVER!!
             self.register_behavior(attacking_maneuver)
 
-
-    def _handle_ravagers(self) -> None:
-        """
-        Handle ravager behavior with detailed debug logging.
-        Paste over your current _handle_ravagers to inspect behavior.
-        Logs are throttled to ~1s to avoid spamming; flip LOG_EVERY_FRAME to True to log every frame.
-        """
-        import time
-        import traceback
-        LOG_EVERY_FRAME = False        # set True to log every frame
-        LOG_THROTTLE_SEC = 1.0         # only used if LOG_EVERY_FRAME is False
-
-        # Throttle guard
-        now = time.time()
-        if not LOG_EVERY_FRAME:
-            last = getattr(self, "_ravager_log_last", 0.0)
-            if now - last < LOG_THROTTLE_SEC:
-                # Still perform behavior without logging
-                pass
-            else:
-                self._ravager_log_last = now
-
-        def log(msg: str) -> None:
-            if LOG_EVERY_FRAME:
-                print(f"[RAVAGER] t={getattr(self, 'time', '?'):.1f} | {msg}")
-            else:
-                # Throttled logs
-                if getattr(self, "_ravager_log_last", 0.0) == now:
-                    print(f"[RAVAGER] t={getattr(self, 'time', '?'):.1f} | {msg}")
-
-        def _fmt_unit(u) -> str:
-            try:
-                return f"{getattr(u.type_id, 'name', str(u.type_id))}#{u.tag}"
-            except Exception:
-                return f"Unit#{getattr(u, 'tag', '?')}"
-
-        def _fmt_units(units, limit: int = 6) -> str:
-            try:
-                lst = list(units)
-                head = ", ".join(_fmt_unit(u) for u in lst[:limit])
-                return head + (" ..." if len(lst) > limit else "")
-            except Exception:
-                return f"<units:{len(getattr(units, '__iter__', []))}>"
-
-        try:
-            # Collect ravagers
-            try:
-                ravagers: Units = self.mediator.get_own_army_dict[UnitID.RAVAGER]
-            except Exception:
-                ravagers = self.units(UnitID.RAVAGER)  # fallback to direct query if dict missing
-
-            rav_count = len(ravagers)
-            rav_tags = [r.tag for r in ravagers]
-            log(f"Begin. ravagers={rav_count} tags={rav_tags}")
-
-            if rav_count == 0:
-                log("No ravagers; nothing to do.")
-                return
-
-            # Precompute proximity map
-            try:
-                all_close_enemy: dict[int, Units] = self.mediator.get_units_in_range(
-                    start_points=ravagers,
-                    distances=10.5,
-                    query_tree=UnitTreeQueryType.AllEnemy,
-                    return_as_dict=True,
-                )
-                log(f"Proximity map built. dict_keys={list(all_close_enemy.keys())[:8]}{' ...' if len(all_close_enemy) > 8 else ''} size={len(all_close_enemy)}")
-            except Exception as e:
-                log(f"ERROR: get_units_in_range failed: {e}")
-                log(traceback.format_exc())
-                all_close_enemy = {}
-
-            # Grid (with enemy influence baked in)
-            try:
-                grid: np.ndarray = self.mediator.get_ground_grid
-                grid_shape = getattr(grid, "shape", None)
-                log(f"Ground grid acquired. shape={grid_shape}")
-            except Exception as e:
-                log(f"ERROR: get_ground_grid failed: {e}")
-                log(traceback.format_exc())
-                grid = None
-
-            # Process each ravager
-            for rav in ravagers:
-                prefix = f"rav={_fmt_unit(rav)} hp={getattr(rav, 'health', '?')}/{getattr(rav, 'health_max', '?')} cd={getattr(rav, 'weapon_cooldown', '?')}"
-                try:
-                    if rav.tag not in all_close_enemy:
-                        log(f"{prefix} | WARNING: no proximity entry. Skipping.")
-                        continue
-
-                    close_enemy: Units = all_close_enemy[rav.tag]
-                    only_ground = [u for u in close_enemy if not getattr(u, 'is_flying', False)]
-
-                    log(
-                        f"{prefix} | close_enemy={len(close_enemy)} [{_fmt_units(close_enemy)}] "
-                        f"only_ground={len(only_ground)} [{_fmt_units(only_ground)}]"
-                    )
-
-                    # Log current orders for visibility on ladder
-                    try:
-                        ords = getattr(rav, "orders", [])
-                        ords_fmt = []
-                        for o in ords:
-                            try:
-                                abil_name = getattr(getattr(o, "ability", None), "name", str(getattr(o, "ability", None)))
-                                tgt = getattr(o, "target", None)
-                                ords_fmt.append((abil_name, tgt))
-                            except Exception:
-                                ords_fmt.append("<unrepr order>")
-                        log(f"{prefix} | orders={ords_fmt}")
-                    except Exception as e:
-                        log(f"{prefix} | ERROR reading orders: {e}")
-
-                    combat_maneuver: CombatManeuver = CombatManeuver()
-
-                    # Try to bile if there is anything close
-                    if close_enemy:
-                        combat_maneuver.add(
-                            UseAOEAbility(
-                                rav,
-                                AbilityId.EFFECT_CORROSIVEBILE,
-                                close_enemy,
-                                min_targets=1,
-                            )
-                        )
-                        log(f"{prefix} | Queued: UseAOEAbility(CORROSIVE_BILE) on {len(close_enemy)} targets")
-
-                    # If ground targets exist, kite back from closest ground unit; otherwise A-move to enemy start
-                    if only_ground and grid is not None:
-                        try:
-                            target = cy_closest_to(rav.position, only_ground)
-                            combat_maneuver.add(
-                                StutterUnitBack(rav, target, grid=grid)
-                            )
-                            log(f"{prefix} | Queued: StutterUnitBack vs { _fmt_unit(target) } at {getattr(target, 'position', '?')}")
-                        except Exception as e:
-                            log(f"{prefix} | ERROR building StutterUnitBack: {e}")
-                            log(traceback.format_exc())
-                            # Fallback A-move if stutter failed
-                            fallback = self.enemy_start_locations[0]
-                            combat_maneuver.add(AMove(rav, fallback))
-                            log(f"{prefix} | Fallback: AMove to enemy_start {fallback}")
-                    else:
-                        fallback = self.enemy_start_locations[0]
-                        combat_maneuver.add(AMove(rav, fallback))
-                        log(f"{prefix} | Queued: AMove to enemy_start {fallback} (no ground or no grid)")
-
-                    self.register_behavior(combat_maneuver)
-                    log(f"{prefix} | Registered CombatManeuver")
-
-                except Exception as e:
-                    log(f"{prefix} | ERROR processing ravager: {e}")
-                    log(traceback.format_exc())
-
-            log("End ravager pass.")
-
-        except Exception as e:
-            log(f"FATAL in _handle_ravagers: {e}")
-            print(traceback.format_exc())
 
 
     # Legacy caster logging method - no longer needed with new ravager system
