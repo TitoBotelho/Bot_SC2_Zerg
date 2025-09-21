@@ -352,6 +352,7 @@ class MyBot(AresBot):
         forces: Units = self.mediator.get_units_from_role(role=UnitRole.ATTACKING)
 
         if self._commenced_attack:
+            self.handle_ravagers()
             self._micro(forces)
 
         elif self.get_total_supply(forces) >= self._begin_attack_at_supply:
@@ -1992,45 +1993,10 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
                 if unit.type_id in [UnitID.RAVAGER]:
-                    ravagers: Units = self.mediator.get_own_army_dict[UnitID.RAVAGER]
 
-                    all_close_enemy: dict[int, Units] = self.mediator.get_units_in_range(
-                        start_points=ravagers,
-                        distances=10.5,
-                        query_tree=UnitTreeQueryType.AllEnemy,
-                        return_as_dict=True,
-                    )
-                    grid: np.ndarray = self.mediator.get_ground_grid
-
-                    for ravager in ravagers:
-                        close_enemy: Units = all_close_enemy[ravager.tag]
-                        only_ground: list[Unit] = [u for u in close_enemy if not u.is_flying]
-
-                        combat_maneuver: CombatManeuver = CombatManeuver()
-
-                        if close_enemy:
-                            combat_maneuver.add(
-                                UseAOEAbility(
-                                    ravager,
-                                    AbilityId.EFFECT_CORROSIVEBILE,
-                                    close_enemy,
-                                    min_targets=1,
-                                )
-                            )
-
-                        if only_ground:
-                            combat_maneuver.add(
-                                StutterUnitBack(
-                                    ravager, cy_closest_to(ravager.position, only_ground), grid=grid
-                                )
-                            )
-                        else:
-                            combat_maneuver.add(AMove(ravager, self.enemy_start_locations[0]))
-
-                        self.register_behavior(combat_maneuver)
                     # Ravagers are handled by the separate _handle_ravagers() method
                     # which processes all ravagers at once, so we skip individual processing here
-                    #pass
+                    pass
 
 #_______________________________________________________________________________________________________________________
 #          OTHER UNITS
@@ -2070,6 +2036,48 @@ class MyBot(AresBot):
     #     except Exception:
     #         unit_name = str(unit.type_id)
     #     print(f"[Caster] t={self.time_formatted} {unit_name} tag={unit.tag} energy={getattr(unit, 'energy', 0):.1f} abilities={abil_list} ctx={context}")
+
+    def handle_ravagers(self) -> None:
+        """
+        Handle all ravagers in one go, this is more efficient than
+        handling them one by one in the main micro loop.
+        """
+        ravagers: Units = self.mediator.get_own_army_dict[UnitID.RAVAGER]
+
+        all_close_enemy: dict[int, Units] = self.mediator.get_units_in_range(
+            start_points=ravagers,
+            distances=10.5,
+            query_tree=UnitTreeQueryType.AllEnemy,
+            return_as_dict=True,
+        )
+        grid: np.ndarray = self.mediator.get_ground_grid
+
+        for ravager in ravagers:
+            close_enemy: Units = all_close_enemy[ravager.tag]
+            only_ground: list[Unit] = [u for u in close_enemy if not u.is_flying]
+
+            combat_maneuver: CombatManeuver = CombatManeuver()
+
+            if close_enemy:
+                combat_maneuver.add(
+                    UseAOEAbility(
+                        ravager,
+                        AbilityId.EFFECT_CORROSIVEBILE,
+                        close_enemy,
+                        min_targets=1,
+                    )
+                )
+
+            if only_ground:
+                combat_maneuver.add(
+                    StutterUnitBack(
+                        ravager, cy_closest_to(ravager.position, only_ground), grid=grid
+                    )
+                )
+            else:
+                combat_maneuver.add(AMove(ravager, self.enemy_start_locations[0]))
+
+            self.register_behavior(combat_maneuver)
 
     def burrow_behavior(self, roach: Unit) -> CombatManeuver:
         """
