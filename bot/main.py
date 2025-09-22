@@ -1,6 +1,8 @@
 """
 ---------------------------
 BOT CLICADINHA
+
+
 ---------------------------
 
 Made of with Ares Random Example Bot
@@ -2177,4 +2179,5 @@ class MyBot(AresBot):
                 if self.can_afford(UnitID.ZERGLING) and self.supply_left > 0:
                     # If we can, train a Zergling
                     self.do(larva.train(UnitID.ZERGLING))
+
     """
