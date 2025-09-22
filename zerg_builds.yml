@@ -729,6 +729,9 @@ Builds:
             - 42 gas
             - 42 overlord
             - 42 INFESTATIONPIT
+            - 42 gas
+            - 42 drone
+            - 42 drone
 
 
 
@@ -949,3 +952,8 @@ Builds:
             - 21 drone
             - 22 drone
             - 22 drone
+            - 22 overlord
+            - 22 gas
+            - 23 drone
+            - 24 drone
+            - 25 drone

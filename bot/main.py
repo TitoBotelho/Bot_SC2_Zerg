@@ -16,7 +16,7 @@ https://github.com/raspersc2/queens-sc2
 
 
 from itertools import cycle
-from typing import Optional, Dict, Set
+from typing import Optional
 
 import numpy as np
 from ares import AresBot
@@ -190,6 +190,7 @@ class MyBot(AresBot):
         self.tag_second_overlord = 0
         self.my_roaches = {}
         self.enemy_widow_mines = {}
+        self.late_game = False
 
         self._commenced_attack: bool = False
 
@@ -197,11 +198,6 @@ class MyBot(AresBot):
         self.creep_queen_tags: Set[int] = set()
         self.other_queen_tags: Set[int] = set()
         self.max_creep_queens: int = 2
-        # Throttled caster debug timestamps per unit tag (legacy system)
-        # self._caster_log_last = {}
-
-        # Legacy ravager bile tracking - no longer needed with new system
-        # self._last_ravager_bile = {}
 
 
 
@@ -352,7 +348,6 @@ class MyBot(AresBot):
         forces: Units = self.mediator.get_units_from_role(role=UnitRole.ATTACKING)
 
         if self._commenced_attack:
-            self.handle_ravagers()
             self._micro(forces)
 
         elif self.get_total_supply(forces) >= self._begin_attack_at_supply:
@@ -428,6 +423,8 @@ class MyBot(AresBot):
             await self.make_ravagers()
             await self.build_plus_one_roach_armor()
             await self.is_mass_widow_mine()
+            await self.is_late_game()
+            await self.make_roach_speed()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -474,6 +471,9 @@ class MyBot(AresBot):
                 await self.assign_overseer()
                 await self.make_changeling()
                 await self.move_changeling()
+
+            if "Late_Game" in self.enemy_strategy:
+                await self.late_game_protocol()
 
 
             #if "3_Base_Terran" in self.enemy_strategy:
@@ -787,7 +787,7 @@ class MyBot(AresBot):
                 if "Terran_Agressive" not in self.enemy_strategy:
                     await self.chat_send("Tag: Terran_Agressive")
                     self.enemy_strategy.append("Terran_Agressive")
-                    #await self.build_spine_crawlers()
+                    
             else:
                 if "2_Base_Terran" not in self.enemy_strategy:
                     await self.chat_send("Tag: 2_Base_Terran")
@@ -821,7 +821,7 @@ class MyBot(AresBot):
                     if unit.name == 'Bunker':
                         if unit.distance_to(self.mediator.get_enemy_nat) > 20:
                             found_bunker = True
-                            break  # Breake the loop if find the Nexus
+                            break  
                 if found_bunker:
                     await self.chat_send("Tag: Bunker_Rush")
                     self.enemy_strategy.append("Bunker_Rush")
@@ -1594,6 +1594,35 @@ class MyBot(AresBot):
             self.bo_changed = True
 
 
+    async def is_late_game(self):
+        if self.time > 600:
+            if self.late_game == False:
+                await self.chat_send("Tag: Late_Game")
+                self.enemy_strategy.append("Late_Game")
+                self.late_game = True
+
+
+    async def late_game_protocol(self):
+        if self.late_game:
+            bases = self.townhalls.ready
+            if self.workers.amount < 60 or bases.amount < 4:
+                if not self.already_pending(UnitID.HATCHERY):
+                    self.SapwnControllerOn = False
+                    self.register_behavior(ExpansionController(to_count=6, max_pending=2))
+                    self.register_behavior(BuildWorkers(to_count=60))           
+                    self.register_behavior(GasBuildingController(to_count=5, max_pending=2))
+
+            else:
+                self.SapwnControllerOn = True
+
+    async def make_roach_speed(self):
+        if UpgradeId.TUNNELINGCLAWS in self.state.upgrades:
+            if UpgradeId.GLIALRECONSTITUTION not in self.state.upgrades or not self.already_pending_upgrade(UpgradeId.GLIALRECONSTITUTION):
+                self.SapwnControllerOn = False
+                self.research(UpgradeId.GLIALRECONSTITUTION)
+
+            else:
+                self.SapwnControllerOn = True
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -1718,7 +1747,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250818")
+            await self.chat_send("Tag: Version_250915")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -1836,8 +1865,6 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
     def _micro(self, forces: Units) -> None:
-        # New Ravager Implementation - Based on creator's working code
-
         # make a fast batch distance query to enemy units for all our units
         # key: unit tag, value: units in range of that unit tag
         # https://aressc2.github.io/ares-sc2/api_reference/manager_mediator.html#ares.managers.manager_mediator.ManagerMediator.get_units_in_range
@@ -1865,12 +1892,6 @@ class MyBot(AresBot):
         if self.enemies_on_creep:
             first_enemy_on_creep = next(iter(self.enemies_on_creep.values()))
             target = first_enemy_on_creep.position
-
-        # Legacy caster logs and bile cooldown maps (no longer needed)
-        # if not hasattr(self, "_caster_log_last"):
-        #     self._caster_log_last = {}
-        # if not hasattr(self, "_last_ravager_bile"):
-        #     self._last_ravager_bile = {}
 
 
         # use `ares-sc2` combat maneuver system
@@ -1963,20 +1984,23 @@ class MyBot(AresBot):
 #          INFESTOR
 #_______________________________________________________________________________________________________________________
 
-
-
                 if unit.type_id in [UnitID.INFESTOR]:
-                    # could also filter enemy units to be even closer
-                    # fungal_targets: Units = only_enemy_units.filter(lambda u: cy_distance_to(unit.position, u.position) < 10.0)
-                    if only_enemy_units:
-                        attacking_maneuver.add(
-                            UseAOEAbility(
-                                unit=unit,
-                                ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH,
-                                targets=only_enemy_units,
-                                min_targets=2
+                    if self.enemy_units:
+                        filtered_enemy_units = self.enemy_units.filter(lambda enemy: enemy.type_id != UnitID.SCV)
+                        # Ordena por distância e pega até 2 inimigos mais próximos
+                        sorted_enemies = sorted(filtered_enemy_units, key=lambda u: unit.distance_to(u))
+                        targets = sorted_enemies[:2]  # Pega até 2 alvos mais próximos
+                
+                        if len(targets) >= 2:
+                            attacking_maneuver.add(
+                                UseAOEAbility(
+                                    unit=unit,
+                                    ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH,
+                                    targets=targets,
+                                    min_targets=2
+                                )
                             )
-                        )
+
 #_______________________________________________________________________________________________________________________
 #          INFESTOR BURROWED
 #_______________________________________________________________________________________________________________________
@@ -1989,14 +2013,59 @@ class MyBot(AresBot):
 
 
 #_______________________________________________________________________________________________________________________
-#          RAVAGER - New Implementation
+#          RAVAGER
 #_______________________________________________________________________________________________________________________
 
-                if unit.type_id in [UnitID.RAVAGER]:
 
-                    # Ravagers are handled by the separate _handle_ravagers() method
-                    # which processes all ravagers at once, so we skip individual processing here
-                    pass
+                if unit.type_id in [UnitID.RAVAGER]:
+                    in_attack_range = cy_in_attack_range(unit, only_enemy_units)
+                    bile_target = None
+
+                    # 1. Liberators (normal ou AG) dentro do range da bile (9)
+                    liberators_close = self.enemy_units.filter(
+                        lambda e: e.type_id in {UnitID.LIBERATORAG} and unit.distance_to(e) <= 9
+                    )
+                    if liberators_close:
+                        bile_target = cy_closest_to(unit.position, liberators_close).position
+                    else:
+                        # 2. Siege Tank sieged
+                        tanks_sieged_close = self.enemy_units.filter(
+                            lambda e: e.type_id == UnitID.SIEGETANKSIEGED and unit.distance_to(e) <= 9
+                        )
+                        if tanks_sieged_close:
+                            bile_target = cy_closest_to(unit.position, tanks_sieged_close).position
+                        else:
+                            # 3. Widow Mine enterrada
+                            widowmines_burrowed_close = self.enemy_units.filter(
+                                lambda e: e.type_id == UnitID.WIDOWMINEBURROWED and unit.distance_to(e) <= 9
+                            )
+                            if widowmines_burrowed_close:
+                                bile_target = cy_closest_to(unit.position, widowmines_burrowed_close).position
+                            else:
+                                # 4. Fallback: inimigo mais próximo em alcance de arma
+                                if in_attack_range:
+                                    closest_enemy = min(in_attack_range, key=lambda u: unit.distance_to(u))
+                                    bile_target = closest_enemy.position
+
+                    # Lança bile se puder (evita spam checando se habilidade disponível)
+                    if bile_target and AbilityId.EFFECT_CORROSIVEBILE in unit.abilities:
+                        attacking_maneuver.add(
+                            UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
+                        )
+
+                    # Ataque normal (arma)
+                    if in_attack_range:
+                        attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
+                    elif in_attack_range := cy_in_attack_range(unit, all_close):
+                        attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
+
+                    enemy_target: Unit = cy_pick_enemy_target(all_close)
+                    if self.race == Race.Protoss and unit.shield_percentage < 0.3:
+                        attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
+                    else:
+                        attacking_maneuver.add(
+                            StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
+                        )
 
 #_______________________________________________________________________________________________________________________
 #          OTHER UNITS
@@ -2016,70 +2085,6 @@ class MyBot(AresBot):
 
             # DON'T FORGET TO REGISTER OUR COMBAT MANEUVER!!
             self.register_behavior(attacking_maneuver)
-
-
-
-    # Legacy caster logging method - no longer needed with new ravager system
-    # def _log_caster(self, unit: Unit, abilities: Set[AbilityId], context: str = "") -> None:
-    #     """Emit a throttled debug line for a spellcaster to check ability cache on ladder."""
-    #     now = time.time()
-    #     last = self._caster_log_last.get(unit.tag, 0)
-    #     if now - last < 2.0:
-    #         return
-    #     self._caster_log_last[unit.tag] = now
-    #     try:
-    #         abil_list = [getattr(a, "name", str(a)) for a in abilities]
-    #     except Exception:
-    #         abil_list = list(abilities)
-    #     try:
-    #         unit_name = unit.type_id.name
-    #     except Exception:
-    #         unit_name = str(unit.type_id)
-    #     print(f"[Caster] t={self.time_formatted} {unit_name} tag={unit.tag} energy={getattr(unit, 'energy', 0):.1f} abilities={abil_list} ctx={context}")
-
-    def handle_ravagers(self) -> None:
-        """
-        Handle all ravagers in one go, this is more efficient than
-        handling them one by one in the main micro loop.
-        """
-        ravagers: Units = self.mediator.get_own_army_dict[UnitID.RAVAGER]
-
-        all_close_enemy: dict[int, Units] = self.mediator.get_units_in_range(
-            start_points=ravagers,
-            distances=10.5,
-            query_tree=UnitTreeQueryType.AllEnemy,
-            return_as_dict=True,
-        )
-        grid: np.ndarray = self.mediator.get_ground_grid
-
-        for ravager in ravagers:
-            close_enemy: Units = all_close_enemy[ravager.tag]
-            only_ground: list[Unit] = [u for u in close_enemy if not u.is_flying]
-
-            combat_maneuver: CombatManeuver = CombatManeuver()
-
-            if close_enemy:
-                combat_maneuver.add(
-                    UseAOEAbility(
-                        ravager,
-                        AbilityId.EFFECT_CORROSIVEBILE,
-                        close_enemy,
-                        min_targets=1,
-                    )
-                )
-
-            self.register_behavior(combat_maneuver)
-
-            if only_ground:
-                combat_maneuver.add(
-                    StutterUnitBack(
-                        ravager, cy_closest_to(ravager.position, only_ground), grid=grid
-                    )
-                )
-            else:
-                combat_maneuver.add(AMove(ravager, self.enemy_start_locations[0]))
-
-            self.register_behavior(combat_maneuver)
 
     def burrow_behavior(self, roach: Unit) -> CombatManeuver:
         """
