@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors[14]
 from __future__ import annotations
 
 # DO NOT EDIT!

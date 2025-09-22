@@ -2068,6 +2068,8 @@ class MyBot(AresBot):
                     )
                 )
 
+            self.register_behavior(combat_maneuver)
+
             if only_ground:
                 combat_maneuver.add(
                     StutterUnitBack(

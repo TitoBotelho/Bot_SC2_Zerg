@@ -1,9 +1,8 @@
-# pylint: disable=W0212
+# pyre-ignore-all-errors[6, 11, 16, 21, 29]
 from __future__ import annotations
 
 import asyncio
 import json
-import os
 import platform
 import signal
 import sys
@@ -11,7 +10,6 @@ from contextlib import suppress
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
 
 import mpyq
 import portpicker
@@ -27,9 +25,9 @@ from sc2.game_state import GameState
 from sc2.maps import Map
 from sc2.player import AbstractPlayer, Bot, BotProcess, Human
 from sc2.portconfig import Portconfig
-from sc2.protocol import ConnectionAlreadyClosed, ProtocolError
+from sc2.protocol import ConnectionAlreadyClosedError, ProtocolError
 from sc2.proxy import Proxy
-from sc2.sc2process import SC2Process, kill_switch
+from sc2.sc2process import KillSwitch, SC2Process
 
 # Set the global logging level
 logger.remove()
@@ -47,20 +45,16 @@ class GameMatch:
     """
 
     map_sc2: Map
-    players: List[AbstractPlayer]
+    players: list[AbstractPlayer]
     realtime: bool = False
-    random_seed: int = None
-    disable_fog: bool = None
-    sc2_config: List[Dict] = None
-    game_time_limit: int = None
+    random_seed: int | None = None
+    disable_fog: bool | None = None
+    sc2_config: list[dict] | None = None
+    game_time_limit: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # avoid players sharing names
-        if (
-            len(self.players) > 1
-            and self.players[0].name is not None
-            and self.players[0].name == self.players[1].name
-        ):
+        if len(self.players) > 1 and self.players[0].name is not None and self.players[0].name == self.players[1].name:
             self.players[1].name += "2"
 
         if self.sc2_config is not None:
@@ -70,14 +64,14 @@ class GameMatch:
                 self.sc2_config = [{}]
             while len(self.sc2_config) < len(self.players):
                 self.sc2_config += self.sc2_config
-            self.sc2_config = self.sc2_config[:len(self.players)]
+            self.sc2_config = self.sc2_config[: len(self.players)]
 
     @property
     def needed_sc2_count(self) -> int:
         return sum(player.needs_sc2 for player in self.players)
 
     @property
-    def host_game_kwargs(self) -> Dict:
+    def host_game_kwargs(self) -> dict:
         return {
             "map_settings": self.map_sc2,
             "players": self.players,
@@ -86,7 +80,7 @@ class GameMatch:
             "disable_fog": self.disable_fog,
         }
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         p1 = self.players[0]
         p1 = p1.name if p1.name else p1
         p2 = self.players[1]
@@ -108,13 +102,12 @@ async def _play_game_human(client, player_id, realtime, game_time_limit):
             await client.step()
 
 
-# pylint: disable=R0912,R0911,R0914
 async def _play_game_ai(
-    client: Client, player_id: int, ai: BotAI, realtime: bool, game_time_limit: Optional[int]
+    client: Client, player_id: int, ai: BotAI, realtime: bool, game_time_limit: int | None
 ) -> Result:
-    gs: GameState = None
+    gs: GameState | None = None
 
-    async def initialize_first_step() -> Optional[Result]:
+    async def initialize_first_step() -> Result | None:
         nonlocal gs
         ai._initialize_variables()
 
@@ -134,12 +127,12 @@ async def _play_game_ai(
         gs = GameState(state.observation)
         proto_game_info = await client._execute(game_info=sc_pb.RequestGameInfo())
         try:
-            await ai._prepare_step(gs, proto_game_info)
+            ai._prepare_step(gs, proto_game_info)
             await ai.on_before_start()
             ai._prepare_first_step()
             await ai.on_start()
         # TODO Catching too general exception Exception (broad-except)
-        # pylint: disable=W0703
+
         except Exception as e:
             logger.exception(f"Caught unknown exception in AI on_start: {e}")
             logger.error("Resigning due to previous error")
@@ -158,7 +151,7 @@ async def _play_game_ai(
         # In on_step various errors can occur - log properly
         try:
             await ai.on_step(iteration)
-        except (AttributeError, ) as e:
+        except (AttributeError,) as e:
             logger.exception(f"Caught exception: {e}")
             raise
         except Exception as e:
@@ -195,7 +188,7 @@ async def _play_game_ai(
             await ai.on_end(Result.Tie)
             return Result.Tie
         proto_game_info = await client._execute(game_info=sc_pb.RequestGameInfo())
-        await ai._prepare_step(gs, proto_game_info)
+        ai._prepare_step(gs, proto_game_info)
 
         await run_bot_iteration(iteration)  # Main bot loop
 
@@ -210,20 +203,12 @@ async def _play_game_ai(
 
 
 async def _play_game(
-    player: AbstractPlayer,
-    client: Client,
-    realtime,
-    portconfig,
-    game_time_limit=None,
-    rgb_render_config=None
+    player: AbstractPlayer, client: Client, realtime, portconfig, game_time_limit=None, rgb_render_config=None
 ) -> Result:
     assert isinstance(realtime, bool), repr(realtime)
 
     player_id = await client.join_game(
-        player.name,
-        player.race,
-        portconfig=portconfig,
-        rgb_render_config=rgb_render_config,
+        player.name, player.race, portconfig=portconfig, rgb_render_config=rgb_render_config
     )
     logger.info(f"Player {player_id} - {player.name if player.name else str(player)}")
 
@@ -240,7 +225,7 @@ async def _play_game(
     return result
 
 
-async def _play_replay(client, ai, realtime=False, player_id=0):
+async def _play_replay(client, ai, realtime: bool = False, player_id: int = 0):
     ai._initialize_variables()
 
     game_data = await client.get_game_data()
@@ -250,12 +235,7 @@ async def _play_replay(client, ai, realtime=False, player_id=0):
     client.game_step = 1
     # This game_data will become self._game_data in botAI
     ai._prepare_start(
-        client,
-        player_id,
-        game_info,
-        game_data,
-        realtime=realtime,
-        base_build=ping_response.ping.base_build,
+        client, player_id, game_info, game_data, realtime=realtime, base_build=ping_response.ping.base_build
     )
     state = await client.observation()
     # Check game result every time we get the observation
@@ -264,12 +244,12 @@ async def _play_replay(client, ai, realtime=False, player_id=0):
         return client._game_result[player_id]
     gs = GameState(state.observation)
     proto_game_info = await client._execute(game_info=sc_pb.RequestGameInfo())
-    await ai._prepare_step(gs, proto_game_info)
+    ai._prepare_step(gs, proto_game_info)
     ai._prepare_first_step()
     try:
         await ai.on_start()
     # TODO Catching too general exception Exception (broad-except)
-    # pylint: disable=W0703
+
     except Exception as e:
         logger.exception(f"Caught unknown exception in AI replay on_start: {e}")
         await ai.on_end(Result.Defeat)
@@ -295,11 +275,9 @@ async def _play_replay(client, ai, realtime=False, player_id=0):
             logger.debug(f"Score: {gs.score.score}")
 
             proto_game_info = await client._execute(game_info=sc_pb.RequestGameInfo())
-            await ai._prepare_step(gs, proto_game_info)
+            ai._prepare_step(gs, proto_game_info)
 
-        logger.debug(
-            f"Running AI step, it={iteration} {gs.game_loop * 0.725 * (1 / 16):.2f}s"
-        )
+        logger.debug(f"Running AI step, it={iteration} {gs.game_loop * 0.725 * (1 / 16):.2f}s")
 
         try:
             # Issue event like unit created or unit destroyed
@@ -307,7 +285,6 @@ async def _play_replay(client, ai, realtime=False, player_id=0):
             await ai.on_step(iteration)
             await ai._after_step()
 
-        # pylint: disable=W0703
         # TODO Catching too general exception Exception (broad-except)
         except Exception as e:
             if isinstance(e, ProtocolError) and e.is_game_over_error:
@@ -327,10 +304,9 @@ async def _play_replay(client, ai, realtime=False, player_id=0):
 
         logger.debug("Running AI step: done")
 
-        if not realtime:
-            if not client.in_game:  # Client left (resigned) the game
-                await ai.on_end(Result.Victory)
-                return Result.Victory
+        if not realtime and not client.in_game:  # Client left (resigned) the game
+            await ai.on_end(Result.Victory)
+            return Result.Victory
 
         await client.step()  # unindent one line to work in realtime
 
@@ -354,7 +330,7 @@ async def _setup_host_game(
 async def _host_game(
     map_settings,
     players,
-    realtime=False,
+    realtime: bool = False,
     portconfig=None,
     save_replay_as=None,
     game_time_limit=None,
@@ -363,15 +339,12 @@ async def _host_game(
     sc2_version=None,
     disable_fog=None,
 ):
-
     assert players, "Can't create a game without players"
 
-    assert any(isinstance(p, (Human, Bot)) for p in players)
+    assert any((isinstance(p, (Human, Bot))) for p in players)
 
     async with SC2Process(
-        fullscreen=players[0].fullscreen,
-        render=rgb_render_config is not None,
-        sc2_version=sc2_version,
+        fullscreen=players[0].fullscreen, render=rgb_render_config is not None, sc2_version=sc2_version
     ) as server:
         await server.ping()
 
@@ -379,10 +352,7 @@ async def _host_game(
             server, map_settings, players, realtime, random_seed, disable_fog, save_replay_as
         )
         # Bot can decide if it wants to launch with 'raw_affects_selection=True'
-        if (
-            not isinstance(players[0], Human)
-            and getattr(players[0].ai, "raw_affects_selection", None) is not None
-        ):
+        if not isinstance(players[0], Human) and getattr(players[0].ai, "raw_affects_selection", None) is not None:
             client.raw_affects_selection = players[0].ai.raw_affects_selection
 
         result = await _play_game(players[0], client, realtime, portconfig, game_time_limit, rgb_render_config)
@@ -390,7 +360,7 @@ async def _host_game(
             await client.save_replay(client.save_replay_path)
         try:
             await client.leave()
-        except ConnectionAlreadyClosed:
+        except ConnectionAlreadyClosedError:
             logger.error("Connection was closed before the game ended")
         await client.quit()
 
@@ -414,10 +384,7 @@ async def _host_game_aiter(
             await server.ping()
 
             client = await _setup_host_game(server, map_settings, players, realtime)
-            if (
-                not isinstance(players[0], Human)
-                and getattr(players[0].ai, "raw_affects_selection", None) is not None
-            ):
+            if not isinstance(players[0], Human) and getattr(players[0].ai, "raw_affects_selection", None) is not None:
                 client.raw_affects_selection = players[0].ai.raw_affects_selection
 
             try:
@@ -426,7 +393,7 @@ async def _host_game_aiter(
                 if save_replay_as is not None:
                     await client.save_replay(save_replay_as)
                 await client.leave()
-            except ConnectionAlreadyClosed:
+            except ConnectionAlreadyClosedError:
                 logger.error("Connection was closed before the game ended")
                 return
 
@@ -439,9 +406,7 @@ def _host_game_iter(*args, **kwargs):
     game = _host_game_aiter(*args, **kwargs)
     new_playerconfig = None
     while True:
-        new_playerconfig = yield asyncio.get_event_loop().run_until_complete(
-            game.asend(new_playerconfig)
-        )
+        new_playerconfig = yield asyncio.get_event_loop().run_until_complete(game.asend(new_playerconfig))
 
 
 async def _join_game(
@@ -450,16 +415,14 @@ async def _join_game(
     portconfig,
     save_replay_as=None,
     game_time_limit=None,
+    sc2_version=None,
 ):
-    async with SC2Process(fullscreen=players[1].fullscreen) as server:
+    async with SC2Process(fullscreen=players[1].fullscreen, sc2_version=sc2_version) as server:
         await server.ping()
 
         client = Client(server._ws)
         # Bot can decide if it wants to launch with 'raw_affects_selection=True'
-        if (
-            not isinstance(players[1], Human)
-            and getattr(players[1].ai, "raw_affects_selection", None) is not None
-        ):
+        if not isinstance(players[1], Human) and getattr(players[1].ai, "raw_affects_selection", None) is not None:
             client.raw_affects_selection = players[1].ai.raw_affects_selection
 
         result = await _play_game(players[1], client, realtime, portconfig, game_time_limit)
@@ -467,7 +430,7 @@ async def _join_game(
             await client.save_replay(save_replay_as)
         try:
             await client.leave()
-        except ConnectionAlreadyClosed:
+        except ConnectionAlreadyClosedError:
             logger.error("Connection was closed before the game ended")
         await client.quit()
 
@@ -486,8 +449,8 @@ async def _host_replay(replay_path, ai, realtime, _portconfig, base_build, data_
         return result
 
 
-def get_replay_version(replay_path: Union[str, Path]) -> Tuple[str, str]:
-    with open(replay_path, 'rb') as f:
+def get_replay_version(replay_path: str | Path) -> tuple[str, str]:
+    with Path(replay_path).open("rb") as f:
         replay_data = f.read()
         replay_io = BytesIO()
         replay_io.write(replay_data)
@@ -498,19 +461,13 @@ def get_replay_version(replay_path: Union[str, Path]) -> Tuple[str, str]:
 
 
 # TODO Deprecate run_game function in favor of run_multiple_games
-def run_game(map_settings, players, **kwargs) -> Union[Result, List[Optional[Result]]]:
+def run_game(map_settings, players, **kwargs) -> Result | list[Result | None]:
     """
     Returns a single Result enum if the game was against the built-in computer.
     Returns a list of two Result enums if the game was "Human vs Bot" or "Bot vs Bot".
     """
     if sum(isinstance(p, (Human, Bot)) for p in players) > 1:
-        host_only_args = [
-            "save_replay_as",
-            "rgb_render_config",
-            "random_seed",
-            "sc2_version",
-            "disable_fog",
-        ]
+        host_only_args = ["save_replay_as", "rgb_render_config", "random_seed", "disable_fog"]
         join_kwargs = {k: v for k, v in kwargs.items() if k not in host_only_args}
 
         portconfig = Portconfig()
@@ -519,10 +476,10 @@ def run_game(map_settings, players, **kwargs) -> Union[Result, List[Optional[Res
             return await asyncio.gather(
                 _host_game(map_settings, players, **kwargs, portconfig=portconfig),
                 _join_game(players, **join_kwargs, portconfig=portconfig),
-                return_exceptions=True
+                return_exceptions=True,
             )
 
-        result: List[Result] = asyncio.run(run_host_and_join())
+        result: list[Result] = asyncio.run(run_host_and_join())
         assert isinstance(result, list)
         assert all(isinstance(r, Result) for r in result)
     else:
@@ -531,31 +488,27 @@ def run_game(map_settings, players, **kwargs) -> Union[Result, List[Optional[Res
     return result
 
 
-def run_replay(ai, replay_path, realtime=False, observed_id=0):
+def run_replay(ai, replay_path: Path | str, realtime: bool = False, observed_id: int = 0):
     portconfig = Portconfig()
-    assert os.path.isfile(
-        replay_path
-    ), f"Replay does not exist at the given path: {replay_path}"
-    assert os.path.isabs(
-        replay_path
-    ), f'Replay path has to be an absolute path, e.g. "C:/replays/my_replay.SC2Replay" but given path was "{replay_path}"'
+    assert Path(replay_path).is_file(), f"Replay does not exist at the given path: {replay_path}"
+    assert Path(replay_path).is_absolute(), (
+        f'Replay path has to be an absolute path, e.g. "C:/replays/my_replay.SC2Replay" but given path was "{replay_path}"'
+    )
     base_build, data_version = get_replay_version(replay_path)
     result = asyncio.get_event_loop().run_until_complete(
-        _host_replay(
-            replay_path, ai, realtime, portconfig, base_build, data_version, observed_id
-        )
+        _host_replay(replay_path, ai, realtime, portconfig, base_build, data_version, observed_id)
     )
     return result
 
 
 async def play_from_websocket(
-    ws_connection: Union[str, ClientWebSocketResponse],
+    ws_connection: str | ClientWebSocketResponse,
     player: AbstractPlayer,
     realtime: bool = False,
-    portconfig: Portconfig = None,
-    save_replay_as=None,
-    game_time_limit: int = None,
-    should_close=True,
+    portconfig: Portconfig | None = None,
+    save_replay_as: str | None = None,
+    game_time_limit: int | None = None,
+    should_close: bool = True,
 ):
     """Use this to play when the match is handled externally e.g. for bot ladder games.
     Portconfig MUST be specified if not playing vs Computer.
@@ -571,12 +524,10 @@ async def play_from_websocket(
             ws_connection = await session.ws_connect(ws_connection, timeout=120)
             should_close = True
         client = Client(ws_connection)
-        result = await _play_game(
-            player, client, realtime, portconfig, game_time_limit=game_time_limit
-        )
+        result = await _play_game(player, client, realtime, portconfig, game_time_limit=game_time_limit)
         if save_replay_as is not None:
             await client.save_replay(save_replay_as)
-    except ConnectionAlreadyClosed:
+    except ConnectionAlreadyClosedError:
         logger.error("Connection was closed before the game ended")
         return None
     finally:
@@ -588,7 +539,7 @@ async def play_from_websocket(
     return result
 
 
-async def run_match(controllers: List[Controller], match: GameMatch, close_ws=True):
+async def run_match(controllers: list[Controller], match: GameMatch, close_ws: bool = True):
     await _setup_host_game(controllers[0], **match.host_game_kwargs)
 
     # Setup portconfig beforehand, so all players use the same ports
@@ -629,16 +580,14 @@ async def run_match(controllers: List[Controller], match: GameMatch, close_ws=Tr
         async_results = [async_results]
     for i, a in enumerate(async_results):
         if isinstance(a, Exception):
-            logger.error(
-                f"Exception[{a}] thrown by {[p for p in match.players if p.needs_sc2][i]}"
-            )
+            logger.error(f"Exception[{a}] thrown by {[p for p in match.players if p.needs_sc2][i]}")
 
     return process_results(match.players, async_results)
 
 
-def process_results(players: List[AbstractPlayer], async_results: List[Result]) -> Dict[AbstractPlayer, Result]:
+def process_results(players: list[AbstractPlayer], async_results: list[Result]) -> dict[AbstractPlayer, Result]:
     opp_res = {Result.Victory: Result.Defeat, Result.Defeat: Result.Victory, Result.Tie: Result.Tie}
-    result: Dict[AbstractPlayer, Result] = {}
+    result: dict[AbstractPlayer, Result] = {}
     i = 0
     for player in players:
         if player.needs_sc2:
@@ -656,18 +605,13 @@ def process_results(players: List[AbstractPlayer], async_results: List[Result]) 
     return result
 
 
-# pylint: disable=R0912
-async def maintain_SCII_count(count: int, controllers: List[Controller], proc_args: List[Dict] = None):
+async def maintain_SCII_count(count: int, controllers: list[Controller], proc_args: list[dict] | None = None) -> None:
     """Modifies the given list of controllers to reflect the desired amount of SCII processes"""
     # kill unhealthy ones.
     if controllers:
         to_remove = []
         alive = await asyncio.wait_for(
-            asyncio.gather(
-                *(c.ping() for c in controllers if not c._ws.closed),
-                return_exceptions=True,
-            ),
-            timeout=20,
+            asyncio.gather(*(c.ping() for c in controllers if not c._ws.closed), return_exceptions=True), timeout=20
         )
         i = 0  # for alive
         for controller in controllers:
@@ -684,8 +628,8 @@ async def maintain_SCII_count(count: int, controllers: List[Controller], proc_ar
                 i += 1
         for c in to_remove:
             c._process._clean(verbose=False)
-            if c._process in kill_switch._to_kill:
-                kill_switch._to_kill.remove(c._process)
+            if c._process in KillSwitch._to_kill:
+                KillSwitch._to_kill.remove(c._process)
             controllers.remove(c)
 
     # spawn more
@@ -696,33 +640,26 @@ async def maintain_SCII_count(count: int, controllers: List[Controller], proc_ar
         else:
             proc_args = [{} for _ in range(needed)]
             index = 0
-        extra = [
-            SC2Process(**proc_args[(index + _) % len(proc_args)]) for _ in range(needed)
-        ]
+        extra = [SC2Process(**proc_args[(index + _) % len(proc_args)]) for _ in range(needed)]
         logger.info(f"Creating {needed} more SC2 Processes")
         for _ in range(3):
             if platform.system() == "Linux":
                 # Works on linux: start one client after the other
-                # pylint: disable=C2801
+
                 new_controllers = [await asyncio.wait_for(sc.__aenter__(), timeout=50) for sc in extra]
             else:
                 # Doesnt seem to work on linux: starting 2 clients nearly at the same time
                 new_controllers = await asyncio.wait_for(
-                    # pylint: disable=C2801
                     asyncio.gather(*[sc.__aenter__() for sc in extra], return_exceptions=True),
-                    timeout=50
+                    timeout=50,
                 )
 
             controllers.extend(c for c in new_controllers if isinstance(c, Controller))
             if len(controllers) == count:
-                await asyncio.wait_for(
-                    asyncio.gather(*(c.ping() for c in controllers)), timeout=20
-                )
+                await asyncio.wait_for(asyncio.gather(*(c.ping() for c in controllers)), timeout=20)
                 break
             extra = [
-                extra[i]
-                for i, result in enumerate(new_controllers)
-                if not isinstance(new_controllers, Controller)
+                extra[i] for i, result in enumerate(new_controllers) if not isinstance(new_controllers, Controller)
             ]
         else:
             logger.critical("Could not launch sufficient SC2")
@@ -735,17 +672,18 @@ async def maintain_SCII_count(count: int, controllers: List[Controller], proc_ar
         logger.info(f"Removing SCII listening to {proc._port}")
         await proc._close_connection()
         proc._clean(verbose=False)
-        if proc in kill_switch._to_kill:
-            kill_switch._to_kill.remove(proc)
+        if proc in KillSwitch._to_kill:
+            KillSwitch._to_kill.remove(proc)
 
 
-def run_multiple_games(matches: List[GameMatch]):
+def run_multiple_games(matches: list[GameMatch]):
     return asyncio.get_event_loop().run_until_complete(a_run_multiple_games(matches))
 
 
 # TODO Catching too general exception Exception (broad-except)
-# pylint: disable=W0703
-async def a_run_multiple_games(matches: List[GameMatch]) -> List[Dict[AbstractPlayer, Result]]:
+
+
+async def a_run_multiple_games(matches: list[GameMatch]) -> list[dict[AbstractPlayer, Result]]:
     """Run multiple matches.
     Non-python bots are supported.
     When playing bot vs bot, this is less likely to fatally crash than repeating run_game()
@@ -767,18 +705,17 @@ async def a_run_multiple_games(matches: List[GameMatch]) -> List[Dict[AbstractPl
             logger.exception(f"Caught unknown exception: {e}")
             logger.info(f"Exception {e} thrown in match {m}")
         finally:
-            if (
-                dont_restart
-            ):  # Keeping them alive after a non-computer match can cause crashes
+            if dont_restart:  # Keeping them alive after a non-computer match can cause crashes
                 await maintain_SCII_count(0, controllers, m.sc2_config)
             results.append(result)
-    kill_switch.kill_all()
+    KillSwitch.kill_all()
     return results
 
 
 # TODO Catching too general exception Exception (broad-except)
-# pylint: disable=W0703
-async def a_run_multiple_games_nokill(matches: List[GameMatch]) -> List[Dict[AbstractPlayer, Result]]:
+
+
+async def a_run_multiple_games_nokill(matches: list[GameMatch]) -> list[dict[AbstractPlayer, Result]]:
     """Run multiple matches while reusing SCII processes.
     Prone to crashes and stalls
     """
@@ -814,11 +751,8 @@ async def a_run_multiple_games_nokill(matches: List[GameMatch]) -> List[Dict[Abs
             results.append(result)
 
     # Fire the killswitch manually, instead of letting the winning player fire it.
-    await asyncio.wait_for(
-        asyncio.gather(*(c._process._close_connection() for c in controllers)),
-        timeout=50,
-    )
-    kill_switch.kill_all()
+    await asyncio.wait_for(asyncio.gather(*(c._process._close_connection() for c in controllers)), timeout=50)
+    KillSwitch.kill_all()
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     return results
