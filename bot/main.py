@@ -1,8 +1,6 @@
 """
 ---------------------------
 BOT CLICADINHA
-
-
 ---------------------------
 
 Made of with Ares Random Example Bot
@@ -35,7 +33,8 @@ from ares.behaviors.combat.individual import (
 )
 from ares.behaviors.macro import AutoSupply, Mining, SpawnController, GasBuildingController, BuildWorkers, ExpansionController
 from ares.consts import ALL_STRUCTURES, WORKER_TYPES, UnitRole, UnitTreeQueryType, BuildingPurpose
-from cython_extensions import cy_closest_to, cy_in_attack_range, cy_pick_enemy_target
+from cython_extensions import cy_closest_to, cy_in_attack_range, cy_pick_enemy_target, cy_distance_to
+from sc2 import unit
 from sc2.data import Race
 from sc2.ids.ability_id import AbilityId
 from sc2.ids.unit_typeid import UnitTypeId as UnitID
@@ -427,6 +426,7 @@ class MyBot(AresBot):
             await self.is_mass_widow_mine()
             await self.is_late_game()
             await self.make_roach_speed()
+            await self.use_fungal_growth()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -1626,6 +1626,18 @@ class MyBot(AresBot):
             else:
                 self.SapwnControllerOn = True
 
+
+    async def use_fungal_growth(self):
+        for infestor in self.units(UnitID.INFESTOR).ready:
+            if infestor.energy >= 75:
+                fungal_targets: Units = self.enemy_units.filter(lambda u: cy_distance_to(infestor.position, u.position) < 10.0)
+                self.register_behavior(UseAOEAbility(
+                    unit=infestor,
+                    ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH,
+                    targets=fungal_targets,
+                    min_targets=2
+                ))
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1987,22 +1999,7 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
                 if unit.type_id in [UnitID.INFESTOR]:
-                    if self.enemy_units:
-                        filtered_enemy_units = self.enemy_units.filter(lambda enemy: enemy.type_id != UnitID.SCV)
-                        # Ordena por distância e pega até 2 inimigos mais próximos
-                        sorted_enemies = sorted(filtered_enemy_units, key=lambda u: unit.distance_to(u))
-                        targets = sorted_enemies[:2]  # Pega até 2 alvos mais próximos
-                
-                        if len(targets) >= 2:
-                            attacking_maneuver.add(
-                                UseAOEAbility(
-                                    unit=unit,
-                                    ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH,
-                                    targets=targets,
-                                    min_targets=2
-                                )
-                            )
-
+                    pass
 #_______________________________________________________________________________________________________________________
 #          INFESTOR BURROWED
 #_______________________________________________________________________________________________________________________
@@ -2179,5 +2176,4 @@ class MyBot(AresBot):
                 if self.can_afford(UnitID.ZERGLING) and self.supply_left > 0:
                     # If we can, train a Zergling
                     self.do(larva.train(UnitID.ZERGLING))
-
     """
