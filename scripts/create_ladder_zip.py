@@ -40,21 +40,24 @@ else:
 ZIP_DIRECTORIES: Dict[str, Dict] = {
     "bot": {"zip_all": True, "folder_to_zip": "bot"},
     "ares-sc2": {"zip_all": True, "folder_to_zip": ""},
+    "scripts": {"zip_all": True, "folder_to_zip": "scripts"},
     #"python-sc2": {"zip_all": False, "folder_to_zip": "sc2"},
     # "sc2_helper": {"zip_all": True, "folder_to_zip": "sc2_helper"},
     #"SC2MapAnalysis": {"zip_all": False, "folder_to_zip": "map_analyzer"},
-    #"cython-extensions-sc2": {"zip_all": False, "folder_to_zip": "cython_extensions"},
     "queens-sc2": {"zip_all": False, "folder_to_zip": "queens_sc2"}
 }
 
 
-def zip_dir(dir_path, zip_file):
+def zip_dir(dir_path, zip_file, arc_root: str | None = None):
     """
     Will walk through a directory recursively and add all folders and files to zipfile
     @param dir_path:
     @param zip_file:
     @return:
     """
+    if arc_root is None:
+        arc_root = ROOT_DIRECTORY
+
     for root, _, files in walk(dir_path):
         if "ares-sc2/build" in root or "ares-sc2/dist" in root:
             continue
@@ -63,7 +66,7 @@ def zip_dir(dir_path, zip_file):
                 continue
             abs_path = path.join(root, file)
             # Anchor arcname at repository root so packaged paths include top-level folder names
-            arcname = path.relpath(abs_path, ROOT_DIRECTORY)
+            arcname = path.relpath(abs_path, arc_root)
             zip_file.write(abs_path, arcname)
 
 
@@ -82,10 +85,13 @@ def zip_files_and_directories(zipfile_name: str) -> None:
     # write directories to the zipfile
     for directory, values in ZIP_DIRECTORIES.items():
         if values["zip_all"]:
-            zip_dir(path.join(ROOT_DIRECTORY, directory), zip_file)
+            zip_dir(path.join(ROOT_DIRECTORY, directory), zip_file, ROOT_DIRECTORY)
         else:
             path_to_dir = path.join(ROOT_DIRECTORY, directory, values["folder_to_zip"])
-            zip_dir(path_to_dir, zip_file)
+            # Optional arc_root override allows us to place cython_extensions at zip root
+            arc_root_override = values.get("arc_root")
+            arc_root_abs = path.join(ROOT_DIRECTORY, arc_root_override) if arc_root_override else ROOT_DIRECTORY
+            zip_dir(path_to_dir, zip_file, arc_root_abs)
 
     # write individual files
     for single_file in ZIP_FILES:
