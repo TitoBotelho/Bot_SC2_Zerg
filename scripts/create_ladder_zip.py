@@ -31,33 +31,20 @@ ZIP_FILES: List[str] = [
     "zerg_builds.yaml",
 ]
 if platform.system() == "Windows":
-    EXCLUDE: list[str] = [
-        "ares-sc2\\build",
-        "ares-sc2\\dist",
-        "ares-sc2\\tests",
-        "ares-src\\docs",
-        "map_analyzer\\pickle_gameinfo",
-    ]
-    FILETYPES_TO_IGNORE: Tuple = (".c", ".so", "pyx", "pyi")
+    FILETYPES_TO_IGNORE: Tuple = (".c", ".so", ".pyx", ".pyi")
     ROOT_DIRECTORY = "./"
 else:
-    EXCLUDE: list[str] = [
-        "ares-sc2/build",
-        "ares-sc2/dist",
-        "ares-sc2/tests",
-        "ares-sc2/docs",
-        "map_analyzer/pickle_gameinfo",
-    ]
     FILETYPES_TO_IGNORE: Tuple = (".c", ".pyd", ".pyx", ".pyi")
     ROOT_DIRECTORY = "./"
 
 ZIP_DIRECTORIES: Dict[str, Dict] = {
     "bot": {"zip_all": True, "folder_to_zip": "bot"},
     "ares-sc2": {"zip_all": True, "folder_to_zip": ""},
-    "python-sc2": {"zip_all": False, "folder_to_zip": "sc2"},
+    #"python-sc2": {"zip_all": False, "folder_to_zip": "sc2"},
     # "sc2_helper": {"zip_all": True, "folder_to_zip": "sc2_helper"},
-    "SC2MapAnalysis": {"zip_all": False, "folder_to_zip": "map_analyzer"},
-    "cython-extensions-sc2": {"zip_all": False, "folder_to_zip": "cython_extensions"},
+    #"SC2MapAnalysis": {"zip_all": False, "folder_to_zip": "map_analyzer"},
+    #"cython-extensions-sc2": {"zip_all": False, "folder_to_zip": "cython_extensions"},
+    "queens-sc2": {"zip_all": False, "folder_to_zip": "queens_sc2"}
 }
 
 
@@ -69,15 +56,15 @@ def zip_dir(dir_path, zip_file):
     @return:
     """
     for root, _, files in walk(dir_path):
-        if any(exclude in root for exclude in EXCLUDE):
+        if "ares-sc2/build" in root or "ares-sc2/dist" in root:
             continue
         for file in files:
             if file.lower().endswith(FILETYPES_TO_IGNORE):
                 continue
-            zip_file.write(
-                path.join(root, file),
-                path.relpath(path.join(root, file), path.join(dir_path, "..")),
-            )
+            abs_path = path.join(root, file)
+            # Anchor arcname at repository root so packaged paths include top-level folder names
+            arcname = path.relpath(abs_path, ROOT_DIRECTORY)
+            zip_file.write(abs_path, arcname)
 
 
 def zip_files_and_directories(zipfile_name: str) -> None:
@@ -190,46 +177,6 @@ def on_error(func, path, exc_info):
     else:
         raise
 
-def try_build_cython_extensions(build_env=None):
-    """
-    Attempt to build Cython extensions with different approaches
-
-    Args:
-        build_env: Optional environment variables dictionary
-
-    Returns:
-        bool: True if build succeeded, False otherwise
-    """
-    import subprocess
-
-    if build_env is None:
-        build_env = os.environ.copy()
-
-    try:
-        # Approach 1: Try with pip install
-        subprocess.run(
-            "cd cython-extensions-sc2 && poetry run pip install -e .",
-            shell=True,
-            env=build_env,
-            check=True
-        )
-        return True
-    except subprocess.CalledProcessError:
-        print("Second build approach failed, trying setup.py directly...")
-
-        try:
-            # Approach 2: Use setup.py directly with different flags
-            subprocess.run(
-                "cd cython-extensions-sc2 && poetry run python setup.py build_ext --inplace",
-                shell=True,
-                env=build_env,
-                check=True
-            )
-            return True
-        except subprocess.CalledProcessError:
-            print("All build approaches failed.")
-            return False
-
 
 if __name__ == "__main__":
     print("Cloning python-sc2...")
@@ -243,24 +190,7 @@ if __name__ == "__main__":
     run("git clone https://github.com/raspersc2/SC2MapAnalysis", shell=True)
     # cython extensions
     run("git clone https://github.com/AresSC2/cython-extensions-sc2", shell=True)
-
-    # Set environment variables to control the Cython build process
-    build_env = os.environ.copy()
-    if platform.system() != "Windows":
-        build_env["LDFLAGS"] = "-Wl,--allow-multiple-definition"
-        # For Python 3.12 compatibility
-        build_env["CFLAGS"] = "-fPIC"
-
-    # Try building with our helper function
-    if try_build_cython_extensions(build_env):
-        print("Successfully built Cython extensions")
-    else:
-        print("WARNING: Cython extension build failed, exiting script")
-        exit(1)
-
-    # Still run poetry build to create the distribution package
-    # run("cd cython-extensions-sc2 && poetry build", shell=True)
-
+    run("cd cython-extensions-sc2 && poetry build", shell=True)
 
     # clone sc2-helper
     # run("git clone https://github.com/danielvschoor/sc2-helper", shell=True)
@@ -308,11 +238,11 @@ if __name__ == "__main__":
     p_status = p.wait()
 
     # compile the cython code
-    # print("Compiling cython code...")
-    # p = Popen(["poetry", "build"], cwd=f"{ROOT_DIRECTORY}ares-sc2")
-    # # makes the process wait, otherwise files get zipped before compile is complete
-    # p.communicate()
-    # p_status = p.wait()
+    print("Compiling cython code...")
+    p = Popen(["poetry", "build"], cwd=f"{ROOT_DIRECTORY}ares-sc2")
+    # makes the process wait, otherwise files get zipped before compile is complete
+    p.communicate()
+    p_status = p.wait()
 
     # at the moment -> ensure debug=False
     print("Checking config values...")
