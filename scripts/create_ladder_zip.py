@@ -41,9 +41,9 @@ ZIP_DIRECTORIES: Dict[str, Dict] = {
     "bot": {"zip_all": True, "folder_to_zip": "bot"},
     "ares-sc2": {"zip_all": True, "folder_to_zip": ""},
     "scripts": {"zip_all": True, "folder_to_zip": "scripts"},
-    #"python-sc2": {"zip_all": False, "folder_to_zip": "sc2"},
+    "python-sc2": {"zip_all": False, "folder_to_zip": "sc2", "arc_root": "python-sc2"},
     # "sc2_helper": {"zip_all": True, "folder_to_zip": "sc2_helper"},
-    #"SC2MapAnalysis": {"zip_all": False, "folder_to_zip": "map_analyzer"},
+    "SC2MapAnalysis": {"zip_all": False, "folder_to_zip": "map_analyzer", "arc_root": "SC2MapAnalysis"},
     # Vendor cython_extensions at zip root so imports work on ladder
     "cython-extensions-sc2": {"zip_all": False, "folder_to_zip": "cython_extensions", "arc_root": "cython-extensions-sc2"},
     "queens-sc2": {"zip_all": False, "folder_to_zip": "queens_sc2"}
