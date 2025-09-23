@@ -58,7 +58,6 @@ ZIP_DIRECTORIES: Dict[str, Dict] = {
     # "sc2_helper": {"zip_all": True, "folder_to_zip": "sc2_helper"},
     "SC2MapAnalysis": {"zip_all": False, "folder_to_zip": "map_analyzer"},
     "cython-extensions-sc2": {"zip_all": False, "folder_to_zip": "cython_extensions"},
-    "queens-sc2": {"zip_all": False, "folder_to_zip": "queens_sc2"}
 }
 
 
