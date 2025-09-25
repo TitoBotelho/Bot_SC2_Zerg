@@ -1627,17 +1627,38 @@ class MyBot(AresBot):
                 self.SapwnControllerOn = True
 
 
-    async def use_fungal_growth(self):
-        for infestor in self.units(UnitID.INFESTOR).ready:
-            if infestor.energy >= 75:
-                fungal_targets: Units = self.enemy_units.filter(lambda u: cy_distance_to(infestor.position, u.position) < 10.0)
-                self.register_behavior(UseAOEAbility(
-                    unit=infestor,
-                    ability_id=AbilityId.FUNGALGROWTH_FUNGALGROWTH,
-                    targets=fungal_targets,
-                    min_targets=2
-                ))
 
+    async def use_fungal_growth(self):
+        """
+        Lança Fungal Growth na unidade inimiga mais próxima dentro do alcance.
+        - Custo: 75 energia
+        - Alcance: ~10
+        - Usa posição da unidade alvo (Fungal é targeted point)
+        """
+        ENERGY_COST = 75
+        CAST_RANGE = 9.9  # pequeno buffer para evitar falhas por ponto flutuante
+
+        if not self.enemy_units:
+            return
+
+        for infestor in self.units(UnitID.INFESTOR).ready:
+            if infestor.energy < ENERGY_COST:
+                continue
+
+            # Filtra inimigos em alcance
+            in_range: Units = self.enemy_units.filter(
+                lambda u: cy_distance_to(infestor.position, u.position) <= CAST_RANGE
+            )
+            if not in_range:
+                continue
+
+            # Alvo mais próximo
+            target = min(
+                in_range,
+                key=lambda u: cy_distance_to(infestor.position, u.position)
+            )
+
+            infestor(AbilityId.FUNGALGROWTH_FUNGALGROWTH, target.position)
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
