@@ -427,6 +427,7 @@ class MyBot(AresBot):
             await self.is_late_game()
             await self.make_roach_speed()
             await self.use_fungal_growth()
+            await self.throw_bile()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -1659,6 +1660,28 @@ class MyBot(AresBot):
             )
 
             infestor(AbilityId.FUNGALGROWTH_FUNGALGROWTH, target.position)
+
+
+    async def throw_bile(self):
+        CAST_RANGE = 9
+        ravagers = self.units(UnitID.RAVAGER).ready
+        # Filtra ravagers com bile disponível
+        ravagers_that_can_bile = [
+            r for r in ravagers
+            if AbilityId.EFFECT_CORROSIVEBILE in await self.get_available_abilities(r)
+        ]
+    
+        for ravager in ravagers_that_can_bile:
+            in_range = self.enemy_units.filter(
+                lambda u: cy_distance_to(ravager.position, u.position) <= CAST_RANGE
+            )
+            if not in_range:
+                continue
+    
+            target = min(in_range, key=lambda u: cy_distance_to(ravager.position, u.position))
+            ravager(AbilityId.EFFECT_CORROSIVEBILE, target.position)
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1782,7 +1805,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250915")
+            await self.chat_send("Tag: Version_250926")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -2038,50 +2061,24 @@ class MyBot(AresBot):
 
 
                 if unit.type_id in [UnitID.RAVAGER]:
-                    in_attack_range = cy_in_attack_range(unit, only_enemy_units)
-                    bile_target = None
-
-                    # 1. Liberators (normal ou AG) dentro do range da bile (9)
-                    liberators_close = self.enemy_units.filter(
-                        lambda e: e.type_id in {UnitID.LIBERATORAG} and unit.distance_to(e) <= 9
-                    )
-                    if liberators_close:
-                        bile_target = cy_closest_to(unit.position, liberators_close).position
-                    else:
-                        # 2. Siege Tank sieged
-                        tanks_sieged_close = self.enemy_units.filter(
-                            lambda e: e.type_id == UnitID.SIEGETANKSIEGED and unit.distance_to(e) <= 9
-                        )
-                        if tanks_sieged_close:
-                            bile_target = cy_closest_to(unit.position, tanks_sieged_close).position
-                        else:
-                            # 3. Widow Mine enterrada
-                            widowmines_burrowed_close = self.enemy_units.filter(
-                                lambda e: e.type_id == UnitID.WIDOWMINEBURROWED and unit.distance_to(e) <= 9
-                            )
-                            if widowmines_burrowed_close:
-                                bile_target = cy_closest_to(unit.position, widowmines_burrowed_close).position
-                            else:
-                                # 4. Fallback: inimigo mais próximo em alcance de arma
-                                if in_attack_range:
-                                    closest_enemy = min(in_attack_range, key=lambda u: unit.distance_to(u))
-                                    bile_target = closest_enemy.position
-
-                    # Lança bile se puder (evita spam checando se habilidade disponível)
-                    if bile_target and AbilityId.EFFECT_CORROSIVEBILE in unit.abilities:
+                    if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
+                        # `ShootTargetInRange` will check weapon is ready
+                        # otherwise it will not execute
                         attacking_maneuver.add(
-                            UseAbility(AbilityId.EFFECT_CORROSIVEBILE, unit=unit, target=bile_target)
+                            ShootTargetInRange(unit=unit, targets=in_attack_range)
                         )
-
-                    # Ataque normal (arma)
-                    if in_attack_range:
-                        attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
+                    # then enemy structures
                     elif in_attack_range := cy_in_attack_range(unit, all_close):
-                        attacking_maneuver.add(ShootTargetInRange(unit=unit, targets=in_attack_range))
+                        attacking_maneuver.add(
+                            ShootTargetInRange(unit=unit, targets=in_attack_range)
+                        )
 
                     enemy_target: Unit = cy_pick_enemy_target(all_close)
+
+                    # low shield, keep protoss units safe
                     if self.race == Race.Protoss and unit.shield_percentage < 0.3:
                         attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
+
                     else:
                         attacking_maneuver.add(
                             StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
