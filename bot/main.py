@@ -1677,8 +1677,15 @@ class MyBot(AresBot):
             )
             if not in_range:
                 continue
-    
-            target = min(in_range, key=lambda u: cy_distance_to(ravager.position, u.position))
+
+            # Prioriza tanks em modo sieged no alcance; se houver, mira no mais próximo
+            sieged_tanks = in_range.of_type(UnitID.SIEGETANKSIEGED)
+            if sieged_tanks:
+                target = min(sieged_tanks, key=lambda u: cy_distance_to(ravager.position, u.position))
+            else:
+                # Caso não haja tank sieged, mira no inimigo mais próximo
+                target = min(in_range, key=lambda u: cy_distance_to(ravager.position, u.position))
+
             ravager(AbilityId.EFFECT_CORROSIVEBILE, target.position)
 
 
@@ -1805,7 +1812,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250926")
+            await self.chat_send("Tag: Version_250930")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
