@@ -192,6 +192,7 @@ class MyBot(AresBot):
         self.my_roaches = {}
         self.enemy_widow_mines = {}
         self.late_game = False
+        self.enemy_banshees = {}
 
         self._commenced_attack: bool = False
 
@@ -428,6 +429,7 @@ class MyBot(AresBot):
             await self.make_roach_speed()
             await self.use_fungal_growth()
             await self.throw_bile()
+            await self.is_mass_banshee()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -1436,7 +1438,7 @@ class MyBot(AresBot):
                     if self.can_afford(UnitID.SPINECRAWLER):
                         my_base_location = self.mediator.get_own_nat
                         # Send the second Overlord in front of second base to scout
-                        target = my_base_location.position.towards(self.game_info.map_center, 6)                   
+                        target = my_base_location.position.towards(self.game_info.map_center, 7)                   
                         #await self.build(UnitID.HYDRALISKDEN, near=target)
                         if worker := self.mediator.select_worker(target_position=target):                
                             self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
@@ -1689,6 +1691,26 @@ class MyBot(AresBot):
             ravager(AbilityId.EFFECT_CORROSIVEBILE, target.position)
 
 
+
+    async def is_mass_banshee(self):
+        """
+        Make air defense if enemy is making a lot of banshees
+        """
+        if "Mass_Banshees" in self.enemy_strategy:
+            return
+
+        # Itera banshees vistas neste frame
+        for enemy in self.enemy_units.of_type({UnitID.BANSHEE}):
+            if enemy.tag not in self.enemy_banshees:
+                # registra primeira vez que vimos essa banshee
+                self.enemy_banshees[enemy.tag] = enemy.type_id
+
+        if len(self.enemy_banshees) >= 3:
+            await self.chat_send("Tag: Mass_Banshee")
+            self.enemy_strategy.append("Mass_Banshees")
+
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1812,7 +1834,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250930")
+            await self.chat_send("Tag: Version_251003")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
