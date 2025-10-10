@@ -192,7 +192,6 @@ class MyBot(AresBot):
         self.my_roaches = {}
         self.enemy_widow_mines = {}
         self.late_game = False
-        self.enemy_banshees = {}
 
         self._commenced_attack: bool = False
 
@@ -429,7 +428,6 @@ class MyBot(AresBot):
             await self.make_roach_speed()
             await self.use_fungal_growth()
             await self.throw_bile()
-            await self.is_mass_banshee()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -1438,7 +1436,7 @@ class MyBot(AresBot):
                     if self.can_afford(UnitID.SPINECRAWLER):
                         my_base_location = self.mediator.get_own_nat
                         # Send the second Overlord in front of second base to scout
-                        target = my_base_location.position.towards(self.game_info.map_center, 7)                   
+                        target = my_base_location.position.towards(self.game_info.map_center, 6)                   
                         #await self.build(UnitID.HYDRALISKDEN, near=target)
                         if worker := self.mediator.select_worker(target_position=target):                
                             self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
@@ -1548,17 +1546,36 @@ class MyBot(AresBot):
 
 
     async def make_ravagers(self):
-        if self.vespene > 300:
-            if self.structures(UnitID.ROACHWARREN).ready:
-                if self.units(UnitID.ROACH).amount >= 10:
-                    if not "Flying_Structures" in self.enemy_strategy:
-                        for roach in self.units(UnitID.ROACH):
-                            roach(AbilityId.MORPHTORAVAGER_RAVAGER)
-                            if "Ravager" not in self.enemy_strategy:
-                                await self.chat_send("Tag: Ravager")
-                                self.enemy_strategy.append("Ravager")
+        # Mesmos gates que você já tinha
+        if self.vespene > 300 and self.structures(UnitID.ROACHWARREN).ready:
+            roaches: Units = self.units(UnitID.ROACH).ready
+            if roaches.amount < 10:
+                return
+            if "Flying_Structures" in self.enemy_strategy:
+                return
 
+            # Ponto de referência: segunda base, senão fallback
+            if getattr(self, "second_base", None):
+                target_pos = self.second_base.position
+            elif self.townhalls.ready:
+                target_pos = self.townhalls.ready.closest_to(self.start_location).position
+            elif self.townhalls:
+                target_pos = self.townhalls.closest_to(self.start_location).position
+            else:
+                target_pos = self.start_location  # último fallback seguro
 
+            # Escolhe a roach mais próxima do target_pos
+            roach = min(roaches, key=lambda r: r.distance_to(target_pos))
+
+            # Checa se pode morfar agora (evita spam/cooldown)
+            abilities = await self.get_available_abilities(roach)
+            if AbilityId.MORPHTORAVAGER_RAVAGER in abilities:
+                roach(AbilityId.MORPHTORAVAGER_RAVAGER)
+                if "Ravager" not in self.enemy_strategy:
+                    await self.chat_send("Tag: Ravager")
+                    self.enemy_strategy.append("Ravager")
+
+                    
     async def build_plus_one_roach_armor(self):
         # Se já pesquisou ZERGMISSILEWEAPONSLEVEL1, desliga o SpawnController até pesquisar ZERGGROUNDARMORSLEVEL1
         if self.structures(UnitID.EVOLUTIONCHAMBER).ready and self.structures(UnitID.SPAWNINGPOOL).ready:
@@ -1666,30 +1683,50 @@ class MyBot(AresBot):
 
     async def throw_bile(self):
         CAST_RANGE = 9
-        ravagers = self.units(UnitID.RAVAGER).ready
-        # Filtra ravagers com bile disponível
-        ravagers_that_can_bile = [
-            r for r in ravagers
-            if AbilityId.EFFECT_CORROSIVEBILE in await self.get_available_abilities(r)
-        ]
-    
-        for ravager in ravagers_that_can_bile:
-            in_range = self.enemy_units.filter(
-                lambda u: cy_distance_to(ravager.position, u.position) <= CAST_RANGE
-            )
-            if not in_range:
+        ravagers: Units = self.units(UnitID.RAVAGER).ready
+
+        for ravager in ravagers:
+            # Verifica se o Ravager pode lançar bile agora
+            abilities = await self.get_available_abilities(ravager)
+            if AbilityId.EFFECT_CORROSIVEBILE not in abilities:
                 continue
 
-            # Prioriza tanks em modo sieged no alcance; se houver, mira no mais próximo
-            sieged_tanks = in_range.of_type(UnitID.SIEGETANKSIEGED)
-            if sieged_tanks:
-                target = min(sieged_tanks, key=lambda u: cy_distance_to(ravager.position, u.position))
-            else:
-                # Caso não haja tank sieged, mira no inimigo mais próximo
-                target = min(in_range, key=lambda u: cy_distance_to(ravager.position, u.position))
+            # 1) Prioriza BUNKER em alcance
+            bunkers_in_range = self.enemy_structures.of_type(UnitID.BUNKER).filter(
+                lambda s: cy_distance_to(ravager.position, s.position) <= CAST_RANGE
+            )
+            if bunkers_in_range:
+                bunker_target = min(
+                    bunkers_in_range,
+                    key=lambda s: cy_distance_to(ravager.position, s.position),
+                )
+                ravager(AbilityId.EFFECT_CORROSIVEBILE, bunker_target.position)
+                continue
 
-            ravager(AbilityId.EFFECT_CORROSIVEBILE, target.position)
+            # 2) Depois, SIEGETANKSIEGED em alcance
+            sieged_tanks_in_range = self.enemy_units.of_type(UnitID.SIEGETANKSIEGED).filter(
+                lambda u: cy_distance_to(ravager.position, u.position) <= CAST_RANGE
+            )
+            if sieged_tanks_in_range:
+                tank_target = min(
+                    sieged_tanks_in_range,
+                    key=lambda u: cy_distance_to(ravager.position, u.position),
+                )
+                ravager(AbilityId.EFFECT_CORROSIVEBILE, tank_target.position)
+                continue
 
+            # 3) Caso contrário, unidade inimiga mais próxima no alcance
+            enemies_in_range = self.enemy_units.filter(
+                lambda u: cy_distance_to(ravager.position, u.position) <= CAST_RANGE
+            )
+            if not enemies_in_range:
+                continue
+
+            nearest_target = min(
+                enemies_in_range,
+                key=lambda u: cy_distance_to(ravager.position, u.position),
+            )
+            ravager(AbilityId.EFFECT_CORROSIVEBILE, nearest_target.position)
 
 
     async def is_mass_banshee(self):
@@ -1834,7 +1871,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251003")
+            await self.chat_send("Tag: Version_251010")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
