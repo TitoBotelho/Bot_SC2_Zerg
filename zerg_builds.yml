@@ -957,3 +957,37 @@ Builds:
             - 23 drone
             - 24 drone
             - 25 drone
+
+
+    BunkerRush:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
+        OpeningBuildOrder:
+            - 12 overlord
+            - 12 drone
+            - 13 drone
+            - 13 worker_scout:
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
+            - 14 drone
+            - 15 drone
+            - 15 hatchery
+            - 15 drone
+            - 15 spawningpool
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 15 gas
+            - 16 drone
+            - 17 drone
+            - 18 overlord
+            - 18 drone
+            - 18 overlord
+            - 18 drone
+            - 18 overlord
+            - 19 drone
+
+
+
+

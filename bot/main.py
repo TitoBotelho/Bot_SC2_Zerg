@@ -433,6 +433,8 @@ class MyBot(AresBot):
             if "Bunker_Rush" in self.enemy_strategy:
                 await self.build_roach_warren()
                 await self.research_burrow()
+                await self.change_to_bo_Bunker_Rush()
+                await self.cancel_second_base()
             #if "2_Base_Terran" in self.enemy_strategy:
 
 
@@ -818,7 +820,7 @@ class MyBot(AresBot):
     async def is_bunker_rush(self):
         if not "Bunker_Rush" in self.enemy_strategy:
         #verify if the protoss opponent has only one base. If so, it is an agressive terran and build a spine crawler
-            if self.time > 114 and self.time < 115:
+            if self.time > 100 and self.time < 102:
                 found_bunker = False
                 for unit in self.enemy_structures:
                     if unit.name == 'Bunker':
@@ -1748,6 +1750,13 @@ class MyBot(AresBot):
 
 
 
+    async def change_to_bo_Bunker_Rush(self):
+        if self.bo_changed == False:
+            self.build_order_runner.switch_opening("BunkerRush")
+            self.bo_changed = True
+
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1871,7 +1880,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251010")
+            await self.chat_send("Tag: Version_251013")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
