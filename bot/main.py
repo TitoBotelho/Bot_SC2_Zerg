@@ -284,8 +284,14 @@ class MyBot(AresBot):
         elif self.opponent_id == "0d0d9c44-2520-457d-84ba-7f6ffe167a3e":
             self._begin_attack_at_supply = 1
     
+        if "2_Proxy_Gateway" in self.enemy_strategy and "Protoss_Agressive" in self.enemy_strategy:
+            self._begin_attack_at_supply = 1   
+
         elif "2_Proxy_Gateway" in self.enemy_strategy:
             self._begin_attack_at_supply = 1
+
+        elif "Protoss_Agressive" in self.enemy_strategy:
+            self._begin_attack_at_supply = 50
 
         else:
             if self.EnemyRace == Race.Terran:
@@ -496,7 +502,8 @@ class MyBot(AresBot):
             await self.stop_collecting_gas()
 
             if "Protoss_Agressive" in self.enemy_strategy:
-                await self.build_spine_crawlers()
+                #await self.build_spine_crawlers()
+                self._begin_attack_at_supply = 50
 
             if "Protoss_Agressive" not in self.enemy_strategy:
                 await self.build_next_base()
@@ -1880,7 +1887,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251013")
+            await self.chat_send("Tag: Version_251014")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
