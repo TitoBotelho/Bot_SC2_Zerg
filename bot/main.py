@@ -130,7 +130,7 @@ class MyBot(AresBot):
     expansions_generator: cycle
     current_base_target: Point2
     _begin_attack_at_supply: float
-    BURROW_AT_HEALTH_PERC: float = 0.3
+    BURROW_AT_HEALTH_PERC: float = 0.35
     UNBURROW_AT_HEALTH_PERC: float = 0.9
     last_debug_time = 0
     
@@ -284,14 +284,6 @@ class MyBot(AresBot):
         elif self.opponent_id == "0d0d9c44-2520-457d-84ba-7f6ffe167a3e":
             self._begin_attack_at_supply = 1
     
-        if "2_Proxy_Gateway" in self.enemy_strategy and "Protoss_Agressive" in self.enemy_strategy:
-            self._begin_attack_at_supply = 1   
-
-        elif "2_Proxy_Gateway" in self.enemy_strategy:
-            self._begin_attack_at_supply = 1
-
-        elif "Protoss_Agressive" in self.enemy_strategy:
-            self._begin_attack_at_supply = 50
 
         else:
             if self.EnemyRace == Race.Terran:
@@ -1445,7 +1437,7 @@ class MyBot(AresBot):
                     if self.can_afford(UnitID.SPINECRAWLER):
                         my_base_location = self.mediator.get_own_nat
                         # Send the second Overlord in front of second base to scout
-                        target = my_base_location.position.towards(self.game_info.map_center, 6)                   
+                        target = my_base_location.position.towards(self.game_info.map_center, 8)                   
                         #await self.build(UnitID.HYDRALISKDEN, near=target)
                         if worker := self.mediator.select_worker(target_position=target):                
                             self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
@@ -1626,7 +1618,7 @@ class MyBot(AresBot):
 
 
     async def is_late_game(self):
-        if self.time > 600:
+        if self.time > 540:
             if self.late_game == False:
                 await self.chat_send("Tag: Late_Game")
                 self.enemy_strategy.append("Late_Game")
@@ -1887,7 +1879,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251014")
+            await self.chat_send("Tag: Version_251017")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
