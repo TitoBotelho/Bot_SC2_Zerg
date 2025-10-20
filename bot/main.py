@@ -163,6 +163,7 @@ class MyBot(AresBot):
         self.bansheeFound = False
         self.tag_worker_build_first_spore = 0
         self.tag_worker_build_second_spore = 0
+        self.tag_worker_build_third_spore = 0
         self.random_race_discovered = False
         self.one_proxy_barracks_found = False
         self.two_proxy_barracks_found = False
@@ -495,7 +496,8 @@ class MyBot(AresBot):
 
             if "Protoss_Agressive" in self.enemy_strategy:
                 #await self.build_spine_crawlers()
-                self._begin_attack_at_supply = 50
+                self._begin_attack_at_supply = 40
+                await self.build_one_spine_crawler()
 
             if "Protoss_Agressive" not in self.enemy_strategy:
                 await self.build_next_base()
@@ -1015,6 +1017,37 @@ class MyBot(AresBot):
                         self.tag_worker_build_second_spore = worker
                         #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                         self.mediator.build_with_specific_worker(worker=self.tag_worker_build_second_spore, structure_type=UnitID.SPORECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+        # 3º Spore: quando tivermos 3 bases
+        if self.tag_worker_build_third_spore == 0:
+            # Precisa de pelo menos 3 Hatcheries prontas
+            bases_ready = self.structures(UnitID.HATCHERY).ready
+            if bases_ready.amount >= 3 and self.can_afford(UnitID.SPORECRAWLER):
+                # Encontrar a terceira base (diferente da first_base e da second_base)
+                second_tag = getattr(self.second_base, "tag", None)
+                third_base = None
+                for base in bases_ready:
+                    if base.tag != self.first_base.tag and base.tag != second_tag:
+                        third_base = base
+                        break
+
+                if third_base:
+                    # Mesma lógica do 1º spore: atrás dos minerais
+                    positions = self.mediator.get_behind_mineral_positions(th_pos=third_base.position)
+                    if positions:
+                        pos = positions[1] if len(positions) > 1 else positions[0]
+                        target = pos.towards(third_base, -1)
+
+                        if worker := self.mediator.select_worker(target_position=target):
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_build_third_spore = worker
+                            self.mediator.build_with_specific_worker(
+                                worker=self.tag_worker_build_third_spore,
+                                structure_type=UnitID.SPORECRAWLER,
+                                pos=target,
+                                building_purpose=BuildingPurpose.NORMAL_BUILDING
+                            )
+
 
     async def make_spines_on_main(self):
         if self.structures(UnitID.SPAWNINGPOOL).ready:
@@ -1618,7 +1651,7 @@ class MyBot(AresBot):
 
 
     async def is_late_game(self):
-        if self.time > 540:
+        if self.time > 510:
             if self.late_game == False:
                 await self.chat_send("Tag: Late_Game")
                 self.enemy_strategy.append("Late_Game")
@@ -1879,7 +1912,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251017")
+            await self.chat_send("Tag: Version_251020")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
