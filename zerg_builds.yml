@@ -398,6 +398,7 @@ Builds:
             - 20 drone
             - 20 drone
             - 20 drone
+            - 20 hatchery
 
 
     OneOneRoaches:
@@ -991,3 +992,42 @@ Builds:
 
 
 
+    Protoss_Agressive:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
+        OpeningBuildOrder:
+            - 12 drone
+            - 12 worker_scout:
+                [nat, third, fourth, fifth, sixth, map_center, third, fourth]
+            - 13 drone
+            - 13 spawningpool
+            - 13 overlord
+            - 13 drone
+            - 13 hatchery
+            - 13 drone
+            - 14 drone
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 overlord
+            - 16 drone
+            - 16 drone
+            - 17 drone
+            - 20 drone
+            - 16 overlord
+            - 21 drone
+            - 22 drone
+            - 23 drone
+            - 19 drone
+            - 20 drone
+            - 20 drone
+            - 20 overlord
+            - 20 drone
+            - 20 hatchery
+            - 20 drone
+            - 20 drone
+            - 20 drone
+            - 20 drone
+            - 20 hatchery

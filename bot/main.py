@@ -498,9 +498,9 @@ class MyBot(AresBot):
                 #await self.build_spine_crawlers()
                 self._begin_attack_at_supply = 40
                 await self.build_one_spine_crawler()
+                await self.change_to_bo_Protoss_Agressive()
 
-            if "Protoss_Agressive" not in self.enemy_strategy:
-                await self.build_next_base()
+
 
             if "2_Proxy_Gateway" in self.enemy_strategy:
                 await self.cancel_second_base()
@@ -1651,11 +1651,12 @@ class MyBot(AresBot):
 
 
     async def is_late_game(self):
-        if self.time > 510:
+        if self.time > 440:
             if self.late_game == False:
                 await self.chat_send("Tag: Late_Game")
                 self.enemy_strategy.append("Late_Game")
                 self.late_game = True
+                self._begin_attack_at_supply = 70
 
 
     async def late_game_protocol(self):
@@ -1788,6 +1789,14 @@ class MyBot(AresBot):
             self.bo_changed = True
 
 
+    async def change_to_bo_Protoss_Agressive(self):
+        if self.bo_changed == False:
+            self.build_order_runner.switch_opening("Protoss_Agressive")
+            self.bo_changed = True
+
+
+
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -1912,7 +1921,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251020")
+            await self.chat_send("Tag: Version_251021")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
