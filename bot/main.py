@@ -199,7 +199,7 @@ class MyBot(AresBot):
 
         self.creep_queen_tags: Set[int] = set()
         self.other_queen_tags: Set[int] = set()
-        self.max_creep_queens: int = 2
+        self.max_creep_queens: int = 4
 
 
 
@@ -591,7 +591,8 @@ class MyBot(AresBot):
             new_creep_queens: Units = queens.take(queens_needed)
             for queen in new_creep_queens:
                 self.creep_queen_tags.add(queen.tag)
-        
+
+
         # Separar as creep queens das outras queens
         creep_queens: Units = queens.tags_in(self.creep_queen_tags)
         other_queens: Units = queens.tags_not_in(self.creep_queen_tags)
@@ -1796,8 +1797,6 @@ class MyBot(AresBot):
 
 
 
-
-
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -1921,7 +1920,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251021")
+            await self.chat_send("Tag: Version_251028")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
