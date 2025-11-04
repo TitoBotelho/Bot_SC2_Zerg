@@ -79,8 +79,8 @@ ARMY_COMP_ROACH: dict[Race, dict] = {
 # against other races
 ARMY_COMP_ROACHINFESTOR: dict[Race, dict] = {
     Race.Zerg: {
-        UnitID.ROACH: {"proportion": 0.98, "priority": 1},
-        UnitID.INFESTOR: {"proportion": 0.02, "priority": 0},
+        UnitID.ROACH: {"proportion": 0.9, "priority": 1},
+        UnitID.INFESTOR: {"proportion": 0.1, "priority": 0},
     }
 }
 
@@ -193,6 +193,7 @@ class MyBot(AresBot):
         self.my_roaches = {}
         self.enemy_widow_mines = {}
         self.late_game = False
+        self.tag_worker_infestation_pit = 0
 
         self._commenced_attack: bool = False
 
@@ -478,6 +479,7 @@ class MyBot(AresBot):
 
             if "Late_Game" in self.enemy_strategy:
                 await self.late_game_protocol()
+                await self.build_infestation_pit()
 
 
             #if "3_Base_Terran" in self.enemy_strategy:
@@ -1187,17 +1189,20 @@ class MyBot(AresBot):
 
 
     async def is_structures_flying(self):
-        #Some terrans, lift their structures when they feel they are about to lose.
-        #This function aims to recognize this situation to make mutaliskas
+        # Some terrans lift their structures when they feel they are about to lose.
+        # This function aims to recognize this situation to make mutalisks
         if self.time > 240:
             if self.terran_flying_structures == False:
-                for unit in self.enemy_structures:
-                    if unit.is_flying:
-                        if unit.distance_to(self.enemy_start_locations[0]) < 12:
-                            await self.chat_send("Tag: Flying_Structures")
-                            self.enemy_strategy.append("Flying_Structures")
-                            self.terran_flying_structures = True
-
+                enemy_main = self.enemy_start_locations[0]
+                flying_near_main = sum(
+                    1
+                    for s in self.enemy_structures
+                    if s.is_flying and s.distance_to(enemy_main) < 12
+                )
+                if flying_near_main >= 2:
+                    await self.chat_send("Tag: Flying_Structures")
+                    self.enemy_strategy.append("Flying_Structures")
+                    self.terran_flying_structures = True
 
     async def build_spire(self):
         if self.structures(UnitID.SPIRE).ready.amount < 1:
@@ -1796,6 +1801,24 @@ class MyBot(AresBot):
             self.bo_changed = True
 
 
+    async def build_infestation_pit(self):
+        if self.structures(UnitID.LAIR).ready:
+            if self.structures(UnitID.INFESTATIONPIT).amount == 0 and not self.already_pending(UnitID.INFESTATIONPIT):
+                if self.tag_worker_infestation_pit == 0:
+                    if self.can_afford(UnitID.INFESTATIONPIT):
+                        positions = self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position)
+                        reference = positions[1] if positions else None
+                        target = reference.towards(self.first_base, -1)
+
+                        #await self.build(UnitID.HYDRALISKDEN, near=target)
+                        if worker := self.mediator.select_worker(target_position=target):                
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_infestation_pit = worker
+                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                            self.mediator.build_with_specific_worker(worker=self.tag_worker_infestation_pit, structure_type=UnitID.INFESTATIONPIT, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+
+
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -1920,7 +1943,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251028")
+            await self.chat_send("Tag: Version_251104")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
