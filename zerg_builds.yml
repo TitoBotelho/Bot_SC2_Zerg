@@ -698,6 +698,10 @@ Builds:
             - 28 drone
             - 29 drone
             - 30 drone
+            - 31 overlord
+            - 32 roach
+            - 34 roach
+            - 35 roach
             - 31 drone
             - 31 overlord
             - 32 drone
@@ -708,7 +712,6 @@ Builds:
             - 39 drone
             - 40 overlord
             - 40 drone
-            - 40 overlord
             - 41 drone
             - 42 evolutionchamber
             - 41 gas
@@ -878,16 +881,12 @@ Builds:
             - 30 drone
             - 31 drone
             - 31 overlord
-            - 32 drone
-            - 33 drone
-            - 34 drone
             - 38 overlord
             - 40 overlord
             - 40 drone
             - 40 overlord
             - 41 drone
             - 41 gas
-            - 42 gas
             - 42 gas
 
 

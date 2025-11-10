@@ -467,7 +467,7 @@ class MyBot(AresBot):
                 await self.spread_overlords()
 
             if "Terran_Agressive" in self.enemy_strategy:
-                await self.build_roach_warren()
+                #await self.build_roach_warren()
                 await self.build_one_spine_crawler()
                 await self.change_to_bo_Terran_Agressive()
 
@@ -1943,7 +1943,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251104")
+            await self.chat_send("Tag: Version_251110")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
