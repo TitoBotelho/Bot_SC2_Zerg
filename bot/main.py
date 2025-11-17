@@ -468,7 +468,7 @@ class MyBot(AresBot):
 
             if "Terran_Agressive" in self.enemy_strategy:
                 #await self.build_roach_warren()
-                await self.build_one_spine_crawler()
+                await self.build_two_spine_crawlers()
                 await self.change_to_bo_Terran_Agressive()
 
             if "Mass_Widow_Mine" in self.enemy_strategy:
@@ -1485,6 +1485,40 @@ class MyBot(AresBot):
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
                             print("first Spine Crawler")
 
+    async def build_two_spine_crawlers(self):
+        if self.rally_point_set == True:
+            if self.structures(UnitID.SPINECRAWLER).amount == 0 and not self.already_pending(UnitID.SPINECRAWLER):
+                if self.tag_worker_build_spine_crawler == 0:
+                    if self.can_afford(UnitID.SPINECRAWLER):
+                        my_base_location = self.mediator.get_own_nat
+                        # Send the second Overlord in front of second base to scout
+                        target = my_base_location.position.towards(self.game_info.map_center, 8)                   
+                        #await self.build(UnitID.HYDRALISKDEN, near=target)
+                        if worker := self.mediator.select_worker(target_position=target):                
+                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                            self.tag_worker_build_spine_crawler = worker
+                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+                            print("first Spine Crawler")
+
+
+            if self.tag_worker_build_2nd_spine_crawler == 0:
+                print("Second Spine Crawler")
+                if self.can_afford(UnitID.SPINECRAWLER):
+                    my_base_location = self.mediator.get_own_nat
+                    # Send the second Overlord in front of second base to scout
+                    reference = my_base_location.position.towards(self.game_info.map_center, 9)
+                    first_base_location = self.first_base                    
+                    target = reference.towards(first_base_location.position, 2)                      
+                    #await self.build(UnitID.HYDRALISKDEN, near=target)
+                    if worker := self.mediator.select_worker(target_position=target):                
+                        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                        self.tag_worker_build_2nd_spine_crawler = worker
+                        #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
+                        self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+                        print("Second Spine Crawler")
+
+
     async def make_changeling(self):
         # Filtra apenas overseers prontos e com energia suficiente
         for overseer in self.units(UnitID.OVERSEER).ready:
@@ -1943,7 +1977,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251110")
+            await self.chat_send("Tag: Version_251117")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
