@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - LingRoachMacroVsTerran
+            - PoolFirst
 
 
     Protoss:
@@ -1020,15 +1020,20 @@ Builds:
             - 16 overlord
             - 21 drone
             - 22 drone
+            - 22 roachwarren
             - 23 drone
             - 19 drone
             - 20 drone
             - 20 drone
             - 20 overlord
             - 20 drone
-            - 20 hatchery
+            - 20 overlord
             - 20 drone
             - 20 drone
             - 20 drone
             - 20 drone
-            - 20 hatchery
+            - 20 gas
+            - 20 drone
+            - 20 drone
+            - 20 drone
+

@@ -494,15 +494,16 @@ class MyBot(AresBot):
             await self.defend()
             await self.search_proxy_vs_protoss()
             await self.is_worker_rush()
-            await self.stop_collecting_gas()
+            
 
             if "Protoss_Agressive" in self.enemy_strategy:
                 #await self.build_spine_crawlers()
                 self._begin_attack_at_supply = 40
-                await self.build_one_spine_crawler()
+                await self.build_two_spine_crawlers()
                 await self.change_to_bo_Protoss_Agressive()
 
-
+            if "2_Base_Protoss" in self.enemy_strategy:
+                await self.stop_collecting_gas()
 
             if "2_Proxy_Gateway" in self.enemy_strategy:
                 await self.cancel_second_base()
@@ -1977,7 +1978,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251117")
+            await self.chat_send("Tag: Version_251125")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -2069,6 +2070,8 @@ class MyBot(AresBot):
                 if "2_Proxy_Gateway" in self.enemy_strategy:
                     self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
                 elif "Cannon_Rush" in self.enemy_strategy:
+                    self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+                elif "Protoss_Agressive" in self.enemy_strategy:
                     self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
                 else:
                     self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
@@ -2309,9 +2312,12 @@ class MyBot(AresBot):
 
 
         if self.EnemyRace == Race.Protoss:
-            if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
-                self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)       
-
+            if "2_Base_Protoss" in self.enemy_strategy:
+                if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
+                    self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)       
+            if "Protoss_Agressive" in self.enemy_strategy:
+                if (not self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED)):
+                    self.research(UpgradeId.BURROW)
 
         if self.EnemyRace == Race.Zerg:  
             
