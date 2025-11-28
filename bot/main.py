@@ -499,7 +499,7 @@ class MyBot(AresBot):
             if "Protoss_Agressive" in self.enemy_strategy:
                 #await self.build_spine_crawlers()
                 self._begin_attack_at_supply = 40
-                await self.build_two_spine_crawlers()
+                await self.build_spine_crawlers()
                 await self.change_to_bo_Protoss_Agressive()
 
             if "2_Base_Protoss" in self.enemy_strategy:
@@ -1978,7 +1978,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251125")
+            await self.chat_send("Tag: Version_251128")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
