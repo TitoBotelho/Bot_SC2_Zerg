@@ -408,7 +408,7 @@ class MyBot(AresBot):
             await self.is_structures_flying()
             await self.build_lair()
             #await self.build_spine_crawlers()
-            await self.make_zerglings()
+            #await self.make_zerglings()
             await self.find_liberator()
             await self.turnOffSpawningControllerOnEarlyGame()
             await self.is_3_base_terran()
@@ -468,7 +468,7 @@ class MyBot(AresBot):
 
             if "Terran_Agressive" in self.enemy_strategy:
                 #await self.build_roach_warren()
-                await self.build_two_spine_crawlers()
+                await self.build_spine_crawlers()
                 await self.change_to_bo_Terran_Agressive()
 
             if "Mass_Widow_Mine" in self.enemy_strategy:
@@ -1703,12 +1703,12 @@ class MyBot(AresBot):
     async def late_game_protocol(self):
         if self.late_game:
             bases = self.townhalls.ready
-            if self.workers.amount < 60 or bases.amount < 4:
+            if self.workers.amount < 55:
                 if not self.already_pending(UnitID.HATCHERY):
                     self.SapwnControllerOn = False
-                    self.register_behavior(ExpansionController(to_count=6, max_pending=2))
-                    self.register_behavior(BuildWorkers(to_count=60))           
-                    self.register_behavior(GasBuildingController(to_count=5, max_pending=2))
+                    self.register_behavior(ExpansionController(to_count=4, max_pending=2))
+                    self.register_behavior(BuildWorkers(to_count=55))           
+                    self.register_behavior(GasBuildingController(to_count=6, max_pending=2))
 
             else:
                 self.SapwnControllerOn = True
@@ -1978,7 +1978,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251128")
+            await self.chat_send("Tag: Version_251201")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
