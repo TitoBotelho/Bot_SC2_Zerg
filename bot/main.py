@@ -736,52 +736,99 @@ class MyBot(AresBot):
                         break
 
     async def build_spine_crawlers(self):
-        if self.rally_point_set == True:
-            if self.structures(UnitID.SPINECRAWLER).amount == 0 and not self.already_pending(UnitID.SPINECRAWLER):
-                if self.tag_worker_build_spine_crawler == 0:
-                    if self.can_afford(UnitID.SPINECRAWLER):
-                        my_base_location = self.mediator.get_own_nat
-                        # Send the second Overlord in front of second base to scout
-                        target = my_base_location.position.towards(self.game_info.map_center, 6)                   
-                        #await self.build(UnitID.HYDRALISKDEN, near=target)
-                        if worker := self.mediator.select_worker(target_position=target):                
-                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                            self.tag_worker_build_spine_crawler = worker
-                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-                            print("first Spine Crawler")
+        if not self.rally_point_set:
+            return
 
-            if self.tag_worker_build_2nd_spine_crawler == 0:
-                print("Second Spine Crawler")
-                if self.can_afford(UnitID.SPINECRAWLER):
-                    my_base_location = self.mediator.get_own_nat
-                    # Send the second Overlord in front of second base to scout
-                    reference = my_base_location.position.towards(self.game_info.map_center, 6)
-                    first_base_location = self.first_base                    
-                    target = reference.towards(first_base_location.position, 2)                      
-                    #await self.build(UnitID.HYDRALISKDEN, near=target)
-                    if worker := self.mediator.select_worker(target_position=target):                
-                        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                        self.tag_worker_build_2nd_spine_crawler = worker
-                        #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                        self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-                        print("Second Spine Crawler")
-            if self.tag_worker_build_3rd_spine_crawler == 0:
-                
-                if self.can_afford(UnitID.SPINECRAWLER):
-                    my_base_location = self.mediator.get_own_nat
-                    # Send the second Overlord in front of second base to scout
-                    reference = my_base_location.position.towards(self.game_info.map_center, 6)
-                    first_base_location = self.first_base                    
-                    target = reference.towards(first_base_location.position, - 2)             
-                    #await self.build(UnitID.HYDRALISKDEN, near=target)
-                    if worker := self.mediator.select_worker(target_position=target):                
-                        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                        self.tag_worker_build_3rd_spine_crawler = worker
-                        #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                        self.mediator.build_with_specific_worker(worker=self.tag_worker_build_3rd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-                        print("third Spine Crawler")
+        # Base de referência: segunda base se existir, senão a primeira
+        base = getattr(self, "second_base", None) or self.first_base
+        base_pos = base.position
 
+        # Vetor da base em direção ao centro do mapa (frente)
+        to_center = self.game_info.map_center - base_pos
+        mag = (to_center.x ** 2 + to_center.y ** 2) ** 0.5 or 1.0
+        dir_unit = Point2((to_center.x / mag, to_center.y / mag))
+
+        # Vetor perpendicular (eixo da linha dos spines)
+        line_unit = Point2((-dir_unit.y, dir_unit.x))
+
+        # Parâmetros da linha
+        forward_offset = 6.0   # quão à frente da base
+        spacing = 2.5          # distância lateral entre spines
+
+        # Âncora (ponto central da linha)
+        anchor = base_pos.towards(self.game_info.map_center, forward_offset)
+
+        # Slots-alvo em linha: esquerda, centro, direita (ordem de construção: centro, esquerda, direita)
+        slot_center = anchor
+        slot_left   = Point2((anchor.x - line_unit.x * spacing, anchor.y - line_unit.y * spacing))
+        slot_right  = Point2((anchor.x + line_unit.x * spacing, anchor.y + line_unit.y * spacing))
+        slots = [slot_center, slot_left, slot_right]
+
+        def has_spine_near(p: Point2, radius: float = 2.0) -> bool:
+            return any(s.distance_to(p) <= radius for s in self.structures(UnitID.SPINECRAWLER))
+
+        async def place_spine_at(pos: Point2) -> Point2 | None:
+            # Se não houver creep exato, tenta pequenos ajustes laterais na própria linha
+            candidate = pos
+            if not self.has_creep(candidate):
+                found = None
+                for d in (0.5, 1.0, 1.5, 2.0):
+                    for sign in (1, -1):
+                        test = Point2((pos.x + line_unit.x * d * sign, pos.y + line_unit.y * d * sign))
+                        if self.has_creep(test):
+                            found = test
+                            break
+                    if found:
+                        break
+                if found:
+                    candidate = found
+                else:
+                    # último recurso: recua levemente em direção à base para pegar creep
+                    candidate = pos.towards(base_pos, 1.0)
+
+            # Refina com find_placement para evitar colisão/minérios
+            try:
+                placed = await self.find_placement(UnitID.SPINECRAWLER, near=candidate, placement_step=1)
+                if placed is not None:
+                    return placed
+            except Exception:
+                pass
+            return candidate if self.has_creep(candidate) else None
+
+        # Mapeia cada slot para o atributo de tag do seu worker
+        slot_attr = {
+            0: "tag_worker_build_spine_crawler",      # centro
+            1: "tag_worker_build_2nd_spine_crawler",  # esquerda
+            2: "tag_worker_build_3rd_spine_crawler",  # direita
+        }
+
+        # Constrói no máximo 3 spines, mantendo alinhamento em linha
+        for idx, pos in enumerate(slots):
+            # Pula se já existe um spine nesse slot
+            if has_spine_near(pos):
+                continue
+            # Pula se já temos worker associado a esse slot
+            if getattr(self, slot_attr[idx]) != 0:
+                continue
+            # Verifica recursos
+            if not self.can_afford(UnitID.SPINECRAWLER):
+                break
+
+            build_pos = await place_spine_at(pos)
+            if not build_pos:
+                continue
+
+            if worker := self.mediator.select_worker(target_position=build_pos):
+                self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                setattr(self, slot_attr[idx], worker)
+                self.mediator.build_with_specific_worker(
+                    worker=getattr(self, slot_attr[idx]),
+                    structure_type=UnitID.SPINECRAWLER,
+                    pos=build_pos,
+                    building_purpose=BuildingPurpose.NORMAL_BUILDING,
+                )
+                # print opcional:
+                # print(f"Spine Crawler slot {idx} at {build_pos}")
 
     async def is_terran_agressive(self):
         # Verify if the terran opponent has only one base. If so, it is an aggressive terran and build a spine crawler
