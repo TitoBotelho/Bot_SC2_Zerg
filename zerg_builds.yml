@@ -846,10 +846,10 @@ Builds:
         ConstantWorkerProductionTill: 0
         OpeningBuildOrder:
             - 12 overlord
-            - 12 worker_scout:
-                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
             - 12 drone
             - 13 drone
+            - 13 worker_scout:
+                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
             - 14 drone
             - 15 drone
             - 15 hatchery
@@ -862,9 +862,13 @@ Builds:
             - 17 drone
             - 18 overlord
             - 18 drone
+            - 16 queen
+            - 17 queen
+            - 18 drone
             - 17 drone
             - 18 drone
             - 19 drone
+            - 26 overlord
             - 21 drone
             - 20 drone
             - 21 drone
@@ -875,19 +879,15 @@ Builds:
             - 24 drone
             - 25 drone
             - 26 drone
-            - 27 drone
-            - 28 drone
-            - 29 drone
-            - 30 drone
-            - 31 drone
-            - 31 overlord
-            - 38 overlord
-            - 40 overlord
-            - 40 drone
-            - 40 overlord
-            - 41 drone
-            - 41 gas
-            - 42 gas
+            - 26 drone
+            - 26 drone
+            - 26 drone
+            - 25 overlord
+            - 26 drone
+            - 26 overlord
+            - 26 gas
+
+
 
 
 
