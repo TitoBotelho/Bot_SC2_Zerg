@@ -765,6 +765,7 @@ class MyBot(AresBot):
         slots = [slot_center, slot_left, slot_right]
 
         def has_spine_near(p: Point2, radius: float = 2.0) -> bool:
+            # Considera spines prontos e em construção
             return any(s.distance_to(p) <= radius for s in self.structures(UnitID.SPINECRAWLER))
 
         async def place_spine_at(pos: Point2) -> Point2 | None:
@@ -789,11 +790,35 @@ class MyBot(AresBot):
             # Refina com find_placement para evitar colisão/minérios
             try:
                 placed = await self.find_placement(UnitID.SPINECRAWLER, near=candidate, placement_step=1)
+                # Se achou posição, garantir espaçamento mínimo de 2.0 contra spines existentes/em construção
                 if placed is not None:
-                    return placed
+                    min_spacing = 2.0
+                    def spaced_ok(p: Point2) -> bool:
+                        return all(p.distance_to(s.position) >= min_spacing for s in self.structures(UnitID.SPINECRAWLER))
+
+                    if spaced_ok(placed):
+                        return placed
+
+                    # Tenta deslocar lateralmente ao longo da linha para ganhar espaço
+                    for d in (0.5, 1.0, 1.5, 2.0, 2.5, 3.0):
+                        for sign in (1, -1):
+                            shifted = Point2((placed.x + line_unit.x * d * sign, placed.y + line_unit.y * d * sign))
+                            if not self.has_creep(shifted):
+                                continue
+                            try:
+                                alt = await self.find_placement(UnitID.SPINECRAWLER, near=shifted, placement_step=1)
+                            except Exception:
+                                alt = None
+                            if alt is not None and spaced_ok(alt):
+                                return alt
             except Exception:
                 pass
-            return candidate if self.has_creep(candidate) else None
+            # fallback: retorna candidato somente se houver creep e espaçamento adequado
+            if self.has_creep(candidate):
+                min_spacing = 2.0
+                if all(candidate.distance_to(s.position) >= min_spacing for s in self.structures(UnitID.SPINECRAWLER)):
+                    return candidate
+            return None
 
         # Mapeia cada slot para o atributo de tag do seu worker
         slot_attr = {
@@ -804,6 +829,12 @@ class MyBot(AresBot):
 
         # Constrói no máximo 3 spines, mantendo alinhamento em linha
         for idx, pos in enumerate(slots):
+            # Ordem sequencial: só inicia o 2º após o 1º começar,
+            # e só inicia o 3º após o 2º começar.
+            if idx == 1 and not (has_spine_near(slots[0]) or getattr(self, slot_attr[0]) != 0):
+                break
+            if idx == 2 and not (has_spine_near(slots[1]) or getattr(self, slot_attr[1]) != 0):
+                break
             # Pula se já existe um spine nesse slot
             if has_spine_near(pos):
                 continue
@@ -2025,7 +2056,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251208")
+            await self.chat_send("Tag: Version_251209")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
