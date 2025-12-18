@@ -194,6 +194,8 @@ class MyBot(AresBot):
         self.enemy_widow_mines = {}
         self.late_game = False
         self.tag_worker_infestation_pit = 0
+        self.taf_worker_build_macro_hatch = 0
+        self.second_base_canceled = False
 
         self._commenced_attack: bool = False
 
@@ -338,7 +340,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
         self._macro()
@@ -500,7 +502,7 @@ class MyBot(AresBot):
                 #await self.build_spine_crawlers()
                 if self.opponent_id != "c033a97a-667d-42e3-91e8-13528ac191ed":
                     self._begin_attack_at_supply = 40
-                await self.build_spine_crawlers()
+                await self.build_2_spine_crawlers()
                 await self.change_to_bo_Protoss_Agressive()
 
             if "2_Base_Protoss" in self.enemy_strategy:
@@ -512,6 +514,7 @@ class MyBot(AresBot):
                 await self.make_spines_on_main()
                 await self.build_roach_warren()
                 await self.research_burrow()
+                #await self.make_macro_hatch()
 
             #if "Cannon_Rush" in self.enemy_strategy:
                 #await self.cancel_second_base()
@@ -979,10 +982,12 @@ class MyBot(AresBot):
 
     async def cancel_second_base(self):
         hatcheries = self.structures(UnitID.HATCHERY)
-        if hatcheries:
-            for hatchery in hatcheries:
-                if not hatchery.is_ready:
-                    self.mediator.cancel_structure(structure=hatchery)
+        if self.second_base_canceled == False:
+            if hatcheries:
+                for hatchery in hatcheries:
+                    if not hatchery.is_ready:
+                        self.mediator.cancel_structure(structure=hatchery)
+                        self.second_base_canceled = True
 
 
     async def retreat_overlords(self):
@@ -1135,7 +1140,7 @@ class MyBot(AresBot):
 
 
     async def make_spines_on_main(self):
-        if self.structures(UnitID.SPAWNINGPOOL).ready:
+        if self.time < 120:
             if self.structures(UnitID.SPINECRAWLER).amount == 0 and not self.already_pending(UnitID.SPINECRAWLER):
                 if self.tag_worker_build_spine_crawler == 0:
                     if self.can_afford(UnitID.SPINECRAWLER):
@@ -1567,167 +1572,128 @@ class MyBot(AresBot):
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
                             print("first Spine Crawler")
 
-    async def build_two_spine_crawlers(self):
-            if not self.rally_point_set:
-                return
+    async def build_2_spine_crawlers(self):
+        if not self.rally_point_set:
+            return
 
-            # Base de referência: segunda base se existir, senão a primeira
-            base = getattr(self, "second_base", None) or self.first_base
-            base_pos = base.position
+        # Base de referência: segunda base se existir, senão a primeira
+        base = getattr(self, "second_base", None) or self.first_base
+        base_pos = base.position
 
-            # Direção ao inimigo (melhor para definir a frente real da base)
-            target_front = self.enemy_start_locations[0] if self.enemy_start_locations else self.game_info.map_center
-            to_enemy = target_front - base_pos
+        # Vetor da base em direção ao centro do mapa (frente)
+        to_center = self.game_info.map_center - base_pos
+        mag = (to_center.x ** 2 + to_center.y ** 2) ** 0.5 or 1.0
+        dir_unit = Point2((to_center.x / mag, to_center.y / mag))
 
-            # Seleciona uma normal de frente ALINHADA AO GRID (±X ou ±Y), igual ao lado do "quadrado" da hatchery
-            if abs(to_enemy.x) >= abs(to_enemy.y):
-                # Frente no eixo X
-                front_sign = 1.0 if to_enemy.x >= 0 else -1.0
-                front_normal = Point2((front_sign, 0.0))
-                side_dir = Point2((0.0, 1.0))  # paralelo ao lado (eixo Y)
-            else:
-                # Frente no eixo Y
-                front_sign = 1.0 if to_enemy.y >= 0 else -1.0
-                front_normal = Point2((0.0, front_sign))
-                side_dir = Point2((1.0, 0.0))  # paralelo ao lado (eixo X)
+        # Vetor perpendicular (eixo da linha dos spines)
+        line_unit = Point2((-dir_unit.y, dir_unit.x))
 
-            # Centro do lado frontal do quadrado
-            edge_offset = 3.0  # metade do footprint efetivo até a borda frontal
-            side_center = Point2((base_pos.x + front_normal.x * edge_offset, base_pos.y + front_normal.y * edge_offset))
+        # Parâmetros da linha
+        forward_offset = 6.0   # quão à frente da base
+        spacing = 2.5          # distância lateral entre spines
 
-            # Posição âncora PARA FORA da base, mantendo paralelismo ao lado frontal
-            out_offset = 7.5  # quão distante para fora da borda frontal
-            anchor_out = Point2((side_center.x + front_normal.x * out_offset, side_center.y + front_normal.y * out_offset))
+        # Âncora (ponto central da linha)
+        anchor = base_pos.towards(self.game_info.map_center, forward_offset)
 
-            # Dois slots simétricos ao longo do lado frontal, mesma distância do centro desse lado
-            spacing = 3.25
-            slot_a = Point2((anchor_out.x - side_dir.x * spacing, anchor_out.y - side_dir.y * spacing))
-            slot_b = Point2((anchor_out.x + side_dir.x * spacing, anchor_out.y + side_dir.y * spacing))
-            slots = [slot_a, slot_b]
+        # Slots-alvo em linha: somente esquerda e direita (exclui o centro/âncora)
+        # Empurra cada slot +1.0 na direção de construção (afastando da segunda base)
+        slot_left   = Point2((anchor.x - line_unit.x * spacing, anchor.y - line_unit.y * spacing))
+        slot_right  = Point2((anchor.x + line_unit.x * spacing, anchor.y + line_unit.y * spacing))
+        slots = [slot_left, slot_right]
 
-            def has_spine_near(p: Point2, radius: float = 2.0) -> bool:
-                # Considera spines prontos e em construção
-                return any(s.distance_to(p) <= radius for s in self.structures(UnitID.SPINECRAWLER))
+        def has_spine_near(p: Point2, radius: float = 2.0) -> bool:
+            # Considera spines prontos e em construção
+            return any(s.distance_to(p) <= radius for s in self.structures(UnitID.SPINECRAWLER))
 
-            async def place_spine_at(pos: Point2) -> Point2 | None:
-                # Mantém paralelismo ao lado frontal da hatchery usando vetores alinhados ao grid
-                candidate = pos
-                min_base_dist = 9.0  # distância mínima da base
-
-                # Garante que o ponto está à frente da base (dot com a normal frontal > 0)
-                def is_in_front(p: Point2) -> bool:
-                    v = Point2((p.x - base_pos.x, p.y - base_pos.y))
-                    return (v.x * front_normal.x + v.y * front_normal.y) > 0.0
-
-                # Ajusta para manter distância mínima e ficar à frente
-                if candidate.distance_to(base_pos) < min_base_dist or not is_in_front(candidate):
-                    # empurra ao longo da normal frontal
-                    delta = max(0.0, min_base_dist - candidate.distance_to(base_pos)) + 0.5
-                    candidate = Point2((candidate.x + front_normal.x * delta, candidate.y + front_normal.y * delta))
-
-                # Se não houver creep, varre ao longo do lado e depois um pouco mais para fora
-                if not self.has_creep(candidate):
-                    found = None
-                    for d in (0.5, 1.0, 1.5, 2.0, 2.5):
-                        for sign in (1, -1):
-                            test = Point2((candidate.x + side_dir.x * d * sign, candidate.y + side_dir.y * d * sign))
-                            if self.has_creep(test) and is_in_front(test):
-                                found = test
-                                break
-                        if found:
+        async def place_spine_at(pos: Point2) -> Point2 | None:
+            # Se não houver creep exato, tenta pequenos ajustes laterais na própria linha
+            candidate = pos
+            if not self.has_creep(candidate):
+                found = None
+                for d in (0.5, 1.0, 1.5, 2.0):
+                    for sign in (1, -1):
+                        test = Point2((pos.x + line_unit.x * d * sign, pos.y + line_unit.y * d * sign))
+                        if self.has_creep(test):
+                            found = test
                             break
-                    if found is None:
-                        for d in (1.0, 2.0, 3.0):
-                            test = Point2((candidate.x + front_normal.x * d, candidate.y + front_normal.y * d))
-                            if self.has_creep(test) and is_in_front(test):
-                                found = test
-                                break
                     if found:
-                        candidate = found
+                        break
+                if found:
+                    candidate = found
+                else:
+                    # último recurso: recua levemente em direção à base para pegar creep
+                    candidate = pos.towards(base_pos, 1.0)
 
-                # Refinar com find_placement respeitando paralelismo (ajustes ao longo do lado)
-                try:
-                    placed = await self.find_placement(UnitID.SPINECRAWLER, near=candidate, placement_step=1)
-                    if placed is not None and is_in_front(placed):
-                        # Reforça distância mínima (empurra mais para fora, se necessário)
-                        if placed.distance_to(base_pos) < min_base_dist:
-                            for d in (1.0, 2.0, 3.0):
-                                push = Point2((placed.x + front_normal.x * d, placed.y + front_normal.y * d))
-                                if not self.has_creep(push) or not is_in_front(push):
-                                    continue
-                                try:
-                                    altp = await self.find_placement(UnitID.SPINECRAWLER, near=push, placement_step=1)
-                                except Exception:
-                                    altp = None
-                                if altp is not None and altp.distance_to(base_pos) >= min_base_dist and is_in_front(altp):
-                                    placed = altp
-                                    break
+            # Refina com find_placement para evitar colisão/minérios
+            try:
+                placed = await self.find_placement(UnitID.SPINECRAWLER, near=candidate, placement_step=1)
+                # Se achou posição, garantir espaçamento mínimo de 2.0 contra spines existentes/em construção
+                if placed is not None:
+                    min_spacing = 2.0
+                    def spaced_ok(p: Point2) -> bool:
+                        return all(p.distance_to(s.position) >= min_spacing for s in self.structures(UnitID.SPINECRAWLER))
 
-                        def min_spacing_ok(p: Point2, min_spacing: float = 2.0) -> bool:
-                            return all(p.distance_to(s.position) >= min_spacing for s in self.structures(UnitID.SPINECRAWLER))
+                    if spaced_ok(placed):
+                        return placed
 
-                        if min_spacing_ok(placed):
-                            return placed
-                        # desliza paralelamente ao lado para ganhar espaço
-                        for d in (0.5, 1.0, 1.5, 2.0, 2.5, 3.0):
-                            for sign in (1, -1):
-                                shifted = Point2((placed.x + side_dir.x * d * sign, placed.y + side_dir.y * d * sign))
-                                if not self.has_creep(shifted) or not is_in_front(shifted):
-                                    continue
-                                try:
-                                    alt = await self.find_placement(UnitID.SPINECRAWLER, near=shifted, placement_step=1)
-                                except Exception:
-                                    alt = None
-                                if alt is not None and min_spacing_ok(alt) and is_in_front(alt):
-                                    return alt
-                except Exception:
-                    pass
-
-                # fallback: retorna candidato se houver creep, distância mínima e espaçamento
-                def min_spacing_ok_fallback(p: Point2, min_spacing: float = 2.0) -> bool:
-                    return all(p.distance_to(s.position) >= min_spacing for s in self.structures(UnitID.SPINECRAWLER))
-                if self.has_creep(candidate) and is_in_front(candidate) and candidate.distance_to(base_pos) >= min_base_dist and min_spacing_ok_fallback(candidate):
+                    # Tenta deslocar lateralmente ao longo da linha para ganhar espaço
+                    for d in (0.5, 1.0, 1.5, 2.0, 2.5, 3.0):
+                        for sign in (1, -1):
+                            shifted = Point2((placed.x + line_unit.x * d * sign, placed.y + line_unit.y * d * sign))
+                            if not self.has_creep(shifted):
+                                continue
+                            try:
+                                alt = await self.find_placement(UnitID.SPINECRAWLER, near=shifted, placement_step=1)
+                            except Exception:
+                                alt = None
+                            if alt is not None and spaced_ok(alt):
+                                return alt
+            except Exception:
+                pass
+            # fallback: retorna candidato somente se houver creep e espaçamento adequado
+            if self.has_creep(candidate):
+                min_spacing = 2.0
+                if all(candidate.distance_to(s.position) >= min_spacing for s in self.structures(UnitID.SPINECRAWLER)):
                     return candidate
-                return None
+            return None
 
-            # Mapeia cada slot para o atributo de tag do seu worker (apenas 2)
-            slot_attr = {
-                0: "tag_worker_build_spine_crawler",      # centro
-                1: "tag_worker_build_2nd_spine_crawler",  # esquerda
-            }
+        # Mapeia cada slot para o atributo de tag do seu worker (apenas 2)
+        # Usamos os atributos de 2º e 3º para não conflitar com o centro
+        slot_attr = {
+            0: "tag_worker_build_2nd_spine_crawler",  # esquerda
+            1: "tag_worker_build_3rd_spine_crawler",  # direita
+        }
 
-            # Constrói exatamente 2 spines, mantendo alinhamento em linha
-            for idx, pos in enumerate(slots):
-                # Ordem sequencial: só inicia o 2º após o 1º começar
-                if idx == 1 and not (has_spine_near(slots[0]) or getattr(self, slot_attr[0]) != 0):
-                    break
+        # Constrói exatamente 2 spines, mantendo alinhamento em linha
+        for idx, pos in enumerate(slots):
+            # Ordem sequencial: só inicia o 2º após o 1º começar
+            if idx == 1 and not (has_spine_near(slots[0]) or getattr(self, slot_attr[0]) != 0):
+                break
+            # Pula se já existe um spine nesse slot
+            if has_spine_near(pos):
+                continue
+            # Pula se já temos worker associado a esse slot
+            if getattr(self, slot_attr[idx]) != 0:
+                continue
+            # Verifica recursos
+            if not self.can_afford(UnitID.SPINECRAWLER):
+                break
 
-                # Pula se já existe um spine nesse slot
-                if has_spine_near(pos):
-                    continue
+            build_pos = await place_spine_at(pos)
+            if not build_pos:
+                continue
 
-                # Pula se já temos worker associado a esse slot
-                if getattr(self, slot_attr[idx]) != 0:
-                    continue
-
-                # Verifica recursos
-                if not self.can_afford(UnitID.SPINECRAWLER):
-                    break
-
-                build_pos = await place_spine_at(pos)
-                if not build_pos:
-                    continue
-
-                if worker := self.mediator.select_worker(target_position=build_pos):
-                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                    setattr(self, slot_attr[idx], worker)
-                    self.mediator.build_with_specific_worker(
-                        worker=getattr(self, slot_attr[idx]),
-                        structure_type=UnitID.SPINECRAWLER,
-                        pos=build_pos,
-                        building_purpose=BuildingPurpose.NORMAL_BUILDING,
-                    )
-
+            if worker := self.mediator.select_worker(target_position=build_pos):
+                self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                setattr(self, slot_attr[idx], worker)
+                self.mediator.build_with_specific_worker(
+                    worker=getattr(self, slot_attr[idx]),
+                    structure_type=UnitID.SPINECRAWLER,
+                    pos=build_pos,
+                    building_purpose=BuildingPurpose.NORMAL_BUILDING,
+                )
+                # print opcional:
+                # print(f"Spine Crawler slot {idx} at {build_pos}")
 
     async def make_changeling(self):
         # Filtra apenas overseers prontos e com energia suficiente
@@ -2063,6 +2029,46 @@ class MyBot(AresBot):
 
 
 
+    async def make_macro_hatch(self):
+       # Usa a posição do Nydus da main aliada como alvo
+       # Pode vir como Point2 ou tupla com np.int64, então convertemos com segurança
+       nydus_pos = self.mediator.get_primary_nydus_own_main
+       
+       if not nydus_pos:
+           return
+
+       try:
+           if hasattr(nydus_pos, "x") and hasattr(nydus_pos, "y"):
+               target = Point2((float(nydus_pos.x), float(nydus_pos.y)))
+           else:
+               x, y = nydus_pos
+               target = Point2((float(x), float(y)))
+       except Exception:
+           return
+
+       # Ajuste: desloca 3 unidades MAIS PERTO da primeira base
+       try:
+           if getattr(self, "first_base", None):
+               target = target.towards(self.first_base, 3)
+       except Exception:
+           pass
+
+       if self.taf_worker_build_macro_hatch == 0:
+           if self.can_afford(UnitID.HATCHERY):
+               # Refinar a posição com find_placement para evitar colisões
+               final_target = target
+               try:
+                   placed = await self.find_placement(UnitID.HATCHERY, near=target, placement_step=1)
+                   if placed is not None:
+                       final_target = placed
+               except Exception:
+                   pass
+
+               if worker := self.mediator.select_worker(target_position=final_target):                
+                   self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                   self.taf_worker_build_macro_hatch = worker
+                   self.mediator.build_with_specific_worker(worker=self.taf_worker_build_macro_hatch, structure_type=UnitID.HATCHERY, pos=final_target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+        
 
 
 #_______________________________________________________________________________________________________________________
@@ -2079,6 +2085,7 @@ class MyBot(AresBot):
             #print("Enemy Strategy: ", self.enemy_strategy)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
+            print("nydus_position: ", self.mediator.get_primary_nydus_own_main)
             #print("Enemy Units: ", self.enemy_units)
             #print("Second Overlord: ", self.tag_second_overlord)
             #print("Mutalisk targets:", self.mutalisk_targets)
@@ -2187,7 +2194,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251216")
+            await self.chat_send("Tag: Version_251218")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
