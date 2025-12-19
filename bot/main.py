@@ -340,7 +340,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
         self._macro()
@@ -2085,7 +2085,7 @@ class MyBot(AresBot):
             #print("Enemy Strategy: ", self.enemy_strategy)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
-            print("nydus_position: ", self.mediator.get_primary_nydus_own_main)
+            #print("nydus_position: ", self.mediator.get_primary_nydus_own_main)
             #print("Enemy Units: ", self.enemy_units)
             #print("Second Overlord: ", self.tag_second_overlord)
             #print("Mutalisk targets:", self.mutalisk_targets)
