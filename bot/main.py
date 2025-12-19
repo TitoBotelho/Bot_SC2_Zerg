@@ -1905,20 +1905,37 @@ class MyBot(AresBot):
         - Custo: 75 energia
         - Alcance: ~10
         - Usa posição da unidade alvo (Fungal é targeted point)
+        - Cooldown global: 3s compartilhado entre todos os Infestors
         """
         ENERGY_COST = 75
         CAST_RANGE = 9.9  # pequeno buffer para evitar falhas por ponto flutuante
+        GLOBAL_COOLDOWN = 3.0  # segundos
+
+        # Respeita cooldown global (compartilhado por todos os Infestors)
+        cooldown_until: float = getattr(self, "fungal_cooldown_until", 0.0)
+        if cooldown_until and self.time < cooldown_until:
+            return
 
         if not self.enemy_units:
             return
 
+        # Tenta com o primeiro Infestor elegível; após lançar, aplica cooldown global
         for infestor in self.units(UnitID.INFESTOR).ready:
             if infestor.energy < ENERGY_COST:
                 continue
 
-            # Filtra inimigos em alcance
+            # Opcional: verifica se a habilidade está disponível no momento
+            try:
+                abilities = await self.get_available_abilities(infestor)
+                if AbilityId.FUNGALGROWTH_FUNGALGROWTH not in abilities:
+                    continue
+            except Exception:
+                # Se não conseguir consultar, continua assumindo energia suficiente
+                pass
+
+            # Filtra inimigos em alcance, ignorando Raven
             in_range: Units = self.enemy_units.filter(
-                lambda u: cy_distance_to(infestor.position, u.position) <= CAST_RANGE
+                lambda u: cy_distance_to(infestor.position, u.position) <= CAST_RANGE and u.type_id != UnitID.RAVEN
             )
             if not in_range:
                 continue
@@ -1930,6 +1947,10 @@ class MyBot(AresBot):
             )
 
             infestor(AbilityId.FUNGALGROWTH_FUNGALGROWTH, target.position)
+
+            # Aplica cooldown global compartilhado
+            self.fungal_cooldown_until = self.time + GLOBAL_COOLDOWN
+            return  # Apenas um lançamento por chamada / janela
 
 
     async def throw_bile(self):
