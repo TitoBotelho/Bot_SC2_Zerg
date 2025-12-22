@@ -79,8 +79,8 @@ ARMY_COMP_ROACH: dict[Race, dict] = {
 # against other races
 ARMY_COMP_ROACHINFESTOR: dict[Race, dict] = {
     Race.Zerg: {
-        UnitID.ROACH: {"proportion": 0.9, "priority": 1},
-        UnitID.INFESTOR: {"proportion": 0.1, "priority": 0},
+        UnitID.ROACH: {"proportion": 0.91, "priority": 1},
+        UnitID.INFESTOR: {"proportion": 0.09, "priority": 0},
     }
 }
 
@@ -1900,18 +1900,20 @@ class MyBot(AresBot):
 
 
     async def use_fungal_growth(self):
+
         """
-        Lança Fungal Growth na unidade inimiga mais próxima dentro do alcance.
+        Lança Fungal Growth apenas se conseguir atingir pelo menos 3 inimigos com o mesmo lançamento.
         - Custo: 75 energia
         - Alcance: ~10
-        - Usa posição da unidade alvo (Fungal é targeted point)
+        - Só lança se pelo menos 3 inimigos estiverem dentro do raio de efeito (~2.0) do ponto alvo
         - Cooldown global: 3s compartilhado entre todos os Infestors
         """
         ENERGY_COST = 75
-        CAST_RANGE = 9.9  # pequeno buffer para evitar falhas por ponto flutuante
+        CAST_RANGE = 9.9  # alcance máximo para lançar
+        EFFECT_RADIUS = 2.0  # raio de efeito do Fungal Growth
+        MIN_TARGETS = 3      # mínimo de inimigos atingidos
         GLOBAL_COOLDOWN = 3.0  # segundos
 
-        # Respeita cooldown global (compartilhado por todos os Infestors)
         cooldown_until: float = getattr(self, "fungal_cooldown_until", 0.0)
         if cooldown_until and self.time < cooldown_until:
             return
@@ -1919,18 +1921,15 @@ class MyBot(AresBot):
         if not self.enemy_units:
             return
 
-        # Tenta com o primeiro Infestor elegível; após lançar, aplica cooldown global
         for infestor in self.units(UnitID.INFESTOR).ready:
             if infestor.energy < ENERGY_COST:
                 continue
 
-            # Opcional: verifica se a habilidade está disponível no momento
             try:
                 abilities = await self.get_available_abilities(infestor)
                 if AbilityId.FUNGALGROWTH_FUNGALGROWTH not in abilities:
                     continue
             except Exception:
-                # Se não conseguir consultar, continua assumindo energia suficiente
                 pass
 
             # Filtra inimigos em alcance, ignorando Raven
@@ -1940,17 +1939,23 @@ class MyBot(AresBot):
             if not in_range:
                 continue
 
-            # Alvo mais próximo
-            target = min(
-                in_range,
-                key=lambda u: cy_distance_to(infestor.position, u.position)
-            )
+            # Para cada inimigo em alcance, verifica quantos outros inimigos estão no raio de efeito se lançar nele
+            best_target = None
+            best_count = 0
+            for candidate in in_range:
+                # Conta quantos inimigos ficariam dentro do raio de efeito se lançar no candidate
+                count = sum(
+                    1 for u in self.enemy_units
+                    if cy_distance_to(candidate.position, u.position) <= EFFECT_RADIUS and u.type_id != UnitID.RAVEN
+                )
+                if count > best_count:
+                    best_count = count
+                    best_target = candidate
 
-            infestor(AbilityId.FUNGALGROWTH_FUNGALGROWTH, target.position)
-
-            # Aplica cooldown global compartilhado
-            self.fungal_cooldown_until = self.time + GLOBAL_COOLDOWN
-            return  # Apenas um lançamento por chamada / janela
+            if best_target and best_count >= MIN_TARGETS:
+                infestor(AbilityId.FUNGALGROWTH_FUNGALGROWTH, best_target.position)
+                self.fungal_cooldown_until = self.time + GLOBAL_COOLDOWN
+                return  # Apenas um lançamento por chamada
 
 
     async def throw_bile(self):
@@ -2215,7 +2220,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251218")
+            await self.chat_send("Tag: Version_251222")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
