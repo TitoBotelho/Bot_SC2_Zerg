@@ -196,6 +196,7 @@ class MyBot(AresBot):
         self.tag_worker_infestation_pit = 0
         self.taf_worker_build_macro_hatch = 0
         self.second_base_canceled = False
+        self.enemy_battlecruisers = {}
 
         self._commenced_attack: bool = False
 
@@ -430,6 +431,7 @@ class MyBot(AresBot):
             await self.make_roach_speed()
             await self.use_fungal_growth()
             await self.throw_bile()
+            await self.is_bc()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -2095,6 +2097,25 @@ class MyBot(AresBot):
                    self.taf_worker_build_macro_hatch = worker
                    self.mediator.build_with_specific_worker(worker=self.taf_worker_build_macro_hatch, structure_type=UnitID.HATCHERY, pos=final_target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
         
+
+    async def is_bc(self):
+        """
+        Make air defense if enemy is making a lot of banshees
+        """
+        if "Battlecruiser" in self.enemy_strategy:
+            return
+
+        # Itera battlecruisers vistas neste frame
+        for enemy in self.enemy_units.of_type({UnitID.BATTLECRUISER}):
+            if enemy.tag not in self.enemy_battlecruisers:
+                # registra primeira vez que vimos essa banshee
+                self.enemy_battlecruisers[enemy.tag] = enemy.type_id
+
+        if len(self.enemy_battlecruisers) >= 1:
+            await self.chat_send("Tag: Battlecruiser")
+            self.enemy_strategy.append("Battlecruiser")
+
+
 
 
 #_______________________________________________________________________________________________________________________
