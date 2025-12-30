@@ -85,6 +85,17 @@ ARMY_COMP_ROACHINFESTOR: dict[Race, dict] = {
 }
 
 # against other races
+ARMY_COMP_ROACHCORRUPTOR: dict[Race, dict] = {
+    Race.Zerg: {
+        UnitID.ROACH: {"proportion": 0.61, "priority": 1},
+        UnitID.CORRUPTOR: {"proportion": 0.3, "priority": 0},
+        UnitID.INFESTOR: {"proportion": 0.09, "priority": 0},
+    }
+}
+
+
+
+# against other races
 ARMY_COMP_LINGROACH: dict[Race, dict] = {
     Race.Zerg: {
         UnitID.ZERGLING: {"proportion": 0.6, "priority": 1},
@@ -1877,18 +1888,18 @@ class MyBot(AresBot):
                 await self.chat_send("Tag: Late_Game")
                 self.enemy_strategy.append("Late_Game")
                 self.late_game = True
-                self._begin_attack_at_supply = 70
+                self._begin_attack_at_supply = 68
 
 
     async def late_game_protocol(self):
         if self.late_game:
             bases = self.townhalls.ready
-            if self.workers.amount < 55:
+            if self.workers.amount < 57:
                 if not self.already_pending(UnitID.HATCHERY):
                     self.SapwnControllerOn = False
                     self.register_behavior(ExpansionController(to_count=4, max_pending=2))
-                    self.register_behavior(BuildWorkers(to_count=55))           
-                    self.register_behavior(GasBuildingController(to_count=6, max_pending=2))
+                    self.register_behavior(BuildWorkers(to_count=57))           
+                    self.register_behavior(GasBuildingController(to_count=7, max_pending=2))
 
             else:
                 self.SapwnControllerOn = True
@@ -2244,7 +2255,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251229")
+            await self.chat_send("Tag: Version_251230")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -2329,6 +2340,8 @@ class MyBot(AresBot):
             if self.EnemyRace == Race.Terran:
                 if "Flying_Structures" in self.enemy_strategy:
                     self.register_behavior(SpawnController(ARMY_COMP_MUTAlLISK[self.race]))
+                elif "Battlecruiser" in self.enemy_strategy:
+                    self.register_behavior(SpawnController(ARMY_COMP_ROACHCORRUPTOR[self.race]))
                 else:
                     self.register_behavior(SpawnController(ARMY_COMP_ROACHINFESTOR[self.race]))
             
