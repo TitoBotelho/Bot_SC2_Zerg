@@ -1978,40 +1978,61 @@ class MyBot(AresBot):
         CAST_RANGE = 9
         ravagers: Units = self.units(UnitID.RAVAGER).ready
 
+        PRIORITY_BILE_TARGETS: set[UnitID] = {
+            UnitID.SIEGETANKSIEGED,
+            UnitID.BUNKER,
+            UnitID.PHOTONCANNON,
+            UnitID.SHIELDBATTERY,
+            UnitID.SPINECRAWLER,
+            UnitID.SUPPLYDEPOTLOWERED,
+            UnitID.SUPPLYDEPOT,
+            UnitID.PYLON,
+        }
+
+
         for ravager in ravagers:
             # Verifica se o Ravager pode lançar bile agora
             abilities = await self.get_available_abilities(ravager)
             if AbilityId.EFFECT_CORROSIVEBILE not in abilities:
                 continue
 
-            # 1) Prioriza BUNKER em alcance
-            bunkers_in_range = self.enemy_structures.of_type(UnitID.BUNKER).filter(
-                lambda s: cy_distance_to(ravager.position, s.position) <= CAST_RANGE
-            )
-            if bunkers_in_range:
-                bunker_target = min(
-                    bunkers_in_range,
-                    key=lambda s: cy_distance_to(ravager.position, s.position),
+            # 1) Prioriza alvos da lista em alcance (exceto Banshee)
+            priority_targets = [
+                unit
+                for unit in self.enemy_units
+                if unit.type_id in PRIORITY_BILE_TARGETS
+                and unit.type_id != UnitID.BANSHEE
+                and cy_distance_to(ravager.position, unit.position) <= CAST_RANGE
+            ]
+            priority_targets += [
+                structure
+                for structure in self.enemy_structures
+                if structure.type_id in PRIORITY_BILE_TARGETS
+                and structure.type_id != UnitID.BANSHEE
+                and cy_distance_to(ravager.position, structure.position) <= CAST_RANGE
+            ]
+
+            if priority_targets:
+                target = min(
+                    priority_targets,
+                    key=lambda t: cy_distance_to(ravager.position, t.position),
                 )
-                ravager(AbilityId.EFFECT_CORROSIVEBILE, bunker_target.position)
+                ravager(AbilityId.EFFECT_CORROSIVEBILE, target.position)
                 continue
 
-            # 2) Depois, SIEGETANKSIEGED em alcance
-            sieged_tanks_in_range = self.enemy_units.of_type(UnitID.SIEGETANKSIEGED).filter(
-                lambda u: cy_distance_to(ravager.position, u.position) <= CAST_RANGE
-            )
-            if sieged_tanks_in_range:
-                tank_target = min(
-                    sieged_tanks_in_range,
-                    key=lambda u: cy_distance_to(ravager.position, u.position),
-                )
-                ravager(AbilityId.EFFECT_CORROSIVEBILE, tank_target.position)
-                continue
-
-            # 3) Caso contrário, unidade inimiga mais próxima no alcance
-            enemies_in_range = self.enemy_units.filter(
-                lambda u: cy_distance_to(ravager.position, u.position) <= CAST_RANGE
-            )
+            # 2) Caso contrário, alvo inimigo mais próximo em alcance (exceto Banshee)
+            enemies_in_range = [
+                unit
+                for unit in self.enemy_units
+                if unit.type_id != UnitID.BANSHEE
+                and cy_distance_to(ravager.position, unit.position) <= CAST_RANGE
+            ]
+            enemies_in_range += [
+                structure
+                for structure in self.enemy_structures
+                if structure.type_id != UnitID.BANSHEE
+                and cy_distance_to(ravager.position, structure.position) <= CAST_RANGE
+            ]
             if not enemies_in_range:
                 continue
 
@@ -2255,7 +2276,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_251230")
+            await self.chat_send("Tag: Version_250126")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
