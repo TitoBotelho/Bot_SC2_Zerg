@@ -370,40 +370,7 @@ class MyBot(AresBot):
 
 
 
-#_______________________________________________________________________________________________________________________
-#          RETURN TO BASE
-#_______________________________________________________________________________________________________________________
-
-        
-        if self._commenced_attack == True:
-            # If we don't have enough army, stop attacking and build more units
-        
-            # RETURN TO BASE
-            if self.get_total_supply(forces) < self._begin_attack_at_supply:
-                # Escolhe a base de referência: se houver 2 ou mais hatcheries, usa a segunda base; senão, usa a primeira
-                bases = self.structures(UnitID.HATCHERY).ready
-                if bases.amount >= 2 and self.second_base is not None:
-                    base_ref = self.second_base
-                else:
-                    base_ref = self.first_base
-        
-                # Verifica se há inimigos próximos da base de referência ou na creep
-                base_under_attack = False
-                for enemy in self.enemy_units:
-                    if enemy.distance_to(base_ref.position) < 18 or self.has_creep(enemy.position):
-                        base_under_attack = True
-                        break
-        
-                if base_under_attack:
-                    # Atacar o inimigo mais próximo da base de referência
-                    self._commenced_attack = True
-                    # Mantém o modo ataque
-                else:
-                    self._commenced_attack = False
-                    self.is_roach_attacking = False
-                    for unit in forces:
-                        # Move para a base de referência
-                        unit.move(base_ref.position.towards(self.game_info.map_center, 6))
+        await self.return_to_base(forces)
 
 
 
@@ -633,6 +600,36 @@ class MyBot(AresBot):
 
 
 
+    async def return_to_base(self, forces: Units) -> None:
+        if self._commenced_attack == True:
+            # If we don't have enough army, stop attacking and build more units
+
+            # RETURN TO BASE
+            if self.get_total_supply(forces) < self._begin_attack_at_supply:
+                # Escolhe a base de referência: se houver 2 ou mais hatcheries, usa a segunda base; senão, usa a primeira
+                bases = self.structures(UnitID.HATCHERY).ready
+                if bases.amount >= 2 and self.second_base is not None:
+                    base_ref = self.second_base
+                else:
+                    base_ref = self.first_base
+
+                # Verifica se há inimigos próximos da base de referência ou na creep
+                base_under_attack = False
+                for enemy in self.enemy_units:
+                    if enemy.distance_to(base_ref.position) < 18 or self.has_creep(enemy.position):
+                        base_under_attack = True
+                        break
+
+                if base_under_attack:
+                    # Atacar o inimigo mais próximo da base de referência
+                    self._commenced_attack = True
+                    # Mantém o modo ataque
+                else:
+                    self._commenced_attack = False
+                    self.is_roach_attacking = False
+                    for unit in forces:
+                        # Move para a base de referência
+                        unit.move(base_ref.position.towards(self.game_info.map_center, 6))
 
     async def build_queens(self):
         for th in self.townhalls.ready:
