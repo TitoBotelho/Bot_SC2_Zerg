@@ -355,6 +355,7 @@ class MyBot(AresBot):
         #await self.debug_tool()
 
 
+
         self._macro()
 
 
@@ -410,6 +411,7 @@ class MyBot(AresBot):
             await self.use_fungal_growth()
             await self.throw_bile()
             await self.is_bc()
+            await self.is_mass_tank()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
@@ -2148,7 +2150,12 @@ class MyBot(AresBot):
             self.enemy_strategy.append("Battlecruiser")
 
 
-
+    async def is_mass_tank(self):
+        if "Mass_Tank" not in self.enemy_strategy:
+            tank_count = sum(1 for unit in self.enemy_units if unit.name == 'SiegeTankSieged' or unit.name == 'SiegeTank')
+            if tank_count >= 3:
+                await self.chat_send("Tag: Mass_Tank")
+                self.enemy_strategy.append("Mass_Tank")
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -2165,7 +2172,7 @@ class MyBot(AresBot):
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
             #print("nydus_position: ", self.mediator.get_primary_nydus_own_main)
-            #print("Enemy Units: ", self.enemy_units)
+            print("Enemy Units: ", self.enemy_units)
             #print("Second Overlord: ", self.tag_second_overlord)
             #print("Mutalisk targets:", self.mutalisk_targets)
             #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
@@ -2273,7 +2280,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250127")
+            await self.chat_send("Tag: Version_250129")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -2356,7 +2363,9 @@ class MyBot(AresBot):
 
 
             if self.EnemyRace == Race.Terran:
-                if "Flying_Structures" in self.enemy_strategy:
+                if "Mass_Tank" in self.enemy_strategy:
+                    self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
+                elif "Flying_Structures" in self.enemy_strategy:
                     self.register_behavior(SpawnController(ARMY_COMP_MUTAlLISK[self.race]))
                 elif "Battlecruiser" in self.enemy_strategy:
                     self.register_behavior(SpawnController(ARMY_COMP_ROACHCORRUPTOR[self.race]))
