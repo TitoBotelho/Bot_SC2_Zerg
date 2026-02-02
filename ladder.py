@@ -10,7 +10,14 @@ import logging
 import aiohttp
 import sc2
 from sc2.client import Client
-from sc2.protocol import ConnectionAlreadyClosed
+try:
+    from sc2.protocol import ConnectionAlreadyClosed
+except ImportError:  # pragma: no cover - compatibility across python-sc2 versions
+    try:
+        from sc2.client import ConnectionAlreadyClosed  # type: ignore
+    except ImportError:  # pragma: no cover
+        class ConnectionAlreadyClosed(Exception):
+            pass
 
 
 def run_ladder_game(bot):
