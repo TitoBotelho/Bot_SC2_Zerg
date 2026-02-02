@@ -208,6 +208,8 @@ class MyBot(AresBot):
         self.taf_worker_build_macro_hatch = 0
         self.second_base_canceled = False
         self.enemy_battlecruisers = {}
+        self.nydus_spot_set = False
+        self.tag_third_overlord = 0
 
         self._commenced_attack: bool = False
 
@@ -528,6 +530,7 @@ class MyBot(AresBot):
             await self.is_ling_rush()
             await self.is_twelve_pool()
             await self.build_roach_warren_failed()
+            await self.check_nydus_spot()
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
@@ -2157,6 +2160,49 @@ class MyBot(AresBot):
                 await self.chat_send("Tag: Mass_Tank")
                 self.enemy_strategy.append("Mass_Tank")
 
+    async def check_nydus_spot(self):
+        nydus_spot = self.mediator.get_primary_nydus_own_main
+        if not nydus_spot:
+            return
+
+        try:
+            if hasattr(nydus_spot, "x") and hasattr(nydus_spot, "y"):
+                target = Point2((float(nydus_spot.x), float(nydus_spot.y)))
+            else:
+                x, y = nydus_spot
+                target = Point2((float(x), float(y)))
+        except Exception:
+            return
+
+        overlords: Units = self.units(UnitID.OVERLORD)
+        if not overlords:
+            return
+
+        third_overlord: Optional[Unit] = None
+        if self.tag_third_overlord:
+            third_overlord = overlords.find_by_tag(self.tag_third_overlord)
+            if not third_overlord:
+                self.tag_third_overlord = 0
+                self.nydus_spot_set = False
+
+        if not third_overlord:
+            alive_tags = set(overlords.tags)
+            ordered_tags = [tag for tag in self.my_overlords.keys() if tag in alive_tags]
+            if len(ordered_tags) >= 3:
+                third_tag = ordered_tags[2]
+                third_overlord = overlords.find_by_tag(third_tag)
+                if third_overlord:
+                    self.tag_third_overlord = third_tag
+            elif overlords.amount >= 3:
+                third_overlord = sorted(overlords, key=lambda o: o.tag)[2]
+                self.tag_third_overlord = third_overlord.tag
+
+        if not third_overlord:
+            return
+
+        if not self.nydus_spot_set or third_overlord.distance_to(target) > 2:
+            self.do(third_overlord.move(target))
+            self.nydus_spot_set = True
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -2280,10 +2326,11 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250129")
+            await self.chat_send("Tag: Version_250202")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
+            self.tag_third_overlord = unit.tag
             enemy_third = self.mediator.get_enemy_third
             target = enemy_third.position.towards(self.game_info.map_center, 9)
             self.do(unit.move(target))

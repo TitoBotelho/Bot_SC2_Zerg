@@ -54,11 +54,19 @@ def main():
         print(result, " against opponent ", opponentid)
     else:
         # Local game
-        map_list: List[str] = [
+        # Descobre mapas instalados e restringe aos de interesse (patch 5.0.14)
+        installed_maps: List[str] = [
             p.name.replace(f".{MAP_FILE_EXT}", "")
             for p in Path(MAPS_PATH).glob(f"*.{MAP_FILE_EXT}")
             if p.is_file()
         ]
+        #allowed_5014 = {"IncorporealAIE_v4", "PersephoneAIE_v4", "PylonAIE_v4", "TorchesAIE_v4", "LeyLinesAIE_v3", "MagannathaAIE_v2", "UltraloveAIE_v2"}
+        allowed_5014 = {"IncorporealAIE_v4"}
+        map_list: List[str] = [m for m in installed_maps if m in allowed_5014]
+
+        if not map_list:
+            # fallback: tenta carregar explicitamente pelos nomes, caso não estejam listados no diretório padrão
+            map_list = list(allowed_5014)
         # alternative example code if finding the map path is problematic
         # map_list: List[str] = [
         #     "BerlingradAIE",
@@ -69,16 +77,22 @@ def main():
         #     "HardwireAIE",
         # ]
 
-        random_race = random.choice([Race.Terran])
+        random_race = random.choice([Race.Zerg])
         print("Starting local game...")
+        chosen_map = random.choice(map_list)
+        print(f"Selected map: {chosen_map}")
+
+
         run_game(
-            maps.get(random.choice(map_list)),
+            maps.get(chosen_map),
             [
                 bot1,
-                Computer(random_race, Difficulty.CheatVision, ai_build=AIBuild.Macro),
+                Computer(random_race, Difficulty.CheatVision, ai_build=AIBuild.Rush),
+                #Builds: RandomBuild, Rush, Timing, Power, Macro, Air 
                 #Computer(random_race, Difficulty.CheatVision, ai_build=AIBuild.RandomBuild),
             ],
-            realtime=True,
+            realtime=False,
+
         )
 
 

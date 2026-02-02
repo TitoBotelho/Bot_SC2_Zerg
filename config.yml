@@ -15,7 +15,7 @@ DebugGameStep: 2
 DebugOptions:
     # one of: Air, AirVsGround, Ground, GroundAvoidance, AirAvoidance
     ActiveGrid: Ground
-    ChatDebug: True
+    ChatDebug: False
     DebugSpawn: False
     ShowPathingCost: False
     ResourceDebug: False
