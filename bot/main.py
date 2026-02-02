@@ -217,6 +217,7 @@ class MyBot(AresBot):
         self.creep_queen_tags: Set[int] = set()
         self.other_queen_tags: Set[int] = set()
         self.max_creep_queens: int = 4
+        self._used_tumors: Set[int] = set()
 
 
 
@@ -2172,7 +2173,9 @@ class MyBot(AresBot):
 
     async def check_nydus_spot(self):
         nydus_spot = self.mediator.get_primary_nydus_own_main
-        if not nydus_spot:
+        if nydus_spot is None:
+            return
+        if isinstance(nydus_spot, (list, tuple, np.ndarray)) and len(nydus_spot) == 0:
             return
 
         try:
