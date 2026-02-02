@@ -238,6 +238,16 @@ class MyBot(AresBot):
                 self.current_base_target = next(self.expansions_generator)
 
             return self.current_base_target
+
+    def _prepare_step(self, state, proto_game_info) -> None:
+        """Compatibility shim for python-sc2 versions that call _prepare_step synchronously."""
+        self.state = state
+        loop: int = state.game_loop
+        if self.realtime and self.last_game_loop + 4 > loop and loop != 0:
+            return
+
+        self.last_game_loop = loop
+        return super(AresBot, self)._prepare_step(state, proto_game_info)
         
 #_______________________________________________________________________________________________________________________
 #          ON START
@@ -271,7 +281,7 @@ class MyBot(AresBot):
                 "defend_against_ground": True,
                 "first_tumor_position": self.mediator.get_own_nat.towards(self.game_info.map_center, 9),
             },
-            "inject_queens": {""
+            "inject_queens": {
                 "active": True,
                 "priority": 1,
             },
