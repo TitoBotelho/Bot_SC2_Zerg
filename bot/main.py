@@ -160,6 +160,9 @@ class MyBot(AresBot):
             specified elsewhere
         """
         super().__init__(game_step_override)
+        if not getattr(Units, "_bool_patched", False):
+            Units.__bool__ = lambda self: bool(self.amount)
+            Units._bool_patched = True
         self.tag_worker_build_2nd_base = 0
         self.tag_worker_build_3rd_base = 0
         self.tag_worker_build_roach_warren = 0
@@ -210,6 +213,7 @@ class MyBot(AresBot):
         self.enemy_battlecruisers = {}
         self.nydus_spot_set = False
         self.tag_third_overlord = 0
+        self.enemy_nat_cc_found = False
 
         self._commenced_attack: bool = False
 
@@ -414,7 +418,7 @@ class MyBot(AresBot):
             await self.burrow_infestors()
             await self.create_queens_after_build_order()
             await self.is_mass_marauder()
-            await self.build_3rd_base()
+            #await self.build_3rd_base()
             await self.is_mass_liberator()
             await self.make_ravagers()
             await self.build_plus_one_roach_armor()
@@ -481,9 +485,9 @@ class MyBot(AresBot):
             if "Battlecruiser" in self.enemy_strategy:
                 await self.build_spire()
 
+            if "Mass_Tank" in self.enemy_strategy:
+                await self.stop_collecting_gas()
 
-            #if "3_Base_Terran" in self.enemy_strategy:
-                #await self.macro_protocol()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -897,22 +901,19 @@ class MyBot(AresBot):
                 # print(f"Spine Crawler slot {idx} at {build_pos}")
 
     async def is_terran_agressive(self):
-        # Verify if the terran opponent has only one base. If so, it is an aggressive terran and build a spine crawler
-        if self.time == 140:
-            found_command_center = False
-            for unit in self.enemy_structures:
-                if unit.name == 'CommandCenter':
-                    if unit.distance_to(self.mediator.get_enemy_nat) < 3:
-                        found_command_center = True
-                        break  # Break the loop if find the Command Center
-                
-            if not found_command_center:
-                if "Terran_Agressive" not in self.enemy_strategy:
+        if "2_Base_Terran" not in self.enemy_strategy and "Terran_Agressive" not in self.enemy_strategy:
+            #verify if the terran opponent has only one base. If so, it is an agressive terran and build a spine crawler
+            if self.time > 142 and self.time < 143:
+                found_cc = False
+                for unit in self.enemy_structures:
+                    if unit.name == 'CommandCenter' or unit.name == 'OrbitalCommand' or unit.name == 'PlanetaryFortress':
+                        if unit.distance_to(self.mediator.get_enemy_nat) < 5:
+                            found_cc = True
+                            break  # Breake the loop if find the Command Center
+                if not found_cc:
                     await self.chat_send("Tag: Terran_Agressive")
                     self.enemy_strategy.append("Terran_Agressive")
-                    
-            else:
-                if "2_Base_Terran" not in self.enemy_strategy:
+                else:
                     await self.chat_send("Tag: 2_Base_Terran")
                     self.enemy_strategy.append("2_Base_Terran")
 
@@ -1422,16 +1423,6 @@ class MyBot(AresBot):
                     self.enemy_has_3_bases = True
 
 
-
-    async def macro_protocol(self):
-        if self.workers.amount < 70:
-            self.SapwnControllerOn = False
-            self.register_behavior(ExpansionController(to_count=5, max_pending=2))
-            self.register_behavior(BuildWorkers(to_count=70))           
-            self.register_behavior(GasBuildingController(to_count=4, max_pending=2))
-
-        else:
-            self.SapwnControllerOn = True
 
 
 
@@ -2232,6 +2223,7 @@ class MyBot(AresBot):
             #print("RallyPointSet: ", self.rally_point_set)
             #print("nydus_position: ", self.mediator.get_primary_nydus_own_main)
             print("Enemy Units: ", self.enemy_units)
+            print("Enemy Structures: ", self.enemy_structures)
             #print("Second Overlord: ", self.tag_second_overlord)
             #print("Mutalisk targets:", self.mutalisk_targets)
             #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
@@ -2339,7 +2331,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250202")
+            await self.chat_send("Tag: Version_250203")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:

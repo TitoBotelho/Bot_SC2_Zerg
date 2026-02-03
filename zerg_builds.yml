@@ -687,8 +687,8 @@ Builds:
             - 21 ZERGLINGMOVEMENTSPEED
             - 20 drone
             - 21 drone
-            - 22 hatchery
             - 21 roachwarren
+            - 22 hatchery
             - 22 drone
             - 21 overlord
             - 23 drone
@@ -714,18 +714,18 @@ Builds:
             - 40 overlord
             - 40 drone
             - 41 drone
-            - 42 evolutionchamber
             - 41 gas
             - 41 drone
             - 42 drone
             - 42 drone
             - 42 drone
             - 42 drone
+            - 42 infestationpit
             - 42 queen
             - 42 drone
-            - 42 drone
-            - 42 drone
             - 42 gas
+            - 42 drone
+            - 42 drone
             - 42 overlord
             - 42 drone
             - 42 drone
@@ -733,10 +733,10 @@ Builds:
             - 42 gas
             - 42 gas
             - 42 overlord
-            - 42 INFESTATIONPIT
             - 42 gas
             - 42 drone
             - 42 drone
+            - 42 evolutionchamber
 
 
 
