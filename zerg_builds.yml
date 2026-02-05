@@ -691,6 +691,7 @@ Builds:
             - 22 hatchery
             - 22 drone
             - 21 overlord
+            - 22 lair
             - 23 drone
             - 24 drone
             - 25 drone
@@ -720,7 +721,6 @@ Builds:
             - 42 drone
             - 42 drone
             - 42 drone
-            - 42 infestationpit
             - 42 queen
             - 42 drone
             - 42 gas

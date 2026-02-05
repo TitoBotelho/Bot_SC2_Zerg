@@ -164,7 +164,6 @@ class MyBot(AresBot):
             Units.__bool__ = lambda self: bool(self.amount)
             Units._bool_patched = True
         self.tag_worker_build_2nd_base = 0
-        self.tag_worker_build_3rd_base = 0
         self.tag_worker_build_roach_warren = 0
         self.tag_worker_build_hydra_den = 0
         self.tag_worker_build_spine_crawler = 0
@@ -405,7 +404,7 @@ class MyBot(AresBot):
             await self.build_range_upgrades()
             await self.build_armor_upgrades()
             await self.is_structures_flying()
-            await self.build_lair()
+            #await self.build_lair()
             #await self.build_spine_crawlers()
             #await self.make_zerglings()
             await self.find_liberator()
@@ -418,7 +417,6 @@ class MyBot(AresBot):
             await self.burrow_infestors()
             await self.create_queens_after_build_order()
             await self.is_mass_marauder()
-            #await self.build_3rd_base()
             await self.is_mass_liberator()
             await self.make_ravagers()
             await self.build_plus_one_roach_armor()
@@ -481,6 +479,7 @@ class MyBot(AresBot):
             if "Late_Game" in self.enemy_strategy:
                 await self.late_game_protocol()
                 await self.build_infestation_pit()
+                await self.build_lair()
 
             if "Battlecruiser" in self.enemy_strategy:
                 await self.build_spire()
@@ -488,6 +487,8 @@ class MyBot(AresBot):
             if "Mass_Tank" in self.enemy_strategy:
                 await self.stop_collecting_gas()
 
+            if "2_Base_Terran" in self.enemy_strategy:
+                await self.build_infestation_pit()
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -670,18 +671,6 @@ class MyBot(AresBot):
                     self.tag_worker_build_2nd_base = worker
                     #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                     self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-
-
-    async def build_next_next_base(self):
-        if len(self.townhalls.ready) == 2:
-            target = await self.get_next_expansion()
-            if self.tag_worker_build_3rd_base == 0:
-                if worker := self.mediator.select_worker(target_position=target):                
-                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                    self.tag_worker_build_3rd_base = worker
-                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                    self.mediator.build_with_specific_worker(worker=self.tag_worker_build_3rd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-
 
 
     async def build_mellee_upgrades(self):
@@ -1795,18 +1784,6 @@ class MyBot(AresBot):
 
 
 
-    async def build_3rd_base(self):
-        if self.time > 360:
-            if len(self.townhalls.ready) == 2:
-                target = await self.get_next_expansion()
-                if self.tag_worker_build_3rd_base == 0:
-                    if worker := self.mediator.select_worker(target_position=target):                
-                        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                        self.tag_worker_build_3rd_base = worker
-                        #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                        self.mediator.build_with_specific_worker(worker=self.tag_worker_build_3rd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
-
-
     async def is_mass_liberator(self):
         if "Mass_Liberator" not in self.enemy_strategy:
             liberator_count = sum(1 for unit in self.enemy_units if unit.name == 'Liberator')
@@ -1892,7 +1869,7 @@ class MyBot(AresBot):
                 await self.chat_send("Tag: Late_Game")
                 self.enemy_strategy.append("Late_Game")
                 self.late_game = True
-                self._begin_attack_at_supply = 68
+                self._begin_attack_at_supply = 30
 
 
     async def late_game_protocol(self):
@@ -2331,7 +2308,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250203")
+            await self.chat_send("Tag: Version_250205")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
