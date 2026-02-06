@@ -548,6 +548,7 @@ class MyBot(AresBot):
             await self.build_roach_warren_failed()
             await self.check_nydus_spot()
 
+
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
         
@@ -564,7 +565,7 @@ class MyBot(AresBot):
                 await self.build_roach_warren()
                 await self.stop_build_order()
                 await self.build_second_gas()
-                await self.build_spine_crawlers()
+                await self.build_safe_spine()
 
 
 
@@ -2184,6 +2185,53 @@ class MyBot(AresBot):
         if not self.nydus_spot_set or third_overlord.distance_to(target) > 2:
             self.do(third_overlord.move(target))
             self.nydus_spot_set = True
+
+    async def build_safe_spine(self):
+        if not getattr(self, "second_base", None):
+            return
+
+        # Evita construir se já houver spine na segunda base ou se já tiver worker alocado
+        if self.structures(UnitID.SPINECRAWLER).amount > 0 or self.already_pending(UnitID.SPINECRAWLER):
+            return
+        if getattr(self, "tag_worker_build_spine_crawler", 0) != 0:
+            return
+        if not self.can_afford(UnitID.SPINECRAWLER):
+            return
+
+        base = self.second_base
+        positions = self.mediator.get_behind_mineral_positions(th_pos=base.position)
+        if not positions:
+            return
+
+        # "positions" costuma ficar atrás dos minerais; queremos entre base e minerais
+        mineral_ref = positions[0]
+        # ponto entre a base e a linha de minério (ligeiramente mais perto da base)
+        target = base.position.towards(mineral_ref, 3)
+
+        # garante creep: se não tiver, aproxima mais da base
+        if not self.has_creep(target):
+            target = base.position.towards(mineral_ref, 2)
+
+        # refina com find_placement
+        try:
+            placed = await self.find_placement(UnitID.SPINECRAWLER, near=target, placement_step=1)
+        except Exception:
+            placed = None
+
+        build_pos = placed if placed else target
+        if not self.has_creep(build_pos):
+            return
+
+        if worker := self.mediator.select_worker(target_position=build_pos):
+            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+            self.tag_worker_build_spine_crawler = worker
+            self.mediator.build_with_specific_worker(
+                worker=self.tag_worker_build_spine_crawler,
+                structure_type=UnitID.SPINECRAWLER,
+                pos=build_pos,
+                building_purpose=BuildingPurpose.NORMAL_BUILDING,
+            )
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -2308,7 +2356,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250205")
+            await self.chat_send("Tag: Version_250206")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
