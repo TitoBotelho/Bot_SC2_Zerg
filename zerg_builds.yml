@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - LingRoachMacroVsTerran
+            - OneOneRoaches
 
 
     Protoss:
@@ -413,13 +413,13 @@ Builds:
             - 13 drone
             - 14 drone
             - 15 drone
-            - 15 hatchery
             - 15 drone
             - 15 spawningpool
             - 14 gas
             - 14 drone
             - 15 drone
             - 16 drone
+            - 15 hatchery
             - 17 drone
             - 18 overlord
             - 18 drone
@@ -428,7 +428,6 @@ Builds:
             - 18 drone
             - 18 queen
             - 19 drone
-            - 22 hatchery
             - 21 drone
             - 20 drone
             - 21 drone

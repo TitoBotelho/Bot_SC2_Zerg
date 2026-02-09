@@ -564,8 +564,8 @@ class MyBot(AresBot):
             if "Ling_Rush" in self.enemy_strategy:
                 await self.build_roach_warren()
                 await self.stop_build_order()
-                await self.build_second_gas()
-                await self.build_safe_spine()
+                #await self.cancel_second_base()
+                await self.make_spines_on_main()
 
 
 
@@ -2356,7 +2356,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250206")
+            await self.chat_send("Tag: Version_250209")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
