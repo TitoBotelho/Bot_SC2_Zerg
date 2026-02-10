@@ -563,9 +563,10 @@ class MyBot(AresBot):
 
             if "Ling_Rush" in self.enemy_strategy:
                 await self.build_roach_warren()
-                await self.stop_build_order()
                 #await self.cancel_second_base()
                 await self.make_spines_on_main()
+                await self.change_to_bo_Vs_Ling_Rush()
+                await self.build_safe_spine()
 
 
 
@@ -2232,6 +2233,14 @@ class MyBot(AresBot):
                 building_purpose=BuildingPurpose.NORMAL_BUILDING,
             )
 
+
+    async def change_to_bo_Vs_Ling_Rush(self):
+        if self.bo_changed == False:
+            self.build_order_runner.switch_opening("VsLingRush")
+            self.bo_changed = True
+
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -2356,7 +2365,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250209")
+            await self.chat_send("Tag: Version_250210")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:

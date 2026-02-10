@@ -1037,3 +1037,33 @@ Builds:
             - 20 drone
             - 20 drone
 
+
+    VsLingRush:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
+        OpeningBuildOrder:
+            - 12 worker_scout
+            - 12 overlord
+            - 12 drone
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 15 drone
+            - 15 spawningpool
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 15 hatchery
+            - 17 drone
+            - 18 overlord
+            - 18 drone
+            - 18 queen
+            - 17 zergling
+            - 17 zergling
+            - 17 zergling
+            - 17 zergling
+            - 17 zergling
+            - 17 zergling                        
