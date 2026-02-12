@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - OneOneRoaches
+            - PoolFirst
 
 
     Protoss:
@@ -1036,6 +1036,7 @@ Builds:
             - 20 drone
             - 20 drone
             - 20 drone
+            - 20 hatchery
 
 
     VsLingRush:
