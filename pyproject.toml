@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = []
 readme = "README.md"
-package-mode = false
+packages = [{ include = "bot" }]
 
 [tool.poetry.dependencies]
 ares-sc2 = { path = "ares-sc2", develop = false }

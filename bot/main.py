@@ -519,15 +519,6 @@ class MyBot(AresBot):
                 await self.research_burrow()
                 #await self.make_macro_hatch()
 
-            #if "Cannon_Rush" in self.enemy_strategy:
-                #await self.cancel_second_base()
-                #await self.build_roach_warren()
-                #await self.research_burrow()
-                #await self.build_second_gas()
-
-            if "Cannon_Rush" not in self.enemy_strategy:
-                await self.build_next_base()
-
 
         if self.EnemyRace == Race.Zerg:
             await self.assign_overseer()
@@ -563,8 +554,9 @@ class MyBot(AresBot):
 
             if "Ling_Rush" in self.enemy_strategy:
                 await self.build_roach_warren()
-                await self.stop_build_order()
-                await self.build_second_gas()
+                #await self.cancel_second_base()
+                await self.make_spines_on_main()
+                await self.change_to_bo_Vs_Ling_Rush()
                 await self.build_safe_spine()
 
 
@@ -627,7 +619,7 @@ class MyBot(AresBot):
             # If we don't have enough army, stop attacking and build more units
 
             # RETURN TO BASE
-            if self.get_total_supply(forces) < self._begin_attack_at_supply:
+            if self.get_total_supply(forces) < 0.6 * self._begin_attack_at_supply:
                 # Escolhe a base de referência: se houver 2 ou mais hatcheries, usa a segunda base; senão, usa a primeira
                 bases = self.structures(UnitID.HATCHERY).ready
                 if bases.amount >= 2 and self.second_base is not None:
@@ -662,16 +654,6 @@ class MyBot(AresBot):
                     # If we're not, train a queen
                     self.do(th.train(UnitID.QUEEN))
 
-
-    async def build_next_base(self):
-        if self.minerals > 300:
-            target = await self.get_next_expansion()
-            if self.tag_worker_build_2nd_base == 0:
-                if worker := self.mediator.select_worker(target_position=target):                
-                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                    self.tag_worker_build_2nd_base = worker
-                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                    self.mediator.build_with_specific_worker(worker=self.tag_worker_build_2nd_base, structure_type=UnitID.HATCHERY, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
 
     async def build_mellee_upgrades(self):
@@ -2232,6 +2214,14 @@ class MyBot(AresBot):
                 building_purpose=BuildingPurpose.NORMAL_BUILDING,
             )
 
+
+    async def change_to_bo_Vs_Ling_Rush(self):
+        if self.bo_changed == False:
+            self.build_order_runner.switch_opening("VsLingRush")
+            self.bo_changed = True
+
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -2356,7 +2346,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250206")
+            await self.chat_send("Tag: Version_250212")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
