@@ -413,18 +413,18 @@ Builds:
             - 13 drone
             - 14 drone
             - 15 drone
-            - 15 drone
-            - 15 spawningpool
-            - 14 gas
-            - 14 drone
+            - 16 drone
+            - 16 spawningpool
+            - 15 gas
             - 15 drone
             - 16 drone
-            - 15 hatchery
+            - 17 drone
+            - 17 hatchery
             - 17 drone
             - 18 overlord
             - 18 drone
-            - 18 queen
-            - 17 zergling
+            - 19 queen
+            #- 17 zergling
             - 18 drone
             - 18 queen
             - 19 drone
@@ -440,10 +440,10 @@ Builds:
             - 26 drone
             - 27 drone
             - 28 drone
+            - 28 overlord
             - 29 drone
             - 30 drone
             - 31 drone
-            - 31 overlord
             - 32 drone
             - 33 drone
             - 34 drone
