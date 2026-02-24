@@ -2373,7 +2373,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250223")
+            await self.chat_send("Tag: Version_250224")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:

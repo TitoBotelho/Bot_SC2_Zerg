@@ -297,7 +297,7 @@ class Point2(Pointlike):
         return math.hypot(self[0], self[1])
 
     def __bool__(self) -> bool:
-        return self[0] != 0 or self[1] != 0
+        return bool((self[0] != 0) or (self[1] != 0))
 
     def __mul__(self, other: _PointLike | float) -> Point2:  # pyright: ignore[reportIncompatibleMethodOverride]
         if isinstance(other, (int, float)):
