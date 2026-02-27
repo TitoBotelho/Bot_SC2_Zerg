@@ -523,6 +523,7 @@ class MyBot(AresBot):
             if "Late_Game" in self.enemy_strategy:
                 await self.late_game_vs_protoss_protocol()
                 await self.build_lair()
+                await self.make_ravagers()
 
 
         if self.EnemyRace == Race.Zerg:
@@ -2228,7 +2229,7 @@ class MyBot(AresBot):
 
 
     async def is_late_game_vs_protoss(self):
-        if self.time > 540:
+        if self.time > 510:
             if self.late_game == False:
                 await self.chat_send("Tag: Late_Game")
                 self.enemy_strategy.append("Late_Game")
@@ -2238,16 +2239,16 @@ class MyBot(AresBot):
 
     async def late_game_vs_protoss_protocol(self):
         if self.late_game:
-            bases = self.townhalls.ready
-            if self.workers.amount < 55:
-                if not self.already_pending(UnitID.HATCHERY):
-                    self.SapwnControllerOn = False
-                    self.register_behavior(ExpansionController(to_count=4, max_pending=2))
-                    self.register_behavior(BuildWorkers(to_count=55))           
-                    self.register_behavior(GasBuildingController(to_count=7, max_pending=2))
+            #bases = self.townhalls.ready
+            #if self.workers.amount < 54:
+                #if not self.already_pending(UnitID.HATCHERY):
+                    #self.SapwnControllerOn = False
+            self.register_behavior(ExpansionController(to_count=4, max_pending=2))
+            self.register_behavior(BuildWorkers(to_count=55))           
+            self.register_behavior(GasBuildingController(to_count=7, max_pending=2))
 
-                else:
-                    self.SapwnControllerOn = True
+                #else:
+                    #self.SapwnControllerOn = True
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -2373,7 +2374,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_250224")
+            await self.chat_send("Tag: Version_260227")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:

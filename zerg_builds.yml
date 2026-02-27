@@ -415,15 +415,15 @@ Builds:
             - 15 drone
             - 16 drone
             - 16 spawningpool
-            - 15 gas
-            - 15 drone
             - 16 drone
-            - 17 drone
-            - 17 hatchery
-            - 17 drone
-            - 18 overlord
-            - 18 drone
-            - 19 queen
+            - 16 drone
+            - 16 hatchery
+            - 16 gas
+            - 16 drone
+            - 16 drone
+            - 16 overlord
+            - 16 drone
+            - 16 queen
             #- 17 zergling
             - 18 drone
             - 18 queen
@@ -454,9 +454,12 @@ Builds:
             - 36 drone
             - 36 drone
             - 36 gas
+            - 36 overlord
             - 36 drone
             - 36 drone
             - 36 drone
+            - 36 gas
+            - 36 overlord
             
 
 
@@ -1038,6 +1041,7 @@ Builds:
             - 20 drone
             - 20 overlord
             - 20 hatchery
+            - 20 overlord
 
 
     VsLingRush:
