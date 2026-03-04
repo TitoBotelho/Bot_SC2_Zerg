@@ -2229,11 +2229,19 @@ class MyBot(AresBot):
 
 
     async def is_late_game_vs_protoss(self):
-        if self.time > 480:
-            if self.late_game == False:
-                await self.chat_send("Tag: Late_Game")
-                self.enemy_strategy.append("Late_Game")
-                self.late_game = True
+        if "2_Base_Protoss" in self.enemy_strategy:
+             if self.time > 360:
+                if self.late_game == False:
+                    await self.chat_send("Tag: Late_Game")
+                    self.enemy_strategy.append("Late_Game")
+                    self.late_game = True
+
+        if "Protoss_Agressive" in self.enemy_strategy:
+            if self.time > 480:
+                if self.late_game == False:
+                    await self.chat_send("Tag: Late_Game")
+                    self.enemy_strategy.append("Late_Game")
+                    self.late_game = True
 
 
 
@@ -2250,11 +2258,16 @@ class MyBot(AresBot):
 
             if "2_Base_Protoss" in self.enemy_strategy:
 
-                self.register_behavior(ExpansionController(to_count=4, max_pending=2))
-                self.register_behavior(BuildWorkers(to_count=55))           
+                if self.workers.amount < 55:
+                    self.SapwnControllerOn = False
+                    self.register_behavior(ExpansionController(to_count=5, max_pending=3))
+                    self.register_behavior(BuildWorkers(to_count=55))           
 
-                #else:
-                    #self.SapwnControllerOn = True
+                else:
+                    self.SapwnControllerOn = True
+
+
+
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
