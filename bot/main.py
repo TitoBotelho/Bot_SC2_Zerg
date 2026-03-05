@@ -31,7 +31,7 @@ from ares.behaviors.combat.individual import (
     UseAOEAbility,
     AttackTarget,
 )
-from ares.behaviors.macro import AutoSupply, Mining, SpawnController, GasBuildingController, BuildWorkers, ExpansionController
+from ares.behaviors.macro import AutoSupply, Mining, SpawnController, GasBuildingController, BuildWorkers, ExpansionController, MacroPlan, BuildStructure, TechUp
 from ares.consts import ALL_STRUCTURES, WORKER_TYPES, UnitRole, UnitTreeQueryType, BuildingPurpose, BuildingSize
 from cython_extensions import cy_closest_to, cy_in_attack_range, cy_pick_enemy_target, cy_distance_to
 from sc2 import unit
@@ -213,6 +213,7 @@ class MyBot(AresBot):
         self.nydus_spot_set = False
         self.tag_third_overlord = 0
         self.enemy_nat_cc_found = False
+        self.infestation_pit_ordered = False
 
         self._commenced_attack: bool = False
 
@@ -223,7 +224,7 @@ class MyBot(AresBot):
         self._used_tumors: Set[int] = set()
 
 
-
+        self.macro_plan = MacroPlan()
 
 
     @property
@@ -259,6 +260,9 @@ class MyBot(AresBot):
 
     async def on_start(self) -> None:
         await super(MyBot, self).on_start()
+
+        # Register macro behaviors now that behavior_executioner is available
+        self.register_behavior(self.macro_plan)
     
         self.EnemyRace = self.enemy_race  
         self.rally_point_set = False
@@ -712,6 +716,8 @@ class MyBot(AresBot):
             if self.can_afford(UnitID.LAIR):
                 th: Unit = self.first_base
                 th(AbilityId.UPGRADETOLAIR_LAIR)
+
+
 
     async def build_hydra_den(self):
         if self.structures(UnitID.LAIR).ready:
@@ -1869,7 +1875,7 @@ class MyBot(AresBot):
                     self.SapwnControllerOn = False
                     self.register_behavior(ExpansionController(to_count=4, max_pending=2))
                     self.register_behavior(BuildWorkers(to_count=57))           
-                    self.register_behavior(GasBuildingController(to_count=7, max_pending=2))
+                    self.register_behavior(GasBuildingController(to_count=6, max_pending=2))
 
                 else:
                     self.SapwnControllerOn = True
@@ -2045,20 +2051,27 @@ class MyBot(AresBot):
 
 
     async def build_infestation_pit(self):
-        if self.structures(UnitID.LAIR).ready:
-            if self.structures(UnitID.INFESTATIONPIT).amount == 0 and not self.already_pending(UnitID.INFESTATIONPIT):
-                if self.tag_worker_infestation_pit == 0:
-                    if self.can_afford(UnitID.INFESTATIONPIT):
-                        positions = self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position)
-                        reference = positions[1] if positions else None
-                        target = reference.towards(self.first_base, -1)
+        if not self.structures(UnitID.LAIR).ready:
+            return
 
-                        #await self.build(UnitID.HYDRALISKDEN, near=target)
-                        if worker := self.mediator.select_worker(target_position=target):                
-                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                            self.tag_worker_infestation_pit = worker
-                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                            self.mediator.build_with_specific_worker(worker=self.tag_worker_infestation_pit, structure_type=UnitID.INFESTATIONPIT, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+        if self.structures(UnitID.INFESTATIONPIT) or self.already_pending(UnitID.INFESTATIONPIT):
+            self.infestation_pit_ordered = False
+            return
+
+        if self.infestation_pit_ordered:
+            return
+
+        self.macro_plan.add(
+            BuildStructure(
+                base_location=self.first_base.position,
+                structure_id=UnitID.INFESTATIONPIT,
+                to_count=1,
+            )
+        )
+        self.register_behavior(self.macro_plan)
+        self.infestation_pit_ordered = True
+        await self.chat_send("Tag: Infestation_Pit_Ordered")
+
 
 
 
@@ -2393,7 +2406,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260302")
+            await self.chat_send("Tag: Version_260305")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
