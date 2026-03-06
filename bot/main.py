@@ -190,7 +190,7 @@ class MyBot(AresBot):
         self.is_roach_attacking = False
         self.defending = False
         self.liberatorFound = False
-        self.SapwnControllerOn = True
+        self.spawn_inhibitors: set[str] = set()
         self.speedMiningOn = True
         self.enemy_has_3_bases = False
         self.scout_targets = {}  # Dicionário para armazenar os alvos dos scouts
@@ -372,7 +372,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
 
@@ -712,10 +712,13 @@ class MyBot(AresBot):
 
 
     async def build_lair(self):
-        if not self.structures(UnitID.LAIR):
+        if not self.structures(UnitID.LAIR) and not self.already_pending(UnitID.LAIR):
+            self.spawn_inhibitors.add("building_lair")
             if self.can_afford(UnitID.LAIR):
                 th: Unit = self.first_base
                 th(AbilityId.UPGRADETOLAIR_LAIR)
+        else:
+            self.spawn_inhibitors.discard("building_lair")
 
 
 
@@ -1306,11 +1309,10 @@ class MyBot(AresBot):
                     self.terran_flying_structures = True
 
     async def build_spire(self):
-        if self.structures(UnitID.SPIRE).ready.amount < 1:
-            self.SapwnControllerOn = False
-
+        if self.structures(UnitID.SPIRE).amount == 0 and not self.already_pending(UnitID.SPIRE):
+            self.spawn_inhibitors.add("building_spire")
         else:
-            self.SapwnControllerOn = True
+            self.spawn_inhibitors.discard("building_spire")
 
         if self.structures(UnitID.LAIR).ready:
             if self.structures(UnitID.SPIRE).amount == 0 and not self.already_pending(UnitID.SPIRE):
@@ -1347,9 +1349,9 @@ class MyBot(AresBot):
 
     async def turnOffSpawningControllerOnEarlyGame(self):
         if self.build_order_runner.build_completed == False:
-            self.SapwnControllerOn = False
+            self.spawn_inhibitors.add("build_order_not_complete")
         else:
-            self.SapwnControllerOn = True
+            self.spawn_inhibitors.discard("build_order_not_complete")
 
     async def turnOffSpeedMining(self):
         if self.speedMiningOn == True:
@@ -1824,11 +1826,12 @@ class MyBot(AresBot):
             if UpgradeId.ZERGMISSILEWEAPONSLEVEL1 in self.state.upgrades:
                 # Desliga o SpawnController enquanto não pesquisa a armadura
                 if UpgradeId.ZERGGROUNDARMORSLEVEL1 not in self.state.upgrades:
-                    self.SapwnControllerOn = False
+                    self.spawn_inhibitors.add("researching_armor")
                     if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL1) and not self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL1):
                         self.research(UpgradeId.ZERGGROUNDARMORSLEVEL1)
-                        self.SapwnControllerOn = True
                     return  # Não tenta pesquisar outros upgrades enquanto espera a armadura
+            else:
+                    self.spawn_inhibitors.discard("researching_armor")
 
 
 
@@ -1868,26 +1871,26 @@ class MyBot(AresBot):
 
 
     async def late_game_protocol(self):
-        if self.late_game:
-            bases = self.townhalls.ready
-            if self.workers.amount < 57:
-                if not self.already_pending(UnitID.HATCHERY):
-                    self.SapwnControllerOn = False
-                    self.register_behavior(ExpansionController(to_count=4, max_pending=2))
-                    self.register_behavior(BuildWorkers(to_count=57))           
-                    self.register_behavior(GasBuildingController(to_count=6, max_pending=2))
-
-                else:
-                    self.SapwnControllerOn = True
+        if not self.late_game:
+            return
+        self.register_behavior(ExpansionController(to_count=4, max_pending=2))
+        if self.units(UnitID.DRONE).amount < 57:
+            self.register_behavior(BuildWorkers(to_count=57))
+            self.register_behavior(GasBuildingController(to_count=6, max_pending=2))
+        bases_started = self.townhalls.amount + self.already_pending(UnitID.HATCHERY)
+        if bases_started < 4 or self.units(UnitID.DRONE).amount < 57:
+            self.spawn_inhibitors.add("late_game_expanding")
+        else:
+            self.spawn_inhibitors.discard("late_game_expanding")
 
     async def make_roach_speed(self):
         if UpgradeId.TUNNELINGCLAWS in self.state.upgrades:
-            if UpgradeId.GLIALRECONSTITUTION not in self.state.upgrades or not self.already_pending_upgrade(UpgradeId.GLIALRECONSTITUTION):
-                self.SapwnControllerOn = False
-                self.research(UpgradeId.GLIALRECONSTITUTION)
-
-            else:
-                self.SapwnControllerOn = True
+            if UpgradeId.GLIALRECONSTITUTION not in self.state.upgrades:
+                if not self.already_pending_upgrade(UpgradeId.GLIALRECONSTITUTION):
+                    self.spawn_inhibitors.add("researching_roach_speed")
+                    self.research(UpgradeId.GLIALRECONSTITUTION)
+                    return
+        self.spawn_inhibitors.discard("researching_roach_speed")
 
 
 
@@ -2272,12 +2275,12 @@ class MyBot(AresBot):
             if "2_Base_Protoss" in self.enemy_strategy:
 
                 if self.workers.amount < 55:
-                    self.SapwnControllerOn = False
+                    self.spawn_inhibitors.add("late_game_vs_protoss_workers")
                     self.register_behavior(ExpansionController(to_count=5, max_pending=3))
                     self.register_behavior(BuildWorkers(to_count=55))           
 
                 else:
-                    self.SapwnControllerOn = True
+                    self.spawn_inhibitors.discard("late_game_vs_protoss_workers")
 
 
 
@@ -2299,6 +2302,7 @@ class MyBot(AresBot):
             #print("nydus_position: ", self.mediator.get_primary_nydus_own_main)
             print("Enemy Units: ", self.enemy_units)
             print("Enemy Structures: ", self.enemy_structures)
+            print("Spawn Inibitors:", self.spawn_inhibitors)
             #print("Second Overlord: ", self.tag_second_overlord)
             #print("Mutalisk targets:", self.mutalisk_targets)
             #print("Behind mineral positions: ", self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position))
@@ -2406,7 +2410,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260305")
+            await self.chat_send("Tag: Version_260306")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -2486,7 +2490,7 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
 
-        if self.SapwnControllerOn == True:
+        if not self.spawn_inhibitors:
 
 
             if self.EnemyRace == Race.Terran:
