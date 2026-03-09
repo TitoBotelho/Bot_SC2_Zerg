@@ -669,15 +669,15 @@ Builds:
             - 13 worker_scout:
                 [nat, third, fourth, fifth, third, fourth, sixth, map_center]
             - 14 drone
-            - 15 drone
-            - 15 hatchery
-            - 15 drone
-            - 15 spawningpool
-            - 14 gas
+            - 14 hatchery
+            - 14 drone
+            - 14 drone
+            - 14 spawningpool
             - 14 drone
             - 15 drone
             - 16 drone
             - 17 drone
+            - 18 gas
             - 18 overlord
             - 18 drone
             - 18 queen
@@ -686,7 +686,6 @@ Builds:
             - 18 queen
             - 19 drone
             - 21 drone
-            - 21 ZERGLINGMOVEMENTSPEED
             - 20 drone
             - 21 drone
             - 21 roachwarren

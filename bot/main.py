@@ -460,7 +460,7 @@ class MyBot(AresBot):
                 await self.make_spores()
 
 
-            if "Flying_Structures" in self.enemy_strategy:
+            if "Flying_Structures" in self.enemy_strategy or "Mass_Banshee" in self.enemy_strategy:
                 #await self.build_lair()
                 #await self.build_hydra_den()
                 #self.register_behavior(BuildWorkers(to_count=80))
@@ -488,8 +488,6 @@ class MyBot(AresBot):
             if "Battlecruiser" in self.enemy_strategy:
                 await self.build_spire()
 
-            if "Mass_Tank" in self.enemy_strategy:
-                await self.stop_collecting_gas()
 
             if "2_Base_Terran" in self.enemy_strategy:
                 await self.build_infestation_pit()
@@ -629,7 +627,7 @@ class MyBot(AresBot):
             # If we don't have enough army, stop attacking and build more units
 
             # RETURN TO BASE
-            if self.get_total_supply(forces) < 0.6 * self._begin_attack_at_supply:
+            if self.get_total_supply(forces) < 0.5 * self._begin_attack_at_supply:
                 # Escolhe a base de referência: se houver 2 ou mais hatcheries, usa a segunda base; senão, usa a primeira
                 bases = self.structures(UnitID.HATCHERY).ready
                 if bases.amount >= 2 and self.second_base is not None:
@@ -1821,17 +1819,23 @@ class MyBot(AresBot):
 
                     
     async def build_plus_one_roach_armor(self):
-        # Se já pesquisou ZERGMISSILEWEAPONSLEVEL1, desliga o SpawnController até pesquisar ZERGGROUNDARMORSLEVEL1
+        # Se já pesquisou ZERGMISSILEWEAPONSLEVEL1, pesquisa ZERGGROUNDARMORSLEVEL1
+        # O SpawnController só fica bloqueado até o upgrade COMEÇAR a ser pesquisado
         if self.structures(UnitID.EVOLUTIONCHAMBER).ready and self.structures(UnitID.SPAWNINGPOOL).ready:
             if UpgradeId.ZERGMISSILEWEAPONSLEVEL1 in self.state.upgrades:
-                # Desliga o SpawnController enquanto não pesquisa a armadura
                 if UpgradeId.ZERGGROUNDARMORSLEVEL1 not in self.state.upgrades:
-                    self.spawn_inhibitors.add("researching_armor")
-                    if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL1) and not self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL1):
-                        self.research(UpgradeId.ZERGGROUNDARMORSLEVEL1)
-                    return  # Não tenta pesquisar outros upgrades enquanto espera a armadura
-            else:
+                    if self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL1):
+                        # Já está sendo pesquisado: libera o SpawnController
+                        self.spawn_inhibitors.discard("researching_armor")
+                    else:
+                        # Ainda não começou: bloqueia e inicia quando puder
+                        self.spawn_inhibitors.add("researching_armor")
+                        if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL1):
+                            self.research(UpgradeId.ZERGGROUNDARMORSLEVEL1)
+                else:
                     self.spawn_inhibitors.discard("researching_armor")
+            else:
+                self.spawn_inhibitors.discard("researching_armor")
 
 
 
@@ -1867,7 +1871,7 @@ class MyBot(AresBot):
                 await self.chat_send("Tag: Late_Game")
                 self.enemy_strategy.append("Late_Game")
                 self.late_game = True
-                self._begin_attack_at_supply = 30
+                self._begin_attack_at_supply = 50
 
 
     async def late_game_protocol(self):
@@ -1876,7 +1880,7 @@ class MyBot(AresBot):
         self.register_behavior(ExpansionController(to_count=4, max_pending=2))
         if self.units(UnitID.DRONE).amount < 57:
             self.register_behavior(BuildWorkers(to_count=57))
-            self.register_behavior(GasBuildingController(to_count=6, max_pending=2))
+            self.register_behavior(GasBuildingController(to_count=7, max_pending=2))
         bases_started = self.townhalls.amount + self.already_pending(UnitID.HATCHERY)
         if bases_started < 4 or self.units(UnitID.DRONE).amount < 57:
             self.spawn_inhibitors.add("late_game_expanding")
@@ -2024,18 +2028,22 @@ class MyBot(AresBot):
 
     async def is_mass_banshee(self):
         """
-        Make air defense if enemy is making a lot of banshees
+        Make air defense if enemy is making a lot of banshees.
+        Cloaked Banshees share the same UnitID.BANSHEE type (no separate ID for cloaked).
+        When cloaked and undetected they disappear from enemy_units, so we track by tag:
+        once a banshee tag is registered it stays counted even while cloaked.
+        We also match by name as a fallback in case of framework edge cases.
         """
         if "Mass_Banshees" in self.enemy_strategy:
             return
 
-        # Itera banshees vistas neste frame
-        for enemy in self.enemy_units.of_type({UnitID.BANSHEE}):
-            if enemy.tag not in self.enemy_banshees:
-                # registra primeira vez que vimos essa banshee
-                self.enemy_banshees[enemy.tag] = enemy.type_id
+        # Registra pelo type_id (visível ou detectada) e pelo nome (fallback)
+        for enemy in self.enemy_units:
+            if enemy.type_id == UnitID.BANSHEE or enemy.name == "Banshee":
+                if enemy.tag not in self.enemy_banshees:
+                    self.enemy_banshees[enemy.tag] = enemy.type_id
 
-        if len(self.enemy_banshees) >= 3:
+        if len(self.enemy_banshees) >= 2:
             await self.chat_send("Tag: Mass_Banshee")
             self.enemy_strategy.append("Mass_Banshees")
 
@@ -2410,7 +2418,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260306")
+            await self.chat_send("Tag: Version_260309")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -2494,10 +2502,10 @@ class MyBot(AresBot):
 
 
             if self.EnemyRace == Race.Terran:
-                if "Mass_Tank" in self.enemy_strategy:
-                    self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
-                elif "Flying_Structures" in self.enemy_strategy:
+                if "Flying_Structures" in self.enemy_strategy:
                     self.register_behavior(SpawnController(ARMY_COMP_MUTAlLISK[self.race]))
+                elif "Mass_Banshee" in self.enemy_strategy:
+                    self.register_behavior(SpawnController(ARMY_COMP_MUTAlLISK[self.race]))    
                 elif "Battlecruiser" in self.enemy_strategy:
                     self.register_behavior(SpawnController(ARMY_COMP_ROACHCORRUPTOR[self.race]))
                 else:
