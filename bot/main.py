@@ -214,6 +214,7 @@ class MyBot(AresBot):
         self.tag_third_overlord = 0
         self.enemy_nat_cc_found = False
         self.infestation_pit_ordered = False
+        self.spire_ordered = False
 
         self._commenced_attack: bool = False
 
@@ -1312,18 +1313,26 @@ class MyBot(AresBot):
         else:
             self.spawn_inhibitors.discard("building_spire")
 
-        if self.structures(UnitID.LAIR).ready:
-            if self.structures(UnitID.SPIRE).amount == 0 and not self.already_pending(UnitID.SPIRE):
-                if self.tag_worker_build_spire == 0:
-                    if self.can_afford(UnitID.SPIRE):
-                        positions = self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position)
-                        target = positions[0] if positions else None
-                        #await self.build(UnitID.HYDRALISKDEN, near=target)
-                        if worker := self.mediator.select_worker(target_position=target):                
-                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                            self.tag_worker_build_spire = worker
-                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                            self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spire, structure_type=UnitID.SPIRE, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+        if not self.structures(UnitID.LAIR).ready:
+            return
+
+        if self.structures(UnitID.SPIRE) or self.already_pending(UnitID.SPIRE):
+            self.spire_ordered = False
+            return
+
+        if self.spire_ordered:
+            return
+
+        self.macro_plan.add(
+            BuildStructure(
+                base_location=self.first_base.position,
+                structure_id=UnitID.SPIRE,
+                to_count=1,
+            )
+        )
+        self.register_behavior(self.macro_plan)
+        self.spire_ordered = True
+        await self.chat_send("Tag: Spire_Ordered")
 
 
 
@@ -1887,6 +1896,10 @@ class MyBot(AresBot):
         else:
             self.spawn_inhibitors.discard("late_game_expanding")
 
+        # Verificação adicional: se já temos 4+ bases (prontas ou em produção) e 60+ trabalhadores, garantir que a tag está desligada
+        if bases_started >= 4 and self.units(UnitID.DRONE).amount > 59:
+            self.spawn_inhibitors.discard("late_game_expanding")
+
     async def make_roach_speed(self):
         if UpgradeId.TUNNELINGCLAWS in self.state.upgrades:
             if UpgradeId.GLIALRECONSTITUTION not in self.state.upgrades:
@@ -2308,8 +2321,8 @@ class MyBot(AresBot):
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
             #print("nydus_position: ", self.mediator.get_primary_nydus_own_main)
-            print("Enemy Units: ", self.enemy_units)
-            print("Enemy Structures: ", self.enemy_structures)
+            #print("Enemy Units: ", self.enemy_units)
+            #print("Enemy Structures: ", self.enemy_structures)
             print("Spawn Inibitors:", self.spawn_inhibitors)
             #print("Second Overlord: ", self.tag_second_overlord)
             #print("Mutalisk targets:", self.mutalisk_targets)
@@ -2326,7 +2339,7 @@ class MyBot(AresBot):
             #print("My roaches:", self.my_roaches)
             #print("FirstBase: ", self.first_base)
             #print("SecondBase: ", self.second_base)
-            print("Enemy Widow Mines: ", self.enemy_widow_mines)
+            #print("Enemy Widow Mines: ", self.enemy_widow_mines)
             self.last_debug_time = current_time  # Atualizar a última vez que a ferramenta de debug foi chamada
 
 
