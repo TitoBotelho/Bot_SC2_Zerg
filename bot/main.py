@@ -15,6 +15,7 @@ https://github.com/raspersc2/queens-sc2
 """
 
 
+import math
 from itertools import cycle
 from typing import Optional
 
@@ -206,6 +207,7 @@ class MyBot(AresBot):
         self.my_roaches = {}
         self.enemy_widow_mines = {}
         self.late_game = False
+        self.late_game_expansion_done = False
         self.tag_worker_infestation_pit = 0
         self.taf_worker_build_macro_hatch = 0
         self.second_base_canceled = False
@@ -353,17 +355,18 @@ class MyBot(AresBot):
         overlord = self.units(UnitID.OVERLORD).first
     
         enemy_natural_location = self.mediator.get_enemy_nat
-    
-        # Get the enemy's start location
-        #enemy_natural_location = self.mediator.get_enemy_nat
-        #target = self.mediator.get_closest_overlord_spot(from_pos=enemy_natural_location)
         target = enemy_natural_location.position.towards(self.game_info.map_center, 12)
-        # Send the Overlord to the new position
-        self.do(overlord.move(target))
-        hg_spot = self.mediator.get_closest_overlord_spot(
-            from_pos=enemy_natural_location
-        )
-        overlord.move(hg_spot, queue=True)
+
+        if self.EnemyRace == Race.Terran:
+            # vs Terran: apenas vai para o target, sem ir para hg_spot
+            self.do(overlord.move(target))
+        else:
+            # vs outras raças: vai para o target e depois para hg_spot
+            self.do(overlord.move(target))
+            hg_spot = self.mediator.get_closest_overlord_spot(
+                from_pos=enemy_natural_location
+            )
+            overlord.move(hg_spot, queue=True)
 
 
 #_______________________________________________________________________________________________________________________
@@ -889,7 +892,7 @@ class MyBot(AresBot):
     async def is_terran_agressive(self):
         if "2_Base_Terran" not in self.enemy_strategy and "Terran_Agressive" not in self.enemy_strategy:
             #verify if the terran opponent has only one base. If so, it is an agressive terran and build a spine crawler
-            if self.time > 142 and self.time < 143:
+            if self.time > 170 and self.time < 180:
                 found_cc = False
                 for unit in self.enemy_structures:
                     if unit.name == 'CommandCenter' or unit.name == 'OrbitalCommand' or unit.name == 'PlanetaryFortress':
@@ -1836,6 +1839,9 @@ class MyBot(AresBot):
                     if self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL1):
                         # Já está sendo pesquisado: libera o SpawnController
                         self.spawn_inhibitors.discard("researching_armor")
+                    elif self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL2):
+                        # Já está sendo pesquisado: libera o SpawnController
+                        self.spawn_inhibitors.discard("researching_armor")    
                     else:
                         # Ainda não começou: bloqueia e inicia quando puder
                         self.spawn_inhibitors.add("researching_armor")
@@ -1886,19 +1892,25 @@ class MyBot(AresBot):
     async def late_game_protocol(self):
         if not self.late_game:
             return
-        self.register_behavior(ExpansionController(to_count=4, max_pending=2))
-        if self.units(UnitID.DRONE).amount < 57:
-            self.register_behavior(BuildWorkers(to_count=57))
-            self.register_behavior(GasBuildingController(to_count=7, max_pending=2))
-        bases_started = self.townhalls.amount + self.already_pending(UnitID.HATCHERY)
-        if bases_started < 4 or self.units(UnitID.DRONE).amount < 57:
-            self.spawn_inhibitors.add("late_game_expanding")
-        else:
-            self.spawn_inhibitors.discard("late_game_expanding")
 
-        # Verificação adicional: se já temos 4+ bases (prontas ou em produção) e 60+ trabalhadores, garantir que a tag está desligada
-        if bases_started >= 4 and self.units(UnitID.DRONE).amount > 59:
+        drone_count = self.units(UnitID.DRONE).amount
+        # self.townhalls counts HATCHERY+LAIR+HIVE whether ready or under construction,
+        # as a plain integer — unlike already_pending() which returns a float (sum of
+        # build_progress), causing 3 + 0.7 = 3.7 < 4 and permanently locking the inhibitor.
+        bases_started = self.townhalls.ready.amount + math.ceil(self.already_pending(UnitID.HATCHERY))
+
+        if bases_started >= 4 and drone_count >= 57:
             self.spawn_inhibitors.discard("late_game_expanding")
+            self.late_game_expansion_done = True
+        elif not self.late_game_expansion_done:
+            self.spawn_inhibitors.add("late_game_expanding")
+
+        macro_plan: MacroPlan = MacroPlan()
+
+        macro_plan.add(ExpansionController(to_count=4, max_pending=2))
+        macro_plan.add(BuildWorkers(to_count=57))
+        macro_plan.add(GasBuildingController(to_count=7, max_pending=2))
+        self.register_behavior(macro_plan)
 
     async def make_roach_speed(self):
         if UpgradeId.TUNNELINGCLAWS in self.state.upgrades:
@@ -2431,7 +2443,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260309")
+            await self.chat_send("Tag: Version_260311")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
