@@ -1878,6 +1878,7 @@ class MyBot(AresBot):
         if self.bo_changed == False:
             self.build_order_runner.switch_opening("TerranAgressive")
             self.bo_changed = True
+            self._begin_attack_at_supply = 90
 
 
     async def is_late_game(self):
@@ -2443,7 +2444,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260311")
+            await self.chat_send("Tag: Version_260313")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
