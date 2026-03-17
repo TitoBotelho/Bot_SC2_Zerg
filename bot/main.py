@@ -212,6 +212,7 @@ class MyBot(AresBot):
         self.taf_worker_build_macro_hatch = 0
         self.second_base_canceled = False
         self.enemy_battlecruisers = {}
+        self.enemy_banshees = {}
         self.nydus_spot_set = False
         self.tag_third_overlord = 0
         self.enemy_nat_cc_found = False
@@ -459,6 +460,8 @@ class MyBot(AresBot):
                 await self.make_changeling()
                 await self.move_changeling()
                 await self.assign_overseer()
+                await self.is_mass_banshee()
+
 
             if "Liberator" in self.enemy_strategy:
                 await self.make_spores()
@@ -2053,25 +2056,14 @@ class MyBot(AresBot):
 
 
     async def is_mass_banshee(self):
-        """
-        Make air defense if enemy is making a lot of banshees.
-        Cloaked Banshees share the same UnitID.BANSHEE type (no separate ID for cloaked).
-        When cloaked and undetected they disappear from enemy_units, so we track by tag:
-        once a banshee tag is registered it stays counted even while cloaked.
-        We also match by name as a fallback in case of framework edge cases.
-        """
-        if "Mass_Banshees" in self.enemy_strategy:
-            return
-
-        # Registra pelo type_id (visível ou detectada) e pelo nome (fallback)
-        for enemy in self.enemy_units:
-            if enemy.type_id == UnitID.BANSHEE or enemy.name == "Banshee":
-                if enemy.tag not in self.enemy_banshees:
-                    self.enemy_banshees[enemy.tag] = enemy.type_id
-
-        if len(self.enemy_banshees) >= 2:
-            await self.chat_send("Tag: Mass_Banshee")
-            self.enemy_strategy.append("Mass_Banshees")
+        if "Mass_Banshee" not in self.enemy_strategy:
+            for unit in self.enemy_units:
+                if unit.name == 'Banshee':
+                    if unit.tag not in self.enemy_banshees:
+                        self.enemy_banshees[unit.tag] = unit.type_id
+            if len(self.enemy_banshees) >= 2:
+                await self.chat_send("Tag: Mass_Banshee")
+                self.enemy_strategy.append("Mass_Banshee")
 
 
 
