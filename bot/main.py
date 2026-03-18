@@ -213,11 +213,15 @@ class MyBot(AresBot):
         self.second_base_canceled = False
         self.enemy_battlecruisers = {}
         self.enemy_banshees = {}
+        self.last_known_banshee_positions = {}  # tag -> Point2, para seguir banshees invisíveis
+        self.last_known_banshee_frames = {}     # tag -> game_loop frame quando banshee foi vista
+        self.overseer_banshee_assignments = {}  # overseer_tag -> banshee_tag
         self.nydus_spot_set = False
         self.tag_third_overlord = 0
         self.enemy_nat_cc_found = False
         self.infestation_pit_ordered = False
         self.spire_ordered = False
+        self.first_overlord = 0
 
         self._commenced_attack: bool = False
 
@@ -354,6 +358,7 @@ class MyBot(AresBot):
     async def send_overlord_to_scout(self):
         # Select the first Overlord
         overlord = self.units(UnitID.OVERLORD).first
+        self.first_overlord = overlord
     
         enemy_natural_location = self.mediator.get_enemy_nat
         target = enemy_natural_location.position.towards(self.game_info.map_center, 12)
@@ -467,7 +472,7 @@ class MyBot(AresBot):
                 await self.make_spores()
 
 
-            if "Flying_Structures" in self.enemy_strategy or "Mass_Banshee" in self.enemy_strategy:
+            if "Flying_Structures" in self.enemy_strategy:
                 #await self.build_lair()
                 #await self.build_hydra_den()
                 #self.register_behavior(BuildWorkers(to_count=80))
@@ -475,6 +480,15 @@ class MyBot(AresBot):
                 #await self.build_second_gas()
                 await self.build_four_gas()
                 await self.spread_overlords()
+
+
+            if "Mass_Banshee" in self.enemy_strategy:
+                #await self.build_lair()
+                #await self.build_hydra_den()
+                #self.register_behavior(BuildWorkers(to_count=80))
+                await self.build_spire()
+                #await self.build_second_gas()
+                await self.build_four_gas()
 
             if "Terran_Agressive" in self.enemy_strategy:
                 #await self.build_roach_warren()
@@ -909,6 +923,15 @@ class MyBot(AresBot):
                     await self.chat_send("Tag: 2_Base_Terran")
                     self.enemy_strategy.append("2_Base_Terran")
 
+                # In either case, move the first overlord to the hg spot near the enemy natural
+                enemy_natural_location = self.mediator.get_enemy_nat
+                hg_spot = self.mediator.get_closest_overlord_spot(
+                    from_pos=enemy_natural_location
+                )
+                self.first_overlord.move(hg_spot)
+
+
+
     async def is_protoss_agressive(self):
         if "2_Base_Protoss" not in self.enemy_strategy and "Protoss_Agressive" not in self.enemy_strategy:
         #verify if the protoss opponent has only one base. If so, it is an agressive terran and build a spine crawler
@@ -1315,7 +1338,8 @@ class MyBot(AresBot):
 
     async def build_spire(self):
         if self.structures(UnitID.SPIRE).amount == 0 and not self.already_pending(UnitID.SPIRE):
-            self.spawn_inhibitors.add("building_spire")
+            if self.structures(UnitID.LAIR).ready:
+                self.spawn_inhibitors.add("building_spire")
         else:
             self.spawn_inhibitors.discard("building_spire")
 
@@ -1447,16 +1471,25 @@ class MyBot(AresBot):
     
         # Se houver alvos em mutalisk_targets, atacar o primeiro
         if self.mutalisk_targets:
-            first_target_tag = next(iter(self.mutalisk_targets))
-            first_target = self.mutalisk_targets[first_target_tag]
-    
+            # Prioridade: banshees primeiro
+            banshees_in_targets = [
+                t for t in self.mutalisk_targets.values()
+                if t in self.enemy_units and t.name == 'Banshee'
+            ]
+            if banshees_in_targets:
+                first_target = banshees_in_targets[0]
+            else:
+                first_target_tag = next(iter(self.mutalisk_targets))
+                first_target = self.mutalisk_targets[first_target_tag]
+
             # Verificar se o alvo ainda está em enemy_units ou enemy_structures
             if first_target in self.enemy_units or first_target in self.enemy_structures:
                 for mutalisk in mutalisks:
                     mutalisk.attack(first_target)
             else:
                 # Se o alvo não estiver mais presente, removê-lo da lista
-                del self.mutalisk_targets[first_target_tag]
+                if first_target.tag in self.mutalisk_targets:
+                    del self.mutalisk_targets[first_target.tag]
 
 
     async def spread_overlords(self):
@@ -1540,13 +1573,29 @@ class MyBot(AresBot):
                 zergling.move(self.enemy_start_locations[0])
 
     async def make_overseer(self):
-        if self.structures(UnitID.LAIR):
-            if self.can_afford(UnitID.OVERSEER):
-                if self.units(UnitID.OVERSEER).ready.amount == 0 and not self.already_pending(UnitID.OVERSEER):
-                    # Encontrar o Overlord com a tag armazenada em self.tag_second_overlord
-                    overseer_candidate = self.units(UnitID.OVERLORD).find_by_tag(self.tag_second_overlord)
-                    if overseer_candidate:
-                        overseer_candidate(AbilityId.MORPH_OVERSEER)
+        if not self.structures(UnitID.LAIR):
+            return
+
+        banshee_count = sum(1 for u in self.enemy_units if u.name == 'Banshee')
+        target_count = max(1, banshee_count)
+
+        current_count = (
+            self.units(UnitID.OVERSEER).amount
+            + self.units(UnitID.OVERLORDCOCOON).amount
+        )
+
+        if current_count >= target_count:
+            return
+
+        if not self.can_afford(UnitID.OVERSEER):
+            return
+
+        # Morph any overlord that is not the first (scouting) overlord
+        first_overlord_tag = getattr(self.first_overlord, 'tag', self.first_overlord)
+        for overlord in self.units(UnitID.OVERLORD):
+            if overlord.tag != first_overlord_tag:
+                overlord(AbilityId.MORPH_OVERSEER)
+                break
 
 
  
@@ -1556,23 +1605,74 @@ class MyBot(AresBot):
         if not overseers:
             return
 
-        # 1. Se houver banshee, siga apenas a banshee mais próxima (ignora roach)
-        banshees = [unit for unit in self.enemy_units if unit.name == 'Banshee']
-        if banshees:
-            for overseer in overseers:
-                target_banshee = min(banshees, key=lambda b: overseer.distance_to(b))
-                if overseer.distance_to(target_banshee) > 2:
-                    self.do(overseer.move(target_banshee.position))
-            return  # Sai da função, não executa o código das roaches
+        if self.EnemyRace == Race.Terran:
+            banshees = [unit for unit in self.enemy_units if unit.name == 'Banshee']
+            banshee_by_tag = {b.tag: b for b in banshees}
 
-        # 2. Caso contrário, siga a roach mais próxima da base inimiga
-        roaches = self.units(UnitID.ROACH).ready
-        if roaches:
-            enemy_main = self.enemy_start_locations[0]
-            target_roach = min(roaches, key=lambda r: r.distance_to(enemy_main))
+            # Atualiza posições conhecidas das banshees visíveis
+            for b in banshees:
+                self.last_known_banshee_positions[b.tag] = b.position
+                self.last_known_banshee_frames[b.tag] = self.state.game_loop
+
+            # Remove posições não vistas há mais de 500 frames (~22 segundos)
+            stale_tags = [
+                tag for tag, frame in self.last_known_banshee_frames.items()
+                if self.state.game_loop - frame > 500
+            ]
+            for tag in stale_tags:
+                self.last_known_banshee_positions.pop(tag, None)
+                self.last_known_banshee_frames.pop(tag, None)
+
+            # Remove atribuições de overseers que já não existem
+            active_overseer_tags = {o.tag for o in overseers}
+            self.overseer_banshee_assignments = {
+                ot: bt for ot, bt in self.overseer_banshee_assignments.items()
+                if ot in active_overseer_tags
+            }
+
+            # Remove atribuições para banshees sem posição conhecida (mortas/expiradas)
+            self.overseer_banshee_assignments = {
+                ot: bt for ot, bt in self.overseer_banshee_assignments.items()
+                if bt in banshee_by_tag or bt in self.last_known_banshee_positions
+            }
+
+            # Banshee tags já atribuídas
+            assigned_banshee_tags = set(self.overseer_banshee_assignments.values())
+
+            # Atribui overseers sem banshee a banshees ainda não atribuídas
+            unassigned_overseers = [o for o in overseers if o.tag not in self.overseer_banshee_assignments]
+            unassigned_banshees = [b for b in banshees if b.tag not in assigned_banshee_tags]
+
+            for overseer in unassigned_overseers:
+                if unassigned_banshees:
+                    # Escolhe a banshee mais próxima deste overseer
+                    target = min(unassigned_banshees, key=lambda b: overseer.distance_to(b))
+                    self.overseer_banshee_assignments[overseer.tag] = target.tag
+                    unassigned_banshees.remove(target)
+
+            # Move cada overseer para sua banshee atribuída
             for overseer in overseers:
-                if overseer.distance_to(target_roach) > 2:
-                    self.do(overseer.move(target_roach.position))
+                banshee_tag = self.overseer_banshee_assignments.get(overseer.tag)
+                if banshee_tag is None:
+                    continue
+
+                if banshee_tag in banshee_by_tag:
+                    # Banshee visível: segue diretamente
+                    self.do(overseer.move(banshee_by_tag[banshee_tag].position))
+                elif banshee_tag in self.last_known_banshee_positions:
+                    # Banshee invisível: vai para última posição conhecida
+                    self.do(overseer.move(self.last_known_banshee_positions[banshee_tag]))
+            return
+
+        if self.EnemyRace == Race.Zerg:
+            # 2. Caso contrário, siga a roach mais próxima da base inimiga
+            roaches = self.units(UnitID.ROACH).ready
+            if roaches:
+                enemy_main = self.enemy_start_locations[0]
+                target_roach = min(roaches, key=lambda r: r.distance_to(enemy_main))
+                for overseer in overseers:
+                    if overseer.distance_to(target_roach) > 2:
+                        self.do(overseer.move(target_roach.position))
 
 
     async def build_one_spine_crawler(self):
@@ -2436,7 +2536,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260313")
+            await self.chat_send("Tag: Version_260318")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
