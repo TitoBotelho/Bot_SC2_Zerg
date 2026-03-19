@@ -220,6 +220,7 @@ class MyBot(AresBot):
         self.tag_third_overlord = 0
         self.enemy_nat_cc_found = False
         self.infestation_pit_ordered = False
+        self.evolution_chamber_ordered = False
         self.spire_ordered = False
         self.first_overlord = 0
 
@@ -415,8 +416,6 @@ class MyBot(AresBot):
             await self.attack_reaper()
             await self.attack_banshee()
             await self.defend()
-            await self.build_range_upgrades()
-            await self.build_armor_upgrades()
             await self.is_structures_flying()
             #await self.build_lair()
             #await self.build_spine_crawlers()
@@ -433,7 +432,6 @@ class MyBot(AresBot):
             await self.is_mass_marauder()
             await self.is_mass_liberator()
             await self.make_ravagers()
-            await self.build_plus_one_roach_armor()
             await self.is_mass_widow_mine()
             await self.is_late_game()
             await self.make_roach_speed()
@@ -505,6 +503,8 @@ class MyBot(AresBot):
                 await self.late_game_protocol()
                 await self.build_infestation_pit()
                 await self.build_lair()
+                await self.build_evolution_chamber()
+                await self.build_missle_upgrades()
 
             if "Battlecruiser" in self.enemy_strategy:
                 await self.build_spire()
@@ -2409,7 +2409,84 @@ class MyBot(AresBot):
                     self.spawn_inhibitors.discard("late_game_vs_protoss_workers")
 
 
+    async def build_missle_upgrades(self):
+        if not (self.structures(UnitID.EVOLUTIONCHAMBER).ready and self.structures(UnitID.SPAWNINGPOOL).ready):
+            return
 
+        # --- Missile Weapons Level 1 ---
+        if UpgradeId.ZERGMISSILEWEAPONSLEVEL1 not in self.state.upgrades:
+            if self.already_pending_upgrade(UpgradeId.ZERGMISSILEWEAPONSLEVEL1):
+                self.spawn_inhibitors.discard("researching_missle_level_1")
+            else:
+                self.spawn_inhibitors.add("researching_missle_level_1")
+                if self.can_afford(UpgradeId.ZERGMISSILEWEAPONSLEVEL1):
+                    self.research(UpgradeId.ZERGMISSILEWEAPONSLEVEL1)
+            return
+
+        self.spawn_inhibitors.discard("researching_missle_level_1")
+
+        # --- Ground Armor Level 1 ---
+        if UpgradeId.ZERGGROUNDARMORSLEVEL1 not in self.state.upgrades:
+            if self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL1):
+                self.spawn_inhibitors.discard("researching_armor_level_1")
+            else:
+                self.spawn_inhibitors.add("researching_armor_level_1")
+                if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL1):
+                    self.research(UpgradeId.ZERGGROUNDARMORSLEVEL1)
+            return
+
+        self.spawn_inhibitors.discard("researching_armor_level_1")
+
+        # --- Level 2 upgrades require Lair ---
+        if not self.structures(UnitID.LAIR).ready:
+            return
+
+        # --- Missile Weapons Level 2 ---
+        if UpgradeId.ZERGMISSILEWEAPONSLEVEL2 not in self.state.upgrades:
+            if self.already_pending_upgrade(UpgradeId.ZERGMISSILEWEAPONSLEVEL2):
+                self.spawn_inhibitors.discard("researching_missle_level_2")
+            else:
+                self.spawn_inhibitors.add("researching_missle_level_2")
+                if self.can_afford(UpgradeId.ZERGMISSILEWEAPONSLEVEL2):
+                    self.research(UpgradeId.ZERGMISSILEWEAPONSLEVEL2)
+            return
+
+        self.spawn_inhibitors.discard("researching_missle_level_2")
+
+        # --- Ground Armor Level 2 ---
+        if UpgradeId.ZERGGROUNDARMORSLEVEL2 not in self.state.upgrades:
+            if self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL2):
+                self.spawn_inhibitors.discard("researching_armor_level_2")
+            else:
+                self.spawn_inhibitors.add("researching_armor_level_2")
+                if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL2):
+                    self.research(UpgradeId.ZERGGROUNDARMORSLEVEL2)
+            return
+
+        self.spawn_inhibitors.discard("researching_armor_level_2")
+
+
+    async def build_evolution_chamber(self):
+        if not self.structures(UnitID.SPAWNINGPOOL).ready:
+            return
+
+        if self.structures(UnitID.EVOLUTIONCHAMBER) or self.already_pending(UnitID.EVOLUTIONCHAMBER):
+            self.evolution_chamber_ordered = False
+            return
+
+        if self.evolution_chamber_ordered:
+            return
+
+        self.macro_plan.add(
+            BuildStructure(
+                base_location=self.first_base.position,
+                structure_id=UnitID.EVOLUTIONCHAMBER,
+                to_count=1,
+            )
+        )
+        self.register_behavior(self.macro_plan)
+        self.evolution_chamber_ordered = True
+        await self.chat_send("Tag: Evolution_Chamber_Ordered")
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -2536,7 +2613,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260318")
+            await self.chat_send("Tag: Version_260319")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
