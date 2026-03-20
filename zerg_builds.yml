@@ -416,11 +416,11 @@ Builds:
             - 15 drone
             - 15 hatchery
             - 15 spawningpool
-            - 15 drone
-            - 15 drone
-            - 15 drone
-            - 15 drone
-            - 16 overlord
+            - 14 drone
+            - 14 drone
+            - 14 drone
+            - 14 drone
+            - 14 overlord
             - 16 drone
             - 16 queen
             - 15 gas
