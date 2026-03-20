@@ -413,18 +413,18 @@ Builds:
             - 13 drone
             - 14 drone
             - 15 drone
-            - 16 drone
-            - 16 spawningpool
-            - 16 drone
-            - 16 drone
-            - 16 hatchery
-            - 16 gas
-            - 16 drone
-            - 16 drone
+            - 15 drone
+            - 15 hatchery
+            - 15 spawningpool
+            - 15 drone
+            - 15 drone
+            - 15 drone
+            - 15 drone
             - 16 overlord
             - 16 drone
             - 16 queen
-            #- 17 zergling
+            - 15 gas
+            - 16 hatchery
             - 18 drone
             - 18 queen
             - 19 drone
@@ -448,6 +448,7 @@ Builds:
             - 33 drone
             - 34 drone
             - 35 gas
+            - 35 lair
             - 35 queen
             - 36 drone
             - 36 drone
@@ -460,6 +461,7 @@ Builds:
             - 36 drone
             - 36 gas
             - 36 overlord
+            - 36 evolutionchamber
             
 
 

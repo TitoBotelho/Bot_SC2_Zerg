@@ -557,7 +557,6 @@ class MyBot(AresBot):
             await self.is_worker_rush()
             await self.force_complete_build_order()
             #await self.zergling_scout()
-            await self.build_lair()
             await self.make_overseer()
             await self.turnOffSpawningControllerOnEarlyGame()
             #await self.build_one_spine_crawler()
@@ -567,6 +566,8 @@ class MyBot(AresBot):
             await self.is_twelve_pool()
             await self.build_roach_warren_failed()
             await self.check_nydus_spot()
+            await self.build_missle_upgrades()
+            await self.make_ravagers()
 
 
             if "Mutalisk" in self.enemy_strategy:
@@ -1451,45 +1452,53 @@ class MyBot(AresBot):
 
     async def mutalisk_attack(self):
         mutalisks: Units = self.units(UnitID.MUTALISK)
-    
-        # Atualizar a lista de mutalisk_targets com unidades voadoras
-        for unit in self.enemy_units:
-            if unit.is_flying and unit.tag not in self.mutalisk_targets:
-                self.mutalisk_targets[unit.tag] = unit
-    
-        # Adicionar estruturas inimigas à lista de mutalisk_targets
-        for structure in self.enemy_structures:
-            if structure.tag not in self.mutalisk_targets:
-                self.mutalisk_targets[structure.tag] = structure
-    
-        # Remover alvos que não estão mais em enemy_units ou enemy_structures
-        self.mutalisk_targets = {
-            tag: target
-            for tag, target in self.mutalisk_targets.items()
-            if target in self.enemy_units or target in self.enemy_structures
-        }
-    
-        # Se houver alvos em mutalisk_targets, atacar o primeiro
-        if self.mutalisk_targets:
-            # Prioridade: banshees primeiro
-            banshees_in_targets = [
-                t for t in self.mutalisk_targets.values()
-                if t in self.enemy_units and t.name == 'Banshee'
-            ]
-            if banshees_in_targets:
-                first_target = banshees_in_targets[0]
-            else:
-                first_target_tag = next(iter(self.mutalisk_targets))
-                first_target = self.mutalisk_targets[first_target_tag]
+        if not mutalisks:
+            return
 
-            # Verificar se o alvo ainda está em enemy_units ou enemy_structures
-            if first_target in self.enemy_units or first_target in self.enemy_structures:
-                for mutalisk in mutalisks:
-                    mutalisk.attack(first_target)
-            else:
-                # Se o alvo não estiver mais presente, removê-lo da lista
-                if first_target.tag in self.mutalisk_targets:
-                    del self.mutalisk_targets[first_target.tag]
+        all_enemy: list = list(self.enemy_units) + list(self.enemy_structures)
+        if not all_enemy:
+            return
+
+        def priority_key(u: Unit) -> int:
+            if u.type_id == UnitID.BANSHEE:
+                return 0
+            if u.type_id in {UnitID.VIKINGFIGHTER, UnitID.VIKINGASSAULT}:
+                return 1
+            if u.type_id == UnitID.MEDIVAC:
+                return 2
+            if u.type_id in {UnitID.SIEGETANK, UnitID.SIEGETANKSIEGED}:
+                return 3
+            if u.type_id == UnitID.SCV:
+                return 5
+            if u.is_flying and u.type_id in ALL_STRUCTURES:
+                return 6
+            return 4  # remaining army units
+
+        # mutalisk_targets stores a single shared target tag under key 0
+        enemy_by_tag: dict[int, Unit] = {u.tag: u for u in all_enemy}
+
+        current_target: Optional[Unit] = enemy_by_tag.get(self.mutalisk_targets.get(0))
+
+        if current_target is None:
+            # Target died or not yet assigned — pick the best one
+            best = sorted(all_enemy, key=lambda u: (priority_key(u), u.distance_to(mutalisks.center)))
+            if not best:
+                return
+            current_target = best[0]
+            self.mutalisk_targets[0] = current_target.tag
+        else:
+            # Target is alive — only switch if a higher-priority target has appeared
+            current_priority = priority_key(current_target)
+            if current_priority > 0:
+                better = [u for u in all_enemy if priority_key(u) < current_priority]
+                if better:
+                    best_priority = min(priority_key(u) for u in better)
+                    top_targets = [u for u in better if priority_key(u) == best_priority]
+                    current_target = min(top_targets, key=lambda u: u.distance_to(mutalisks.center))
+                    self.mutalisk_targets[0] = current_target.tag
+
+        for mutalisk in mutalisks:
+            mutalisk.attack(current_target)
 
 
     async def spread_overlords(self):
@@ -2613,7 +2622,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260319")
+            await self.chat_send("Tag: Version_260320")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -2790,6 +2799,58 @@ class MyBot(AresBot):
                 burrow_behavior: CombatManeuver = self.burrow_behavior(unit)
                 attacking_maneuver.add(burrow_behavior)
 
+#_______________________________________________________________________________________________________________________
+#          CORRUPTOR
+#_______________________________________________________________________________________________________________________
+            if unit.type_id == UnitID.CORRUPTOR:
+                CORRUPTOR_AIR_PRIORITY: list[UnitID] = [
+                    UnitID.BATTLECRUISER,
+                    UnitID.VIKINGFIGHTER,
+                    UnitID.BANSHEE,
+                    UnitID.MEDIVAC,
+                ]
+                # Query all enemy units globally — near_enemy uses EnemyGround and misses air
+                all_enemy_air: Units = self.enemy_units.filter(
+                    lambda u: u.is_flying and not u.is_memory
+                )
+                if all_enemy_air:
+                    # Find the highest-priority air target on the entire map
+                    global_air_target: Optional[Unit] = None
+                    for p_type in CORRUPTOR_AIR_PRIORITY:
+                        candidates = all_enemy_air.of_type(p_type)
+                        if candidates:
+                            global_air_target = min(
+                                candidates, key=lambda u: u.distance_to(unit)
+                            )
+                            break
+                    if not global_air_target:
+                        global_air_target = min(
+                            all_enemy_air, key=lambda u: u.distance_to(unit)
+                        )
+
+                    if in_attack_range := cy_in_attack_range(unit, all_enemy_air):
+                        # Shoot highest-priority type already in weapon range
+                        priority_in_range = None
+                        for p_type in CORRUPTOR_AIR_PRIORITY:
+                            candidates = [u for u in in_attack_range if u.type_id == p_type]
+                            if candidates:
+                                priority_in_range = candidates
+                                break
+                        targets = priority_in_range if priority_in_range else in_attack_range
+                        attacking_maneuver.add(
+                            ShootTargetInRange(unit=unit, targets=targets)
+                        )
+                    else:
+                        # Path to the priority air target anywhere on the map
+                        attacking_maneuver.add(
+                            PathUnitToTarget(unit=unit, grid=grid, target=global_air_target.position)
+                        )
+                        attacking_maneuver.add(
+                            AMove(unit=unit, target=global_air_target.position)
+                        )
+                self.register_behavior(attacking_maneuver)
+                continue
+
             # enemy around, engagement control
             if all_close:
                 # ares's cython version of `cy_in_attack_range` is approximately 4
@@ -2903,9 +2964,7 @@ class MyBot(AresBot):
 #          OTHER UNITS
 #_______________________________________________________________________________________________________________________
 
-
-                else:
-                    attacking_maneuver.add(AMove(unit=unit, target=target))
+                attacking_maneuver.add(AMove(unit=unit, target=target))
 
                     
             # no enemy around, path to the attack target
