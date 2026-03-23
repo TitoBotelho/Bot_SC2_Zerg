@@ -394,11 +394,25 @@ class MyBot(AresBot):
         # see `self.on_unit_created` where we originally assigned units ATTACKING role //
         forces: Units = self.mediator.get_units_from_role(role=UnitRole.ATTACKING)
 
+        # Separate air attackers from ground forces.
+        # Corruptors and mutalisks always intercept air threats independently of _commenced_attack.
+        _AIR_ATTACKER_TYPES: frozenset = frozenset({UnitID.CORRUPTOR, UnitID.MUTALISK})
+        air_forces: Units = forces.filter(lambda u: u.type_id in _AIR_ATTACKER_TYPES)
+
         if self._commenced_attack:
             self._micro(forces)
 
         elif self.get_total_supply(forces) >= self._begin_attack_at_supply:
             self._commenced_attack = True
+
+        # Even when the main army is not yet attacking, air interceptors react
+        # to any enemy flying unit over our creep (e.g. Battlecruiser, Banshee).
+        if not self._commenced_attack and air_forces:
+            enemy_air_on_creep: Units = self.enemy_units.filter(
+                lambda u: u.is_flying and not u.is_memory and self.has_creep(u.position)
+            )
+            if enemy_air_on_creep:
+                self._micro(air_forces)
 
 
 
@@ -426,7 +440,6 @@ class MyBot(AresBot):
             await self.is_worker_rush()
             #await self.build_hydra_den()
             await self.force_complete_build_order()
-            await self.mutalisk_attack()
             await self.burrow_infestors()
             await self.create_queens_after_build_order()
             await self.is_mass_marauder()
@@ -1240,6 +1253,7 @@ class MyBot(AresBot):
 
     async def defend(self):
         enemy_on_creep = False
+        air_enemy_on_creep = False
         for enemyUnit in self.enemy_units:
             if self.has_creep(enemyUnit.position):
                 if not enemyUnit.is_flying:
@@ -1248,6 +1262,9 @@ class MyBot(AresBot):
                     self._commenced_attack = True
                     # Adicionar a unidade inimiga ao dicionário enemies_on_creep
                     self.enemies_on_creep[enemyUnit.tag] = enemyUnit
+                else:
+                    # Unidade voadora sobre a creep (ex: Battlecruiser) — não aciona defesa terrestre
+                    air_enemy_on_creep = True
             else:
                 # Remover a unidade inimiga do dicionário enemies_on_creep se ela sair da creep
                 if enemyUnit.tag in self.enemies_on_creep:
@@ -1256,12 +1273,18 @@ class MyBot(AresBot):
         # Remover unidades inimigas do dicionário se elas não estiverem mais na lista de unidades inimigas
         self.enemies_on_creep = {tag: unit for tag, unit in self.enemies_on_creep.items() if unit in self.enemy_units}
     
-        if not enemy_on_creep:
+        # Só executa o reset se não houver nenhum inimigo (terrestre ou aéreo) sobre a creep.
+        # Se houver inimigo aéreo, os corruptors/mutalisks tratam disso no on_step; não resetar aqui.
+        if not enemy_on_creep and not air_enemy_on_creep:
             forces: Units = self.mediator.get_units_from_role(role=UnitRole.ATTACKING)
+            _AIR_ATTACKER_TYPES = {UnitID.CORRUPTOR, UnitID.MUTALISK}
+            ground_forces: Units = forces.filter(lambda u: u.type_id not in _AIR_ATTACKER_TYPES)
             if self.get_total_supply(forces) < self._begin_attack_at_supply:
                 self._commenced_attack = False
                 self.defending = False
-                for unit in forces:
+                # Somente unidades terrestres recebem a ordem de recuar.
+                # Air forces (corruptors, mutalisks) são gerenciadas separadamente no on_step.
+                for unit in ground_forces:
                     if self.second_base is not None:         
                         unit.move(self.second_base.position.towards(self.game_info.map_center, 4))                        
                     else:
@@ -1448,57 +1471,6 @@ class MyBot(AresBot):
 
 
 
-
-
-    async def mutalisk_attack(self):
-        mutalisks: Units = self.units(UnitID.MUTALISK)
-        if not mutalisks:
-            return
-
-        all_enemy: list = list(self.enemy_units) + list(self.enemy_structures)
-        if not all_enemy:
-            return
-
-        def priority_key(u: Unit) -> int:
-            if u.type_id == UnitID.BANSHEE:
-                return 0
-            if u.type_id in {UnitID.VIKINGFIGHTER, UnitID.VIKINGASSAULT}:
-                return 1
-            if u.type_id == UnitID.MEDIVAC:
-                return 2
-            if u.type_id in {UnitID.SIEGETANK, UnitID.SIEGETANKSIEGED}:
-                return 3
-            if u.type_id == UnitID.SCV:
-                return 5
-            if u.is_flying and u.type_id in ALL_STRUCTURES:
-                return 6
-            return 4  # remaining army units
-
-        # mutalisk_targets stores a single shared target tag under key 0
-        enemy_by_tag: dict[int, Unit] = {u.tag: u for u in all_enemy}
-
-        current_target: Optional[Unit] = enemy_by_tag.get(self.mutalisk_targets.get(0))
-
-        if current_target is None:
-            # Target died or not yet assigned — pick the best one
-            best = sorted(all_enemy, key=lambda u: (priority_key(u), u.distance_to(mutalisks.center)))
-            if not best:
-                return
-            current_target = best[0]
-            self.mutalisk_targets[0] = current_target.tag
-        else:
-            # Target is alive — only switch if a higher-priority target has appeared
-            current_priority = priority_key(current_target)
-            if current_priority > 0:
-                better = [u for u in all_enemy if priority_key(u) < current_priority]
-                if better:
-                    best_priority = min(priority_key(u) for u in better)
-                    top_targets = [u for u in better if priority_key(u) == best_priority]
-                    current_target = min(top_targets, key=lambda u: u.distance_to(mutalisks.center))
-                    self.mutalisk_targets[0] = current_target.tag
-
-        for mutalisk in mutalisks:
-            mutalisk.attack(current_target)
 
 
     async def spread_overlords(self):
@@ -2606,7 +2578,6 @@ class MyBot(AresBot):
             UnitID.QUEEN,
             UnitID.MULE,
             UnitID.OVERLORD,
-            UnitID.MUTALISK,
             UnitID.CHANGELING,
         }:
             # here we are making a request to an ares manager via the mediator
@@ -2622,7 +2593,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260320")
+            await self.chat_send("Tag: Version_260323")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -2775,6 +2746,52 @@ class MyBot(AresBot):
             first_enemy_on_creep = next(iter(self.enemies_on_creep.values()))
             target = first_enemy_on_creep.position
 
+        # Pre-compute shared mutalisk target (once per step)
+        def _muta_priority(u: Unit) -> int:
+            if u.type_id == UnitID.BANSHEE:
+                return 0
+            if u.type_id in {UnitID.VIKINGFIGHTER, UnitID.VIKINGASSAULT}:
+                return 1
+            if u.type_id == UnitID.MEDIVAC:
+                return 2
+            if u.type_id in {UnitID.SIEGETANK, UnitID.SIEGETANKSIEGED}:
+                return 3
+            if u.type_id == UnitID.SCV:
+                return 5
+            if u.is_flying and u.type_id in ALL_STRUCTURES:
+                return 6
+            return 4
+
+        _muta_shared_target: Optional[Unit] = None
+        _all_enemy_for_muta: Optional[Units] = None
+        _muta_units: Units = forces.filter(lambda u: u.type_id == UnitID.MUTALISK)
+        if _muta_units:
+            _combined = (
+                self.enemy_units.filter(lambda u: not u.is_memory)
+                + self.enemy_structures.filter(lambda u: not u.is_memory)
+            )
+            if _combined:
+                _all_enemy_for_muta = _combined
+                _enemy_by_tag: dict[int, Unit] = {u.tag: u for u in _combined}
+                _current: Optional[Unit] = _enemy_by_tag.get(self.mutalisk_targets.get(0))
+                if _current is None:
+                    _best = sorted(
+                        _combined,
+                        key=lambda u: (_muta_priority(u), u.distance_to(_muta_units.center)),
+                    )
+                    if _best:
+                        _current = _best[0]
+                        self.mutalisk_targets[0] = _current.tag
+                else:
+                    _cp = _muta_priority(_current)
+                    if _cp > 0:
+                        _better = [u for u in _combined if _muta_priority(u) < _cp]
+                        if _better:
+                            _bp = min(_muta_priority(u) for u in _better)
+                            _top = [u for u in _better if _muta_priority(u) == _bp]
+                            _current = min(_top, key=lambda u: u.distance_to(_muta_units.center))
+                            self.mutalisk_targets[0] = _current.tag
+                _muta_shared_target = _current
 
         # use `ares-sc2` combat maneuver system
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/combat_behaviors.html
@@ -2848,6 +2865,43 @@ class MyBot(AresBot):
                         attacking_maneuver.add(
                             AMove(unit=unit, target=global_air_target.position)
                         )
+                self.register_behavior(attacking_maneuver)
+                continue
+
+#_______________________________________________________________________________________________________________________
+#          MUTALISK
+#_______________________________________________________________________________________________________________________
+            if unit.type_id == UnitID.MUTALISK:
+                if not self._commenced_attack:
+                    # Modo defensivo: só ataca unidades voadoras sobre a creep.
+                    # Não avança em direção a alvos terrestres nem à base inimiga.
+                    enemy_air = self.enemy_units.filter(
+                        lambda u: u.is_flying and not u.is_memory
+                        and self.has_creep(u.position)
+                    )
+                    if enemy_air:
+                        if in_attack_range := cy_in_attack_range(unit, enemy_air):
+                            attacking_maneuver.add(
+                                ShootTargetInRange(unit=unit, targets=in_attack_range)
+                            )
+                        closest_air = min(enemy_air, key=lambda u: u.distance_to(unit))
+                        attacking_maneuver.add(AMove(unit=unit, target=closest_air.position))
+                    self.register_behavior(attacking_maneuver)
+                    continue
+                # Modo ataque: usa o alvo compartilhado por prioridade
+                if _muta_shared_target is None or _all_enemy_for_muta is None:
+                    attacking_maneuver.add(
+                        PathUnitToTarget(unit=unit, grid=grid, target=target)
+                    )
+                    attacking_maneuver.add(AMove(unit=unit, target=target))
+                else:
+                    if in_attack_range := cy_in_attack_range(unit, _all_enemy_for_muta):
+                        attacking_maneuver.add(
+                            ShootTargetInRange(unit=unit, targets=in_attack_range)
+                        )
+                    attacking_maneuver.add(
+                        AMove(unit=unit, target=_muta_shared_target.position)
+                    )
                 self.register_behavior(attacking_maneuver)
                 continue
 
