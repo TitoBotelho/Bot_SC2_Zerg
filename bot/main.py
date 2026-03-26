@@ -448,8 +448,8 @@ class MyBot(AresBot):
             await self.is_mass_widow_mine()
             await self.is_late_game()
             await self.make_roach_speed()
-            await self.use_fungal_growth()
-            await self.throw_bile()
+            # await self.use_fungal_growth()
+            # await self.throw_bile()
             await self.is_bc()
             await self.is_mass_tank()
 
@@ -2008,132 +2008,131 @@ class MyBot(AresBot):
 
 
 
-    async def use_fungal_growth(self):
+    # async def use_fungal_growth(self):
 
-        """
-        Lança Fungal Growth apenas se conseguir atingir pelo menos 3 inimigos com o mesmo lançamento.
-        - Custo: 75 energia
-        - Alcance: ~10
-        - Só lança se pelo menos 3 inimigos estiverem dentro do raio de efeito (~2.0) do ponto alvo
-        - Cooldown global: 3s compartilhado entre todos os Infestors
-        """
-        ENERGY_COST = 75
-        CAST_RANGE = 9.9  # alcance máximo para lançar
-        EFFECT_RADIUS = 2.0  # raio de efeito do Fungal Growth
-        MIN_TARGETS = 3      # mínimo de inimigos atingidos
-        GLOBAL_COOLDOWN = 3.0  # segundos
+    #     """
+    #     Lança Fungal Growth apenas se conseguir atingir pelo menos 3 inimigos com o mesmo lançamento.
+    #     - Custo: 75 energia
+    #     - Alcance: ~10
+    #     - Só lança se pelo menos 3 inimigos estiverem dentro do raio de efeito (~2.0) do ponto alvo
+    #     - Cooldown global: 3s compartilhado entre todos os Infestors
+    #     """
+    #     ENERGY_COST = 75
+    #     CAST_RANGE = 9.9  # alcance máximo para lançar
+    #     EFFECT_RADIUS = 2.0  # raio de efeito do Fungal Growth
+    #     MIN_TARGETS = 3      # mínimo de inimigos atingidos
+    #     GLOBAL_COOLDOWN = 3.0  # segundos
 
-        cooldown_until: float = getattr(self, "fungal_cooldown_until", 0.0)
-        if cooldown_until and self.time < cooldown_until:
-            return
+    #     cooldown_until: float = getattr(self, "fungal_cooldown_until", 0.0)
+    #     if cooldown_until and self.time < cooldown_until:
+    #         return
 
-        if not self.enemy_units:
-            return
+    #     if not self.enemy_units:
+    #         return
 
-        for infestor in self.units(UnitID.INFESTOR).ready:
-            if infestor.energy < ENERGY_COST:
-                continue
+    #     for infestor in self.units(UnitID.INFESTOR).ready:
+    #         if infestor.energy < ENERGY_COST:
+    #             continue
 
-            try:
-                abilities = await self.get_available_abilities(infestor)
-                if AbilityId.FUNGALGROWTH_FUNGALGROWTH not in abilities:
-                    continue
-            except Exception:
-                pass
+    #         try:
+    #             abilities = await self.get_available_abilities(infestor)
+    #             if AbilityId.FUNGALGROWTH_FUNGALGROWTH not in abilities:
+    #                 continue
+    #         except Exception:
+    #             pass
 
-            # Filtra inimigos em alcance, ignorando Raven
-            in_range: Units = self.enemy_units.filter(
-                lambda u: cy_distance_to(infestor.position, u.position) <= CAST_RANGE and u.type_id != UnitID.RAVEN
-            )
-            if not in_range:
-                continue
+    #         # Filtra inimigos em alcance, ignorando Raven
+    #         in_range: Units = self.enemy_units.filter(
+    #             lambda u: cy_distance_to(infestor.position, u.position) <= CAST_RANGE and u.type_id != UnitID.RAVEN
+    #         )
+    #         if not in_range:
+    #             continue
 
-            # Para cada inimigo em alcance, verifica quantos outros inimigos estão no raio de efeito se lançar nele
-            best_target = None
-            best_count = 0
-            for candidate in in_range:
-                # Conta quantos inimigos ficariam dentro do raio de efeito se lançar no candidate
-                count = sum(
-                    1 for u in self.enemy_units
-                    if cy_distance_to(candidate.position, u.position) <= EFFECT_RADIUS and u.type_id != UnitID.RAVEN
-                )
-                if count > best_count:
-                    best_count = count
-                    best_target = candidate
+    #         # Para cada inimigo em alcance, verifica quantos outros inimigos estão no raio de efeito se lançar nele
+    #         best_target = None
+    #         best_count = 0
+    #         for candidate in in_range:
+    #             # Conta quantos inimigos ficariam dentro do raio de efeito se lançar no candidate
+    #             count = sum(
+    #                 1 for u in self.enemy_units
+    #                 if cy_distance_to(candidate.position, u.position) <= EFFECT_RADIUS and u.type_id != UnitID.RAVEN
+    #             )
+    #             if count > best_count:
+    #                 best_count = count
+    #                 best_target = candidate
 
-            if best_target and best_count >= MIN_TARGETS:
-                infestor(AbilityId.FUNGALGROWTH_FUNGALGROWTH, best_target.position)
-                self.fungal_cooldown_until = self.time + GLOBAL_COOLDOWN
-                return  # Apenas um lançamento por chamada
-
-
-    async def throw_bile(self):
-        CAST_RANGE = 9
-        ravagers: Units = self.units(UnitID.RAVAGER).ready
-
-        PRIORITY_BILE_TARGETS: set[UnitID] = {
-            UnitID.SIEGETANKSIEGED,
-            UnitID.BUNKER,
-            UnitID.PHOTONCANNON,
-            UnitID.SHIELDBATTERY,
-            UnitID.SPINECRAWLER,
-            UnitID.SUPPLYDEPOTLOWERED,
-            UnitID.SUPPLYDEPOT,
-            UnitID.PYLON,
-        }
+    #         if best_target and best_count >= MIN_TARGETS:
+    #             infestor(AbilityId.FUNGALGROWTH_FUNGALGROWTH, best_target.position)
+    #             self.fungal_cooldown_until = self.time + GLOBAL_COOLDOWN
+    #             return  # Apenas um lançamento por chamada
 
 
-        for ravager in ravagers:
-            # Verifica se o Ravager pode lançar bile agora
-            abilities = await self.get_available_abilities(ravager)
-            if AbilityId.EFFECT_CORROSIVEBILE not in abilities:
-                continue
+    # async def throw_bile(self):
+    #     CAST_RANGE = 9
+    #     ravagers: Units = self.units(UnitID.RAVAGER).ready
 
-            # 1) Prioriza alvos da lista em alcance (exceto Banshee)
-            priority_targets = [
-                unit
-                for unit in self.enemy_units
-                if unit.type_id in PRIORITY_BILE_TARGETS
-                and unit.type_id != UnitID.BANSHEE
-                and cy_distance_to(ravager.position, unit.position) <= CAST_RANGE
-            ]
-            priority_targets += [
-                structure
-                for structure in self.enemy_structures
-                if structure.type_id in PRIORITY_BILE_TARGETS
-                and structure.type_id != UnitID.BANSHEE
-                and cy_distance_to(ravager.position, structure.position) <= CAST_RANGE
-            ]
+    #     PRIORITY_BILE_TARGETS: set[UnitID] = {
+    #         UnitID.SIEGETANKSIEGED,
+    #         UnitID.BUNKER,
+    #         UnitID.PHOTONCANNON,
+    #         UnitID.SHIELDBATTERY,
+    #         UnitID.SPINECRAWLER,
+    #         UnitID.SUPPLYDEPOTLOWERED,
+    #         UnitID.SUPPLYDEPOT,
+    #         UnitID.PYLON,
+    #     }
 
-            if priority_targets:
-                target = min(
-                    priority_targets,
-                    key=lambda t: cy_distance_to(ravager.position, t.position),
-                )
-                ravager(AbilityId.EFFECT_CORROSIVEBILE, target.position)
-                continue
+    #     for ravager in ravagers:
+    #         # Verifica se o Ravager pode lançar bile agora
+    #         abilities = await self.get_available_abilities(ravager)
+    #         if AbilityId.EFFECT_CORROSIVEBILE not in abilities:
+    #             continue
 
-            # 2) Caso contrário, alvo inimigo mais próximo em alcance (exceto Banshee)
-            enemies_in_range = [
-                unit
-                for unit in self.enemy_units
-                if unit.type_id != UnitID.BANSHEE
-                and cy_distance_to(ravager.position, unit.position) <= CAST_RANGE
-            ]
-            enemies_in_range += [
-                structure
-                for structure in self.enemy_structures
-                if structure.type_id != UnitID.BANSHEE
-                and cy_distance_to(ravager.position, structure.position) <= CAST_RANGE
-            ]
-            if not enemies_in_range:
-                continue
+    #         # 1) Prioriza alvos da lista em alcance (exceto Banshee)
+    #         priority_targets = [
+    #             unit
+    #             for unit in self.enemy_units
+    #             if unit.type_id in PRIORITY_BILE_TARGETS
+    #             and unit.type_id != UnitID.BANSHEE
+    #             and cy_distance_to(ravager.position, unit.position) <= CAST_RANGE
+    #         ]
+    #         priority_targets += [
+    #             structure
+    #             for structure in self.enemy_structures
+    #             if structure.type_id in PRIORITY_BILE_TARGETS
+    #             and structure.type_id != UnitID.BANSHEE
+    #             and cy_distance_to(ravager.position, structure.position) <= CAST_RANGE
+    #         ]
 
-            nearest_target = min(
-                enemies_in_range,
-                key=lambda u: cy_distance_to(ravager.position, u.position),
-            )
-            ravager(AbilityId.EFFECT_CORROSIVEBILE, nearest_target.position)
+    #         if priority_targets:
+    #             target = min(
+    #                 priority_targets,
+    #                 key=lambda t: cy_distance_to(ravager.position, t.position),
+    #             )
+    #             ravager(AbilityId.EFFECT_CORROSIVEBILE, target.position)
+    #             continue
+
+    #         # 2) Caso contrário, alvo inimigo mais próximo em alcance (exceto Banshee)
+    #         enemies_in_range = [
+    #             unit
+    #             for unit in self.enemy_units
+    #             if unit.type_id != UnitID.BANSHEE
+    #             and cy_distance_to(ravager.position, unit.position) <= CAST_RANGE
+    #         ]
+    #         enemies_in_range += [
+    #             structure
+    #             for structure in self.enemy_structures
+    #             if structure.type_id != UnitID.BANSHEE
+    #             and cy_distance_to(ravager.position, structure.position) <= CAST_RANGE
+    #         ]
+    #         if not enemies_in_range:
+    #             continue
+
+    #         nearest_target = min(
+    #             enemies_in_range,
+    #             key=lambda u: cy_distance_to(ravager.position, u.position),
+    #         )
+    #         ravager(AbilityId.EFFECT_CORROSIVEBILE, nearest_target.position)
 
 
     async def is_mass_banshee(self):
@@ -2142,7 +2141,7 @@ class MyBot(AresBot):
                 if unit.name == 'Banshee':
                     if unit.tag not in self.enemy_banshees:
                         self.enemy_banshees[unit.tag] = unit.type_id
-            if len(self.enemy_banshees) >= 2:
+            if len(self.enemy_banshees) >= 3:
                 await self.chat_send("Tag: Mass_Banshee")
                 self.enemy_strategy.append("Mass_Banshee")
 
@@ -2593,7 +2592,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260323")
+            await self.chat_send("Tag: Version_260326")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -2793,6 +2792,13 @@ class MyBot(AresBot):
                             self.mutalisk_targets[0] = _current.tag
                 _muta_shared_target = _current
 
+        # Bile target: prioriza SiegeTank se visível, senão usa attack_target
+        bile_target: Point2 = self.attack_target
+        for _u in self.enemy_units:
+            if _u.name == 'SiegeTank':
+                bile_target = _u.position
+                break
+
         # use `ares-sc2` combat maneuver system
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/combat_behaviors.html
         for unit in forces:
@@ -2973,17 +2979,36 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
                 if unit.type_id in [UnitID.INFESTOR]:
-                    pass
+                    fungal_targets: list[Unit] = [
+                        u for u in only_enemy_units
+                        if u.type_id != UnitID.RAVEN
+                    ]
+                    if fungal_targets and unit.energy >= 75:
+                        best_pos: Point2 | None = None
+                        best_count: int = 0
+                        for candidate in fungal_targets:
+                            count = sum(
+                                1 for u in fungal_targets
+                                if cy_distance_to(candidate.position, u.position) <= 2.0
+                            )
+                            if count > best_count:
+                                best_count = count
+                                best_pos = candidate.position
+                        if best_pos and best_count >= 3:
+                            unit(AbilityId.FUNGALGROWTH_FUNGALGROWTH, best_pos)
+                            self.register_behavior(attacking_maneuver)
+                            continue
+                    attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
+                    self.register_behavior(attacking_maneuver)
+                    continue
 #_______________________________________________________________________________________________________________________
 #          INFESTOR BURROWED
 #_______________________________________________________________________________________________________________________
 
                 if unit.type_id in [UnitID.INFESTORBURROWED]:
-
-                    
                     attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
-                    
-
+                    self.register_behavior(attacking_maneuver)
+                    continue
 
 #_______________________________________________________________________________________________________________________
 #          RAVAGER
@@ -2991,29 +3016,51 @@ class MyBot(AresBot):
 
 
                 if unit.type_id in [UnitID.RAVAGER]:
+                    # Bile direta com controle manual de cooldown (7s)
+                    # unit.abilities é vazio por padrão no python-sc2 sem chamada async,
+                    # por isso UseAbility nunca funciona para habilidades com cooldown.
+                    if not hasattr(self, "_bile_cd"):
+                        self._bile_cd: dict[int, int] = {}
+                    if self._bile_cd.get(unit.tag, 0) <= self.state.game_loop:
+                        # Prioridade: alvo prioritário se tiver, senão o mais próximo
+                        PRIORITY_BILE: set[UnitID] = {
+                            UnitID.SIEGETANKSIEGED, UnitID.BUNKER, UnitID.PHOTONCANNON,
+                            UnitID.SHIELDBATTERY, UnitID.SPINECRAWLER,
+                            UnitID.SUPPLYDEPOTLOWERED, UnitID.SUPPLYDEPOT, UnitID.PYLON,
+                        }
+                        priority = [
+                            u for u in all_close
+                            if u.type_id in PRIORITY_BILE
+                        ]
+                        bile_candidates = priority if priority else [
+                            u for u in only_enemy_units
+                            if u.type_id != UnitID.BANSHEE
+                        ]
+                        if bile_candidates:
+                            best_bile = min(
+                                bile_candidates,
+                                key=lambda u: cy_distance_to(unit.position, u.position),
+                            )
+                            # Bile é instantânea; o comando de movimento a seguir
+                            # não cancela o projtétil já lançado
+                            unit(AbilityId.EFFECT_CORROSIVEBILE, best_bile.position)
+                            self._bile_cd[unit.tag] = self.state.game_loop + int(22.4 * 7.0)
+
                     if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
-                        # `ShootTargetInRange` will check weapon is ready
-                        # otherwise it will not execute
                         attacking_maneuver.add(
                             ShootTargetInRange(unit=unit, targets=in_attack_range)
                         )
-                    # then enemy structures
                     elif in_attack_range := cy_in_attack_range(unit, all_close):
                         attacking_maneuver.add(
                             ShootTargetInRange(unit=unit, targets=in_attack_range)
                         )
 
                     enemy_target: Unit = cy_pick_enemy_target(all_close)
-
-                    # low shield, keep protoss units safe
-                    if self.race == Race.Protoss and unit.shield_percentage < 0.3:
-                        attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
-
-                    else:
-                        attacking_maneuver.add(
-                            StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
-                        )
-
+                    attacking_maneuver.add(
+                        StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
+                    )
+                    self.register_behavior(attacking_maneuver)
+                    continue
 #_______________________________________________________________________________________________________________________
 #          OTHER UNITS
 #_______________________________________________________________________________________________________________________
