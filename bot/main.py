@@ -602,6 +602,11 @@ class MyBot(AresBot):
                 await self.change_to_bo_Vs_Ling_Rush()
                 await self.build_safe_spine()
 
+            if "12_Pool" in self.enemy_strategy:
+                await self.build_roach_warren()
+                await self.make_spines_on_main()
+                await self.change_to_bo_Vs_Ling_Rush()                
+                await self.build_safe_spine()
 
 
         if self.EnemyRace == Race.Random:
@@ -1199,36 +1204,50 @@ class MyBot(AresBot):
 
 
     async def make_spines_on_main(self):
+        if not self.structures(UnitID.SPAWNINGPOOL).ready:
+            return
+
+        # Calcula posições entre o hatchery e a linha de minerais
+        minerals_near_base = self.mineral_field.closer_than(12, self.first_base.position)
+        if minerals_near_base:
+            mineral_center = minerals_near_base.center
+        else:
+            # fallback: direção oposta à rampa
+            mineral_center = self.first_base.position.towards(self.main_base_ramp.top_center, -8)
+
+        # Vetor da base em direção aos minerais
+        dm = mineral_center - self.first_base.position
+        mag = (dm.x ** 2 + dm.y ** 2) ** 0.5 or 1.0
+        dir_min = Point2((dm.x / mag, dm.y / mag))
+        # Vetor perpendicular (linha lateral)
+        perp = Point2((-dir_min.y, dir_min.x))
+
+        # Âncora: 3.5 tiles do hatchery em direção aos minerais
+        anchor = self.first_base.position.towards(mineral_center, 3.5)
+        spacing = 2.5
+
+        # slot1: perto da rampa (posição original)
+        my_ramp = self.main_base_ramp.top_center
+        slot1 = my_ramp.position.towards(self.first_base, 6)
+        slot2 = Point2((anchor.x - perp.x * spacing, anchor.y - perp.y * spacing))  # esquerda
+        slot3 = Point2((anchor.x + perp.x * spacing, anchor.y + perp.y * spacing))  # direita
+
         if self.time < 120:
             if self.structures(UnitID.SPINECRAWLER).amount == 0 and not self.already_pending(UnitID.SPINECRAWLER):
                 if self.tag_worker_build_spine_crawler == 0:
                     if self.can_afford(UnitID.SPINECRAWLER):
-                        my_ramp = self.main_base_ramp.top_center
-                        # Send the second Overlord in front of second base to scout
-                        target = my_ramp.position.towards(self.first_base, 6)                   
-                        if worker := self.mediator.select_worker(target_position=target):                
+                        target = slot1
+                        if worker := self.mediator.select_worker(target_position=target):
                             self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
                             self.tag_worker_build_spine_crawler = worker
-                            #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                             self.mediator.build_with_specific_worker(worker=self.tag_worker_build_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
         if self.tag_worker_build_spine_crawler != 0:
             if self.can_afford(UnitID.SPINECRAWLER):
-                # Primeiro tente a posição antiga (perto da rampa)
-                my_ramp = self.main_base_ramp.top_center
-                reference = my_ramp.position.towards(self.first_base, 6)
-                target = reference.towards(self.game_info.map_center, -5)
-        
-                # Se a posição não tiver creep, tente ao redor do hatchery
+                target = slot2
                 if not self.has_creep(target):
-                    hatchery = self.first_base
-                    for distance in range(4, 9):
-                        candidate = hatchery.position.towards(self.game_info.map_center, distance)
-                        if self.has_creep(candidate):
-                            target = candidate
-                            break
-        
-                if worker := self.mediator.select_worker(target_position=target):                
+                    target = slot1
+                if worker := self.mediator.select_worker(target_position=target):
                     self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
                     self.tag_worker_build_2nd_spine_crawler = worker
                     self.mediator.build_with_specific_worker(
@@ -1236,18 +1255,16 @@ class MyBot(AresBot):
                         structure_type=UnitID.SPINECRAWLER,
                         pos=target,
                         building_purpose=BuildingPurpose.NORMAL_BUILDING
-                    )           
-
+                    )
 
         if self.tag_worker_build_2nd_spine_crawler != 0:
             if self.can_afford(UnitID.SPINECRAWLER):
-                my_ramp = self.main_base_ramp.top_center
-                reference = my_ramp.position.towards(self.first_base, 6)
-                target = reference.towards(self.game_info.map_center, -2)
-                if worker := self.mediator.select_worker(target_position=target):                
+                target = slot3
+                if not self.has_creep(target):
+                    target = slot1
+                if worker := self.mediator.select_worker(target_position=target):
                     self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
                     self.tag_worker_build_3rd_spine_crawler = worker
-                    #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
                     self.mediator.build_with_specific_worker(worker=self.tag_worker_build_3rd_spine_crawler, structure_type=UnitID.SPINECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
 
 
