@@ -2560,6 +2560,13 @@ class MyBot(AresBot):
 
         if unit_tag in self.creep_queen_tags:
             self.creep_queen_tags.remove(unit_tag)
+
+        # Se a segunda base foi destruída, reseta o rally point para a primeira base
+        if self.second_base is not None and unit_tag == self.second_base.tag:
+            self.second_base = None
+            rally_point = self.first_base.position.towards(self.game_info.map_center, 6)
+            for hatchery in self.structures(UnitID.HATCHERY).ready:
+                self.do(hatchery(AbilityId.RALLY_HATCHERY_UNITS, rally_point))
             
 
 
@@ -2609,7 +2616,7 @@ class MyBot(AresBot):
             my_base_location = self.mediator.get_own_nat
             target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260326")
+            await self.chat_send("Tag: Version_260330")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
