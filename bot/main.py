@@ -175,9 +175,7 @@ class MyBot(AresBot):
         self.spineCrawlerCheeseDetected = False
         self.reaperFound = False
         self.bansheeFound = False
-        self.tag_worker_build_first_spore = 0
-        self.tag_worker_build_second_spore = 0
-        self.tag_worker_build_third_spore = 0
+        self.spore_workers: dict = {}  # base_tag -> worker_tag
         self.random_race_discovered = False
         self.one_proxy_barracks_found = False
         self.two_proxy_barracks_found = False
@@ -942,12 +940,8 @@ class MyBot(AresBot):
                     await self.chat_send("Tag: 2_Base_Terran")
                     self.enemy_strategy.append("2_Base_Terran")
 
-                # In either case, move the first overlord to the hg spot near the enemy natural
-                enemy_natural_location = self.mediator.get_enemy_nat
-                hg_spot = self.mediator.get_closest_overlord_spot(
-                    from_pos=enemy_natural_location
-                )
-                self.first_overlord.move(hg_spot)
+                # In either case, move the first overlord to the enemy's first base
+                self.first_overlord.move(self.enemy_start_locations[0])
 
 
 
@@ -1142,65 +1136,52 @@ class MyBot(AresBot):
 
 
     async def make_spores(self):
-        if self.tag_worker_build_first_spore == 0:
-            if self.can_afford(UnitID.SPORECRAWLER):
-                positions = self.mediator.get_behind_mineral_positions(th_pos=self.first_base.position)
-                if positions:
-                    # usa a segunda posição se existir, senão a primeira
-                    pos = positions[1] if len(positions) > 1 else positions[0]
-                    target = pos.towards(self.first_base, -1)
-                    if worker := self.mediator.select_worker(target_position=target):
-                        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                        self.tag_worker_build_first_spore = worker
-                        self.mediator.build_with_specific_worker(
-                            worker=self.tag_worker_build_first_spore,
-                            structure_type=UnitID.SPORECRAWLER,
-                            pos=target,
-                            building_purpose=BuildingPurpose.NORMAL_BUILDING
-                        )
+        """Build one Spore Crawler per base. Rebuilds automatically if destroyed."""
+        bases = self.townhalls.ready
+        if not bases:
+            return
 
+        for base in bases:
+            # Check if a spore (ready or under construction) already exists near this base
+            spore_near = any(
+                s.distance_to(base.position) < 10
+                for s in self.structures(UnitID.SPORECRAWLER)
+            )
+            if spore_near:
+                # Spore exists — clear worker tracking so we can react if it's destroyed later
+                self.spore_workers.pop(base.tag, None)
+                continue
 
-        if self.tag_worker_build_second_spore == 0:
-            if self.second_base is not None:
-                if self.can_afford(UnitID.SPORECRAWLER):
-                    my_base_location = self.second_base
-                    # Send the second Overlord in front of second base to scout
-                    target = my_base_location.position.towards(self.game_info.map_center, -5)                   
-                    if worker := self.mediator.select_worker(target_position=target):                
-                        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                        self.tag_worker_build_second_spore = worker
-                        #self.mediator.build_with_specific_worker(worker, UnitID.HATCHERY, target, BuildingPurpose.NORMAL_BUILDING)
-                        self.mediator.build_with_specific_worker(worker=self.tag_worker_build_second_spore, structure_type=UnitID.SPORECRAWLER, pos=target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+            # No spore near this base — check if we have a worker already heading there
+            worker_tag = self.spore_workers.get(base.tag, 0)
+            if worker_tag:
+                worker_alive = self.units(UnitID.DRONE).find_by_tag(worker_tag)
+                if worker_alive is not None:
+                    continue  # Worker still on the job
+                else:
+                    # Worker died — reset so we re-order
+                    self.spore_workers[base.tag] = 0
 
-        # 3º Spore: quando tivermos 3 bases
-        if self.tag_worker_build_third_spore == 0:
-            # Precisa de pelo menos 3 Hatcheries prontas
-            bases_ready = self.structures(UnitID.HATCHERY).ready
-            if bases_ready.amount >= 3 and self.can_afford(UnitID.SPORECRAWLER):
-                # Encontrar a terceira base (diferente da first_base e da second_base)
-                second_tag = getattr(self.second_base, "tag", None)
-                third_base = None
-                for base in bases_ready:
-                    if base.tag != self.first_base.tag and base.tag != second_tag:
-                        third_base = base
-                        break
+            if not self.can_afford(UnitID.SPORECRAWLER):
+                continue
 
-                if third_base:
-                    # Mesma lógica do 1º spore: atrás dos minerais
-                    positions = self.mediator.get_behind_mineral_positions(th_pos=third_base.position)
-                    if positions:
-                        pos = positions[1] if len(positions) > 1 else positions[0]
-                        target = pos.towards(third_base, -1)
+            # Find build position behind minerals of this base
+            positions = self.mediator.get_behind_mineral_positions(th_pos=base.position)
+            if positions:
+                pos = positions[1] if len(positions) > 1 else positions[0]
+                target = pos.towards(base, -1)
+            else:
+                target = base.position.towards(self.game_info.map_center, -5)
 
-                        if worker := self.mediator.select_worker(target_position=target):
-                            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                            self.tag_worker_build_third_spore = worker
-                            self.mediator.build_with_specific_worker(
-                                worker=self.tag_worker_build_third_spore,
-                                structure_type=UnitID.SPORECRAWLER,
-                                pos=target,
-                                building_purpose=BuildingPurpose.NORMAL_BUILDING
-                            )
+            if worker := self.mediator.select_worker(target_position=target):
+                self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                self.spore_workers[base.tag] = worker.tag
+                self.mediator.build_with_specific_worker(
+                    worker=worker,
+                    structure_type=UnitID.SPORECRAWLER,
+                    pos=target,
+                    building_purpose=BuildingPurpose.NORMAL_BUILDING,
+                )
 
 
     async def make_spines_on_main(self):
@@ -2249,10 +2230,15 @@ class MyBot(AresBot):
         if "Battlecruiser" in self.enemy_strategy:
             return
 
+        # Detecta Fusion Core — inimigo está fazendo Battlecruisers
+        if self.enemy_structures.of_type({UnitID.FUSIONCORE}):
+            await self.chat_send("Tag: Battlecruiser")
+            self.enemy_strategy.append("Battlecruiser")
+            return
+
         # Itera battlecruisers vistas neste frame
         for enemy in self.enemy_units.of_type({UnitID.BATTLECRUISER}):
             if enemy.tag not in self.enemy_battlecruisers:
-                # registra primeira vez que vimos essa banshee
                 self.enemy_battlecruisers[enemy.tag] = enemy.type_id
 
         if len(self.enemy_battlecruisers) >= 1:
@@ -2613,10 +2599,13 @@ class MyBot(AresBot):
         # Exemplo para a segunda base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 2:
             self.tag_second_overlord = unit.tag
-            my_base_location = self.mediator.get_own_nat
-            target = my_base_location.position.towards(self.game_info.map_center, 5)
+            if self.EnemyRace == Race.Terran:
+                target = self.enemy_start_locations[0]
+            else:
+                my_base_location = self.mediator.get_own_nat
+                target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260330")
+            await self.chat_send("Tag: Version_260331")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
