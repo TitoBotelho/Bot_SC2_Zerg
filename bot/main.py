@@ -186,6 +186,10 @@ class MyBot(AresBot):
         self.photon_cannon_found = False
         self.terran_flying_structures = False
         self.tag_worker_build_spire = 0
+        self.tag_worker_spore_bc_0 = 0  # 1ª base, lado mineral
+        self.tag_worker_spore_bc_1 = 0  # 1ª base, lado oposto
+        self.tag_worker_spore_bc_2 = 0  # 2ª base, lado mineral
+        self.tag_worker_spore_bc_3 = 0  # 2ª base, lado oposto
         self.is_roach_attacking = False
         self.defending = False
         self.liberatorFound = False
@@ -291,7 +295,7 @@ class MyBot(AresBot):
             "creep_queens": {
                 "active": True,
                 "priority": 0,
-                "max": self.max_creep_queens,
+                "max": 20,
                 "defend_against_air": True,
                 "defend_against_ground": True,
                 "first_tumor_position": self.mediator.get_own_nat.towards(self.game_info.map_center, 9),
@@ -519,10 +523,12 @@ class MyBot(AresBot):
 
             if "Battlecruiser" in self.enemy_strategy:
                 await self.build_spire()
+                await self.build_spores_vs_bc()
+                await self.build_more_queens()
 
 
             if "2_Base_Terran" in self.enemy_strategy:
-                await self.build_infestation_pit()
+                pass  # infestation pit já é ordenado via "Late_Game"
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -634,29 +640,10 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
         queens: Units = self.units(UnitID.QUEEN)
-        
-        # Verificar se mais creep queens são necessárias
-        if queens and len(self.creep_queen_tags) < self.max_creep_queens:
-            queens_needed: int = self.max_creep_queens - len(self.creep_queen_tags)
-            new_creep_queens: Units = queens.take(queens_needed)
-            for queen in new_creep_queens:
-                self.creep_queen_tags.add(queen.tag)
 
-
-        # Separar as creep queens das outras queens
-        creep_queens: Units = queens.tags_in(self.creep_queen_tags)
-        other_queens: Units = queens.tags_not_in(self.creep_queen_tags)
-        
-        # Atualizar self.other_queen_tags com as tags das outras queens
-        self.other_queen_tags = {queen.tag for queen in other_queens}
-        
-        # Chamar a biblioteca de queens para gerenciar as creep queens
-        await self.queens.manage_queens(iteration, creep_queens)
-
-        # we have full control of the other queen_control
-        #for queen in other_queens:
-            #if queen.distance_to(self.game_info.map_center) > 12:
-                #queen.attack(self.game_info.map_center)
+        # A biblioteca gerencia tudo: 1 inject queen por base (priority=1)
+        # e o restante espalha creep (priority=0, max=20)
+        await self.queens.manage_queens(iteration, queens)
 
 
 
@@ -1165,13 +1152,24 @@ class MyBot(AresBot):
             if not self.can_afford(UnitID.SPORECRAWLER):
                 continue
 
-            # Find build position behind minerals of this base
+            # Find build position between base and mineral line (close to base)
             positions = self.mediator.get_behind_mineral_positions(th_pos=base.position)
             if positions:
-                pos = positions[1] if len(positions) > 1 else positions[0]
-                target = pos.towards(base, -1)
+                mineral_ref = positions[0]
+                target = base.position.towards(mineral_ref, 3)
+                if not self.has_creep(target):
+                    target = base.position.towards(mineral_ref, 2)
             else:
-                target = base.position.towards(self.game_info.map_center, -5)
+                target = base.position.towards(self.game_info.map_center, -4)
+
+            try:
+                placed = await self.find_placement(UnitID.SPORECRAWLER, near=target, placement_step=1)
+            except Exception:
+                placed = None
+            target = placed if placed else target
+
+            if not self.has_creep(target):
+                continue
 
             if worker := self.mediator.select_worker(target_position=target):
                 self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
@@ -2161,11 +2159,11 @@ class MyBot(AresBot):
         if not self.structures(UnitID.LAIR).ready:
             return
 
-        if self.structures(UnitID.INFESTATIONPIT) or self.already_pending(UnitID.INFESTATIONPIT):
-            self.infestation_pit_ordered = False
+        if self.infestation_pit_ordered:
             return
 
-        if self.infestation_pit_ordered:
+        if self.structures(UnitID.INFESTATIONPIT) or self.already_pending(UnitID.INFESTATIONPIT):
+            self.infestation_pit_ordered = True
             return
 
         self.macro_plan.add(
@@ -2234,6 +2232,7 @@ class MyBot(AresBot):
         if self.enemy_structures.of_type({UnitID.FUSIONCORE}):
             await self.chat_send("Tag: Battlecruiser")
             self.enemy_strategy.append("Battlecruiser")
+            self.build_order_runner.set_build_completed()
             return
 
         # Itera battlecruisers vistas neste frame
@@ -2471,6 +2470,107 @@ class MyBot(AresBot):
         self.evolution_chamber_ordered = True
         await self.chat_send("Tag: Evolution_Chamber_Ordered")
 
+
+    async def build_spores_vs_bc(self):
+        """Constrói 2 Spore Crawlers na 1ª base e 2 na 2ª base (um perto dos minerais e
+        um no lado diametralmente oposto). Pausa spawn de unidades até que os 4 comecem
+        a ser construídos.
+        """
+        MINERAL_DIST = 3    # distância da base em direção aos minerais
+        OPPOSITE_DIST = 4   # distância da base no sentido oposto aos minerais
+        NEAR_RADIUS = 5.0   # raio para detectar spore já existente
+
+        # (atributo da base, atributo do worker, True=lado mineral / False=lado oposto)
+        SLOTS = [
+            ("first_base",  "tag_worker_spore_bc_0", True),
+            ("first_base",  "tag_worker_spore_bc_1", False),
+            ("second_base", "tag_worker_spore_bc_2", True),
+            ("second_base", "tag_worker_spore_bc_3", False),
+        ]
+
+        def spore_near(pos: Point2) -> bool:
+            return any(
+                s.distance_to(pos) < NEAR_RADIUS
+                for s in self.structures(UnitID.SPORECRAWLER)
+            )
+
+        async def find_spore_pos(base_unit, towards_minerals: bool):
+            positions = self.mediator.get_behind_mineral_positions(th_pos=base_unit.position)
+            if not positions:
+                return None
+            mineral_ref = positions[0]
+            dist = MINERAL_DIST if towards_minerals else -OPPOSITE_DIST
+            target = base_unit.position.towards(mineral_ref, dist)
+
+            # Ajusta se não houver creep tentando distâncias levemente diferentes
+            if not self.has_creep(target):
+                found = None
+                for delta in [0.5, 1.0, 1.5, 2.0, 2.5]:
+                    adj = base_unit.position.towards(mineral_ref, dist + (delta if towards_minerals else -delta))
+                    if self.has_creep(adj):
+                        found = adj
+                        break
+                if not found:
+                    return None
+                target = found
+
+            try:
+                placed = await self.find_placement(UnitID.SPORECRAWLER, near=target, placement_step=1)
+            except Exception:
+                placed = None
+
+            result = placed if placed else target
+            return result if self.has_creep(result) else None
+
+        # Conta slots já tratados (worker atribuído ou posição já ocupada por spore)
+        ordered = sum(1 for _, attr, _ in SLOTS if getattr(self, attr, 0) != 0)
+
+        if ordered < len(SLOTS):
+            self.spawn_inhibitors.add("building_spores_vs_bc")
+        else:
+            self.spawn_inhibitors.discard("building_spores_vs_bc")
+            return
+
+        for base_attr, worker_attr, towards_minerals in SLOTS:
+            if getattr(self, worker_attr, 0) != 0:
+                continue
+
+            base = getattr(self, base_attr, None)
+            if base is None:
+                continue
+
+            if not self.can_afford(UnitID.SPORECRAWLER):
+                break
+
+            build_pos = await find_spore_pos(base, towards_minerals)
+            if build_pos is None:
+                continue
+
+            # Se já existe um spore nessa posição, marca como concluído
+            if spore_near(build_pos):
+                setattr(self, worker_attr, -1)
+                continue
+
+            if worker := self.mediator.select_worker(target_position=build_pos):
+                self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                setattr(self, worker_attr, worker)
+                self.mediator.build_with_specific_worker(
+                    worker=worker,
+                    structure_type=UnitID.SPORECRAWLER,
+                    pos=build_pos,
+                    building_purpose=BuildingPurpose.NORMAL_BUILDING,
+                )
+
+
+    async def build_more_queens(self):
+        if self.minerals < 1000:
+            return
+        if not self.can_afford(UnitID.QUEEN):
+            return
+        for th in self.townhalls.ready:
+            if th.is_idle:
+                th.train(UnitID.QUEEN)
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -2605,7 +2705,7 @@ class MyBot(AresBot):
                 my_base_location = self.mediator.get_own_nat
                 target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260331")
+            await self.chat_send("Tag: Version_260401")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
