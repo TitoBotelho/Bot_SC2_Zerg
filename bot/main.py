@@ -599,18 +599,13 @@ class MyBot(AresBot):
                 await self.change_to_bo_TwelvePool()
                 await self.build_roach_warren()
 
-            if "Ling_Rush" in self.enemy_strategy:
+            if "Ling_Rush" in self.enemy_strategy or "12_Pool" in self.enemy_strategy:
                 await self.build_roach_warren()
-                #await self.cancel_second_base()
-                await self.make_spines_on_main()
+                #await self.make_spines_on_main()
                 await self.change_to_bo_Vs_Ling_Rush()
-                await self.build_safe_spine()
+                await self.cancel_second_base()
+                await self.make_spines_vs_ling_rush()
 
-            if "12_Pool" in self.enemy_strategy:
-                await self.build_roach_warren()
-                await self.make_spines_on_main()
-                await self.change_to_bo_Vs_Ling_Rush()                
-                await self.build_safe_spine()
 
 
         if self.EnemyRace == Race.Random:
@@ -1205,9 +1200,9 @@ class MyBot(AresBot):
         anchor = self.first_base.position.towards(mineral_center, 3.5)
         spacing = 2.5
 
-        # slot1: perto da rampa (posição original)
-        my_ramp = self.main_base_ramp.top_center
-        slot1 = my_ramp.position.towards(self.first_base, 6)
+        # slot1: grudado na base, em direção à segunda base (natural)
+        nat = self.mediator.get_own_nat
+        slot1 = self.first_base.position.towards(nat, 4)
         slot2 = Point2((anchor.x - perp.x * spacing, anchor.y - perp.y * spacing))  # esquerda
         slot3 = Point2((anchor.x + perp.x * spacing, anchor.y + perp.y * spacing))  # direita
 
@@ -2570,6 +2565,16 @@ class MyBot(AresBot):
         for th in self.townhalls.ready:
             if th.is_idle:
                 th.train(UnitID.QUEEN)
+
+    async def make_spines_vs_ling_rush(self):
+        second_base_ready = (
+            self.second_base is not None
+            and self.second_base.is_ready
+        )
+        if second_base_ready:
+            await self.build_spine_crawlers()
+        else:
+            await self.make_spines_on_main()
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
