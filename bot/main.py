@@ -240,10 +240,11 @@ class MyBot(AresBot):
 
     @property
     def attack_target(self) -> Point2:
-        if self.enemy_structures:
+        ground_structures = self.enemy_structures.filter(lambda s: not s.is_flying)
+        if ground_structures:
             # using a faster cython alternative here, see docs for all available functions
             # https://aressc2.github.io/ares-sc2/api_reference/cython_extensions/index.html
-            return cy_closest_to(self.start_location, self.enemy_structures).position
+            return cy_closest_to(self.start_location, ground_structures).position
         # not seen anything in early game, just head to enemy spawn
         elif self.time < 240.0:
             return self.enemy_start_locations[0]
@@ -2710,7 +2711,7 @@ class MyBot(AresBot):
                 my_base_location = self.mediator.get_own_nat
                 target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260401")
+            await self.chat_send("Tag: Version_260406")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
