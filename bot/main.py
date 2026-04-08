@@ -3030,6 +3030,83 @@ class MyBot(AresBot):
                 self.register_behavior(attacking_maneuver)
                 continue
 
+#_______________________________________________________________________________________________________________________
+#          RAVAGER
+#_______________________________________________________________________________________________________________________
+
+            if unit.type_id in [UnitID.RAVAGER]:
+                # Bile direta com controle manual de cooldown (7s)
+                # unit.abilities é vazio por padrão no python-sc2 sem chamada async,
+                # por isso UseAbility nunca funciona para habilidades com cooldown.
+                if not hasattr(self, "_bile_cd"):
+                    self._bile_cd: dict[int, int] = {}
+                if self._bile_cd.get(unit.tag, 0) <= self.state.game_loop:
+                    BILE_RANGE: int = 9
+                    # Unidades aéreas paradas/lentas que a bile consegue acertar
+                    BILE_AIR_TYPES: set[UnitID] = {UnitID.LIBERATORAG, UnitID.MEDIVAC}
+                    air_bile: list[Unit] = [
+                        u for u in self.enemy_units
+                        if u.type_id in BILE_AIR_TYPES
+                        and not u.is_memory
+                        and cy_distance_to(unit.position, u.position) <= BILE_RANGE
+                    ]
+                    # Candidatos terrestres (sem Banshee)
+                    ground_bile: list[Unit] = [
+                        u for u in all_close
+                        if u.type_id != UnitID.BANSHEE
+                    ]
+
+                    def _bile_tier(u: Unit) -> int:
+                        t = u.type_id
+                        if t == UnitID.SIEGETANKSIEGED: return 0
+                        if t == UnitID.LIBERATORAG:     return 1
+                        if t == UnitID.MEDIVAC:         return 2
+                        if t in WORKER_TYPES:           return 4
+                        if t in ALL_STRUCTURES:         return 5
+                        return 3  # unidades de exército
+
+                    all_bile_candidates: list[Unit] = air_bile + ground_bile
+                    if all_bile_candidates:
+                        best_bile = min(
+                            all_bile_candidates,
+                            key=lambda u: (_bile_tier(u), cy_distance_to(unit.position, u.position)),
+                        )
+                        # Bile é instantânea; o comando de movimento a seguir
+                        # não cancela o projétil já lançado
+                        unit(AbilityId.EFFECT_CORROSIVEBILE, best_bile.position)
+                        self._bile_cd[unit.tag] = self.state.game_loop + int(22.4 * 7.0)
+
+                if all_close:
+                    if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
+                        attacking_maneuver.add(
+                            ShootTargetInRange(unit=unit, targets=in_attack_range)
+                        )
+                    elif in_attack_range := cy_in_attack_range(unit, all_close):
+                        attacking_maneuver.add(
+                            ShootTargetInRange(unit=unit, targets=in_attack_range)
+                        )
+                    enemy_target: Unit = cy_pick_enemy_target(all_close)
+                    attacking_maneuver.add(
+                        StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
+                    )
+                else:
+                    # Sem inimigos terrestres: avança para alvo aéreo ou alvo geral
+                    air_targets: list[Unit] = [
+                        u for u in self.enemy_units
+                        if u.type_id in {UnitID.LIBERATORAG, UnitID.MEDIVAC}
+                        and not u.is_memory
+                    ]
+                    move_target: Point2 = (
+                        min(air_targets, key=lambda u: u.distance_to(unit)).position
+                        if air_targets else target
+                    )
+                    attacking_maneuver.add(
+                        PathUnitToTarget(unit=unit, grid=grid, target=move_target)
+                    )
+                    attacking_maneuver.add(AMove(unit=unit, target=move_target))
+                self.register_behavior(attacking_maneuver)
+                continue
+
             # enemy around, engagement control
             if all_close:
                 # ares's cython version of `cy_in_attack_range` is approximately 4
@@ -3129,57 +3206,6 @@ class MyBot(AresBot):
                     self.register_behavior(attacking_maneuver)
                     continue
 
-#_______________________________________________________________________________________________________________________
-#          RAVAGER
-#_______________________________________________________________________________________________________________________
-
-
-                if unit.type_id in [UnitID.RAVAGER]:
-                    # Bile direta com controle manual de cooldown (7s)
-                    # unit.abilities é vazio por padrão no python-sc2 sem chamada async,
-                    # por isso UseAbility nunca funciona para habilidades com cooldown.
-                    if not hasattr(self, "_bile_cd"):
-                        self._bile_cd: dict[int, int] = {}
-                    if self._bile_cd.get(unit.tag, 0) <= self.state.game_loop:
-                        # Prioridade: alvo prioritário se tiver, senão o mais próximo
-                        PRIORITY_BILE: set[UnitID] = {
-                            UnitID.SIEGETANKSIEGED, UnitID.BUNKER, UnitID.PHOTONCANNON,
-                            UnitID.SHIELDBATTERY, UnitID.SPINECRAWLER,
-                            UnitID.SUPPLYDEPOTLOWERED, UnitID.SUPPLYDEPOT, UnitID.PYLON,
-                        }
-                        priority = [
-                            u for u in all_close
-                            if u.type_id in PRIORITY_BILE
-                        ]
-                        bile_candidates = priority if priority else [
-                            u for u in only_enemy_units
-                            if u.type_id != UnitID.BANSHEE
-                        ]
-                        if bile_candidates:
-                            best_bile = min(
-                                bile_candidates,
-                                key=lambda u: cy_distance_to(unit.position, u.position),
-                            )
-                            # Bile é instantânea; o comando de movimento a seguir
-                            # não cancela o projtétil já lançado
-                            unit(AbilityId.EFFECT_CORROSIVEBILE, best_bile.position)
-                            self._bile_cd[unit.tag] = self.state.game_loop + int(22.4 * 7.0)
-
-                    if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
-                        attacking_maneuver.add(
-                            ShootTargetInRange(unit=unit, targets=in_attack_range)
-                        )
-                    elif in_attack_range := cy_in_attack_range(unit, all_close):
-                        attacking_maneuver.add(
-                            ShootTargetInRange(unit=unit, targets=in_attack_range)
-                        )
-
-                    enemy_target: Unit = cy_pick_enemy_target(all_close)
-                    attacking_maneuver.add(
-                        StutterUnitBack(unit=unit, target=enemy_target, grid=grid)
-                    )
-                    self.register_behavior(attacking_maneuver)
-                    continue
 #_______________________________________________________________________________________________________________________
 #          OTHER UNITS
 #_______________________________________________________________________________________________________________________
