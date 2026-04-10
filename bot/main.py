@@ -641,6 +641,16 @@ class MyBot(AresBot):
         # e o restante espalha creep (priority=0, max=20)
         await self.queens.manage_queens(iteration, queens)
 
+        # Se algum inimigo pisar na gosma, todas as queens que não estão injetando atacam o alvo
+        enemy_on_creep: Units = self.enemy_units.filter(
+            lambda u: not u.is_memory and self.has_creep(u.position)
+        )
+        if enemy_on_creep:
+            closest_enemy = cy_closest_to(self.start_location, enemy_on_creep)
+            for queen in queens:
+                if queen.energy < 25:  # não está injetando (energia < custo do inject)
+                    queen.attack(closest_enemy.position)
+
 
 
     async def return_to_base(self, forces: Units) -> None:
@@ -923,8 +933,8 @@ class MyBot(AresBot):
                     await self.chat_send("Tag: 2_Base_Terran")
                     self.enemy_strategy.append("2_Base_Terran")
 
-                # In either case, move the first overlord to the enemy's first base
-                self.first_overlord.move(self.enemy_start_locations[0])
+                # In either case, move the first overlord back to own base
+                self.first_overlord.move(self.start_location)
 
 
 
@@ -2711,7 +2721,7 @@ class MyBot(AresBot):
                 my_base_location = self.mediator.get_own_nat
                 target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260406")
+            await self.chat_send("Tag: Version_260410")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -2997,6 +3007,47 @@ class MyBot(AresBot):
 #          MUTALISK
 #_______________________________________________________________________________________________________________________
             if unit.type_id == UnitID.MUTALISK:
+                air_grid: np.ndarray = self.mediator.get_air_grid
+                # Retreat logic mirrored from return_to_base — must run inside _micro
+                # so the registered behavior isn't overridden by a later unit.move() call.
+                if self._commenced_attack and self.get_total_supply(forces) < 0.5 * self._begin_attack_at_supply:
+                    _bases = self.structures(UnitID.HATCHERY).ready
+                    _base_ref = (
+                        self.second_base
+                        if _bases.amount >= 2 and self.second_base is not None
+                        else self.first_base
+                    )
+                    _base_under_attack = any(
+                        e.distance_to(_base_ref.position) < 18 or self.has_creep(e.position)
+                        for e in self.enemy_units
+                    )
+                    if not _base_under_attack:
+                        _retreat_pos = _base_ref.position.towards(self.game_info.map_center, 6)
+                        attacking_maneuver.add(PathUnitToTarget(unit=unit, grid=air_grid, target=_retreat_pos))
+                        attacking_maneuver.add(AMove(unit=unit, target=_retreat_pos))
+                        self.register_behavior(attacking_maneuver)
+                        continue
+                if unit.health_percentage < 0.6:
+                    nearest_base = (
+                        min(self.townhalls.ready, key=lambda b: b.distance_to(unit)).position
+                        if self.townhalls.ready else self.start_location
+                    )
+                    attacking_maneuver.add(PathUnitToTarget(unit=unit, grid=air_grid, target=nearest_base))
+                    attacking_maneuver.add(AMove(unit=unit, target=nearest_base))
+                    self.register_behavior(attacking_maneuver)
+                    continue
+                # Flee from Missile Turrets — they deal massive damage and mutas can't hit them
+                TURRET_RANGE: float = 8.0
+                nearby_turrets = [
+                    s for s in self.enemy_structures
+                    if s.type_id == UnitID.MISSILETURRET
+                    and not s.is_memory
+                    and cy_distance_to(unit.position, s.position) <= TURRET_RANGE
+                ]
+                if nearby_turrets:
+                    attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=air_grid))
+                    self.register_behavior(attacking_maneuver)
+                    continue
                 if not self._commenced_attack:
                     # Modo defensivo: só ataca unidades voadoras sobre a creep.
                     # Não avança em direção a alvos terrestres nem à base inimiga.
