@@ -236,6 +236,8 @@ class MyBot(AresBot):
 
 
         self.macro_plan = MacroPlan()
+        self._queen_attack_target: Optional[int] = None
+        self._gas_count_registered: int = 0
 
 
     @property
@@ -428,7 +430,8 @@ class MyBot(AresBot):
             await self.is_terran_agressive()
             await self.is_bunker_rush()
             await self.search_proxy_barracks()
-            await self.burrow_roaches()
+            if iteration % 4 == 0:
+                await self.burrow_roaches()
             await self.findReaper()
             await self.attack_reaper()
             await self.attack_banshee()
@@ -443,7 +446,8 @@ class MyBot(AresBot):
             await self.is_worker_rush()
             #await self.build_hydra_den()
             await self.force_complete_build_order()
-            await self.burrow_infestors()
+            if iteration % 4 == 0:
+                await self.burrow_infestors()
             await self.create_queens_after_build_order()
             await self.is_mass_marauder()
             await self.is_mass_liberator()
@@ -476,9 +480,10 @@ class MyBot(AresBot):
             if "Banshee" in self.enemy_strategy:
                 await self.make_spores()
                 await self.make_overseer()
-                await self.make_changeling()
-                await self.move_changeling()
-                await self.assign_overseer()
+                if iteration % 8 == 0:
+                    await self.make_changeling()
+                    await self.move_changeling()
+                    await self.assign_overseer()
                 await self.is_mass_banshee()
 
 
@@ -493,7 +498,8 @@ class MyBot(AresBot):
                 await self.build_spire()
                 #await self.build_second_gas()
                 await self.build_four_gas()
-                await self.spread_overlords()
+                if iteration % 32 == 0:
+                    await self.spread_overlords()
 
 
             if "Mass_Banshee" in self.enemy_strategy:
@@ -511,9 +517,10 @@ class MyBot(AresBot):
 
             if "Mass_Widow_Mine" in self.enemy_strategy:
                 await self.make_overseer()
-                await self.assign_overseer()
-                await self.make_changeling()
-                await self.move_changeling()
+                if iteration % 8 == 0:
+                    await self.assign_overseer()
+                    await self.make_changeling()
+                    await self.move_changeling()
 
             if "Late_Game" in self.enemy_strategy:
                 await self.late_game_protocol()
@@ -536,7 +543,8 @@ class MyBot(AresBot):
             await self.is_protoss_agressive()
             await self.build_mellee_upgrades()
             await self.build_armor_upgrades()
-            await self.burrow_roaches()
+            if iteration % 4 == 0:
+                await self.burrow_roaches()
             await self.defend()
             await self.search_proxy_vs_protoss()
             await self.is_worker_rush()
@@ -568,9 +576,11 @@ class MyBot(AresBot):
 
 
         if self.EnemyRace == Race.Zerg:
-            await self.assign_overseer()
+            if iteration % 8 == 0:
+                await self.assign_overseer()
             await self.find_cheese_spine_crawler()
-            await self.burrow_roaches()
+            if iteration % 4 == 0:
+                await self.burrow_roaches()
             await self.find_mutalisks()
             await self.is_worker_rush()
             await self.force_complete_build_order()
@@ -578,8 +588,9 @@ class MyBot(AresBot):
             await self.make_overseer()
             await self.turnOffSpawningControllerOnEarlyGame()
             #await self.build_one_spine_crawler()
-            await self.make_changeling()
-            await self.move_changeling()
+            if iteration % 8 == 0:
+                await self.make_changeling()
+                await self.move_changeling()
             await self.is_ling_rush()
             await self.is_twelve_pool()
             await self.build_roach_warren_failed()
@@ -613,7 +624,8 @@ class MyBot(AresBot):
             await self.build_queens()
             await self.discover_race()
             await self.build_spine_crawlers()
-            await self.burrow_roaches()
+            if iteration % 4 == 0:
+                await self.burrow_roaches()
             await self.defend()
             await self.is_worker_rush()
             
@@ -641,15 +653,20 @@ class MyBot(AresBot):
         # e o restante espalha creep (priority=0, max=20)
         await self.queens.manage_queens(iteration, queens)
 
-        # Se algum inimigo pisar na gosma, todas as queens que não estão injetando atacam o alvo
-        enemy_on_creep: Units = self.enemy_units.filter(
-            lambda u: not u.is_memory and self.has_creep(u.position)
-        )
-        if enemy_on_creep:
-            closest_enemy = cy_closest_to(self.start_location, enemy_on_creep)
-            for queen in queens:
-                if queen.energy < 25:  # não está injetando (energia < custo do inject)
-                    queen.attack(closest_enemy.position)
+        # Se algum inimigo pisar na gosma, reavalia o alvo a cada 8 iterações para não inundar o motor com ordens
+        if iteration % 8 == 0:
+            enemy_on_creep: Units = self.enemy_units.filter(
+                lambda u: not u.is_memory and self.has_creep(u.position)
+            )
+            if enemy_on_creep:
+                closest_enemy = cy_closest_to(self.start_location, enemy_on_creep)
+                if closest_enemy.tag != self._queen_attack_target:
+                    self._queen_attack_target = closest_enemy.tag
+                    for queen in queens:
+                        if queen.energy < 25:  # não está injetando (energia < custo do inject)
+                            queen.attack(closest_enemy.position)
+            else:
+                self._queen_attack_target = None
 
 
 
@@ -1021,12 +1038,16 @@ class MyBot(AresBot):
 
     async def build_second_gas(self):
         if self.structures(UnitID.HATCHERY).amount == 2:
-            self.register_behavior(GasBuildingController(to_count = 2))
+            if self._gas_count_registered < 2:
+                self.register_behavior(GasBuildingController(to_count=2))
+                self._gas_count_registered = 2
 
 
     async def build_four_gas(self):
         if self.structures(UnitID.HATCHERY).amount >= 2:
-            self.register_behavior(GasBuildingController(to_count = 4))
+            if self._gas_count_registered < 4:
+                self.register_behavior(GasBuildingController(to_count=4))
+                self._gas_count_registered = 4
             
             
 
