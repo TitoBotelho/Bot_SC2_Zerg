@@ -427,77 +427,98 @@ class MyBot(AresBot):
 
         if self.EnemyRace == Race.Terran:
             #await self.build_queens()
-            await self.is_terran_agressive()
-            await self.is_bunker_rush()
-            await self.search_proxy_barracks()
-            if iteration % 4 == 0:
-                await self.burrow_roaches()
-            await self.findReaper()
+            # --- Vital (every frame) ---
             await self.attack_reaper()
             await self.attack_banshee()
             await self.defend()
-            await self.is_structures_flying()
-            #await self.build_lair()
-            #await self.build_spine_crawlers()
-            #await self.make_zerglings()
-            await self.find_liberator()
             await self.turnOffSpawningControllerOnEarlyGame()
-            await self.is_3_base_terran()
-            await self.is_worker_rush()
-            #await self.build_hydra_den()
-            await self.force_complete_build_order()
+
+            # --- % 4 == 0: detection / scouting / burrow ---
             if iteration % 4 == 0:
+                await self.is_terran_agressive()
+                await self.is_bunker_rush()
+                await self.search_proxy_barracks()
+                await self.findReaper()
+                await self.burrow_roaches()
                 await self.burrow_infestors()
-            await self.create_queens_after_build_order()
-            await self.is_mass_marauder()
-            await self.is_mass_liberator()
-            await self.make_ravagers()
-            await self.is_mass_widow_mine()
-            await self.is_late_game()
-            await self.make_roach_speed()
-            # await self.use_fungal_growth()
-            # await self.throw_bile()
-            await self.is_bc()
-            await self.is_mass_tank()
+
+            # --- % 4 == 1: building / construction ---
+            elif iteration % 4 == 1:
+                await self.is_structures_flying()
+                await self.find_liberator()
+                await self.is_3_base_terran()
+                await self.is_worker_rush()
+                #await self.build_hydra_den()
+                await self.force_complete_build_order()
+                await self.create_queens_after_build_order()
+
+            # --- % 4 == 2: composition checks ---
+            elif iteration % 4 == 2:
+                await self.is_mass_marauder()
+                await self.is_mass_liberator()
+                await self.make_ravagers()
+                await self.is_mass_widow_mine()
+
+            # --- % 4 == 3: upgrades / late-game checks ---
+            elif iteration % 4 == 3:
+                await self.is_late_game()
+                await self.make_roach_speed()
+                # await self.use_fungal_growth()
+                # await self.throw_bile()
+                await self.is_bc()
+                await self.is_mass_tank()
 
 
             if "Bunker_Rush" in self.enemy_strategy:
-                await self.build_roach_warren()
-                await self.research_burrow()
-                await self.change_to_bo_Bunker_Rush()
-                await self.cancel_second_base()
+                if iteration % 4 == 0:
+                    await self.cancel_second_base()
+                elif iteration % 4 == 1:
+                    await self.build_roach_warren()
+                elif iteration % 4 == 2:
+                    await self.research_burrow()
+                elif iteration % 4 == 3:
+                    await self.change_to_bo_Bunker_Rush()
             #if "2_Base_Terran" in self.enemy_strategy:
 
 
             if "Proxy_Barracks" in self.enemy_strategy:
                 #await self.cancel_second_base()
+                # Vital: active micro every frame
                 await self.retreat_overlords()
                 await self.harass_worker_proxy_barracks()
-                await self.build_spine_crawlers()
-                await self.change_to_bo_DefensiveVsProxyBarracks()
+                if iteration % 4 == 1:
+                    await self.build_spine_crawlers()
+                elif iteration % 4 == 2:
+                    await self.change_to_bo_DefensiveVsProxyBarracks()
 
 
             if "Banshee" in self.enemy_strategy:
-                await self.make_spores()
-                await self.make_overseer()
+                if iteration % 4 == 0:
+                    await self.make_spores()
+                elif iteration % 4 == 1:
+                    await self.make_overseer()
+                elif iteration % 4 == 2:
+                    await self.is_mass_banshee()
                 if iteration % 8 == 0:
                     await self.make_changeling()
                     await self.move_changeling()
                     await self.assign_overseer()
-                await self.is_mass_banshee()
 
 
             if "Liberator" in self.enemy_strategy:
-                await self.make_spores()
+                if iteration % 4 == 0:
+                    await self.make_spores()
 
 
             if "Flying_Structures" in self.enemy_strategy:
                 #await self.build_lair()
                 #await self.build_hydra_den()
                 #self.register_behavior(BuildWorkers(to_count=80))
-                await self.build_spire()
-                #await self.build_second_gas()
-                await self.build_four_gas()
+                if iteration % 4 == 1:
+                    await self.build_spire()
+                elif iteration % 4 == 2:
+                    #await self.build_second_gas()
+                    await self.build_four_gas()
                 if iteration % 32 == 0:
                     await self.spread_overlords()
 
@@ -506,33 +527,46 @@ class MyBot(AresBot):
                 #await self.build_lair()
                 #await self.build_hydra_den()
                 #self.register_behavior(BuildWorkers(to_count=80))
-                await self.build_spire()
-                #await self.build_second_gas()
-                await self.build_four_gas()
+                if iteration % 4 == 1:
+                    await self.build_spire()
+                elif iteration % 4 == 2:
+                    #await self.build_second_gas()
+                    await self.build_four_gas()
 
             if "Terran_Agressive" in self.enemy_strategy:
                 #await self.build_roach_warren()
-                await self.build_spine_crawlers()
-                await self.change_to_bo_Terran_Agressive()
+                if iteration % 4 == 1:
+                    await self.build_spine_crawlers()
+                elif iteration % 4 == 2:
+                    await self.change_to_bo_Terran_Agressive()
 
             if "Mass_Widow_Mine" in self.enemy_strategy:
-                await self.make_overseer()
+                if iteration % 4 == 0:
+                    await self.make_overseer()
                 if iteration % 8 == 0:
                     await self.assign_overseer()
                     await self.make_changeling()
                     await self.move_changeling()
 
             if "Late_Game" in self.enemy_strategy:
+                # Vital: army/protocol management every frame
                 await self.late_game_protocol()
-                await self.build_infestation_pit()
-                await self.build_lair()
-                await self.build_evolution_chamber()
-                await self.build_missle_upgrades()
+                if iteration % 4 == 0:
+                    await self.build_infestation_pit()
+                elif iteration % 4 == 1:
+                    await self.build_lair()
+                elif iteration % 4 == 2:
+                    await self.build_evolution_chamber()
+                elif iteration % 4 == 3:
+                    await self.build_missle_upgrades()
 
             if "Battlecruiser" in self.enemy_strategy:
-                await self.build_spire()
-                await self.build_spores_vs_bc()
-                await self.build_more_queens()
+                if iteration % 4 == 0:
+                    await self.build_spire()
+                elif iteration % 4 == 1:
+                    await self.build_spores_vs_bc()
+                elif iteration % 4 == 2:
+                    await self.build_more_queens()
 
 
             if "2_Base_Terran" in self.enemy_strategy:
@@ -2742,7 +2776,7 @@ class MyBot(AresBot):
                 my_base_location = self.mediator.get_own_nat
                 target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260410")
+            await self.chat_send("Tag: Version_260414")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
