@@ -352,6 +352,15 @@ class MyBot(AresBot):
         self.queens = Queens(
             self, queen_policy=self.creep_queen_policy
         )
+
+        # Instância única do Mining behavior, criada UMA VEZ aqui no on_start.
+        # IMPORTANTE: NÃO criar uma nova instância a cada frame em _macro().
+        # O Mining possui caches internos (locked_action_tags, safe_long_distance_mineral_fields)
+        # que evitam cálculos pesados a cada step. Se a instância for recriada toda frame,
+        # esses caches são zerados e o método _safe_long_distance_mineral_fields() (O(n) nos
+        # minerais do mapa) é reexecutado para CADA worker sem recurso — custo que cresce
+        # significativamente após ~15 minutos, quando patches começam a esgotar.
+        self.mining_behavior: Mining = Mining(workers_per_gas=self.workers_for_gas)
     
         # Send Overlord to scout on the second base
         await self.send_overlord_to_scout()
@@ -2843,9 +2852,16 @@ class MyBot(AresBot):
         # MINE
         # ares-sc2 Mining behavior
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/macro_behaviors.html#ares.behaviors.macro.mining.Mining
-        
+        #
+        # Reutilizamos self.mining_behavior (criado no on_start) em vez de instanciar
+        # Mining() a cada frame. Isso preserva os caches internos da classe:
+        #   - locked_action_tags: evita spam de comandos repetidos nos workers
+        #   - safe_long_distance_mineral_fields: lista de patches seguros para mineração
+        #     a longa distância — calculada apenas quando None e muito custosa (O(n))
+        # Apenas atualizamos workers_per_gas caso o valor tenha mudado em tempo de jogo.
         if self.speedMiningOn == True:
-            self.register_behavior(Mining(workers_per_gas = self.workers_for_gas))
+            self.mining_behavior.workers_per_gas = self.workers_for_gas
+            self.register_behavior(self.mining_behavior)
 
 
 
