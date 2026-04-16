@@ -692,24 +692,37 @@ class MyBot(AresBot):
 
         queens: Units = self.units(UnitID.QUEEN)
 
-        # A biblioteca gerencia tudo: 1 inject queen por base (priority=1)
-        # e o restante espalha creep (priority=0, max=20)
-        await self.queens.manage_queens(iteration, queens)
-
-        # Se algum inimigo pisar na gosma, reavalia o alvo a cada 8 iterações para não inundar o motor com ordens
-        if iteration % 8 == 0:
-            enemy_on_creep: Units = self.enemy_units.filter(
-                lambda u: not u.is_memory and self.has_creep(u.position)
-            )
-            if enemy_on_creep:
-                closest_enemy = cy_closest_to(self.start_location, enemy_on_creep)
-                if closest_enemy.tag != self._queen_attack_target:
-                    self._queen_attack_target = closest_enemy.tag
-                    for queen in queens:
-                        if queen.energy < 25:  # não está injetando (energia < custo do inject)
+        # Se supply > 195, queens largam tudo e atacam qualquer inimigo visível
+        if self.supply_used > 195:
+            visible_enemies: Units = self.enemy_units.filter(lambda u: not u.is_memory)
+            if visible_enemies:
+                if iteration % 8 == 0:
+                    closest_enemy = cy_closest_to(self.start_location, visible_enemies)
+                    if closest_enemy.tag != self._queen_attack_target:
+                        self._queen_attack_target = closest_enemy.tag
+                        for queen in queens:
                             queen.attack(closest_enemy.position)
             else:
                 self._queen_attack_target = None
+        else:
+            # A biblioteca gerencia tudo: 1 inject queen por base (priority=1)
+            # e o restante espalha creep (priority=0, max=20)
+            await self.queens.manage_queens(iteration, queens)
+
+            # Se algum inimigo pisar na gosma, reavalia o alvo a cada 8 iterações para não inundar o motor com ordens
+            if iteration % 8 == 0:
+                enemy_on_creep: Units = self.enemy_units.filter(
+                    lambda u: not u.is_memory and self.has_creep(u.position)
+                )
+                if enemy_on_creep:
+                    closest_enemy = cy_closest_to(self.start_location, enemy_on_creep)
+                    if closest_enemy.tag != self._queen_attack_target:
+                        self._queen_attack_target = closest_enemy.tag
+                        for queen in queens:
+                            if queen.energy < 25:  # não está injetando (energia < custo do inject)
+                                queen.attack(closest_enemy.position)
+                else:
+                    self._queen_attack_target = None
 
 
 
