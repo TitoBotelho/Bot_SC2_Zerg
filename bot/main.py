@@ -208,8 +208,8 @@ class MyBot(AresBot):
         self.tag_second_overlord = 0
         self.my_roaches = {}
         self.enemy_widow_mines = {}
-        self.late_game = False
-        self.late_game_expansion_done = False
+        self.mid_game = False
+        self.mid_game_expansion_done = False
         self.tag_worker_infestation_pit = 0
         self.taf_worker_build_macro_hatch = 0
         self.second_base_canceled = False
@@ -468,9 +468,9 @@ class MyBot(AresBot):
                 await self.make_ravagers()
                 await self.is_mass_widow_mine()
 
-            # --- % 4 == 3: upgrades / late-game checks ---
+            # --- % 4 == 3: upgrades / mid-game checks ---
             elif iteration % 4 == 3:
-                await self.is_late_game()
+                await self.is_mid_game()
                 await self.make_roach_speed()
                 # await self.use_fungal_growth()
                 # await self.throw_bile()
@@ -557,15 +557,15 @@ class MyBot(AresBot):
                     await self.make_changeling()
                     await self.move_changeling()
 
-            if "Late_Game" in self.enemy_strategy:
+            if "Mid_Game" in self.enemy_strategy:
                 # Vital: army/protocol management every frame
-                await self.late_game_protocol()
+                await self.mid_game_protocol()
                 if iteration % 4 == 0:
                     await self.build_infestation_pit()
                 elif iteration % 4 == 1:
                     await self.build_lair()
                 elif iteration % 4 == 2:
-                    await self.build_evolution_chamber()
+                    await self.build_evolution_chambers()
                 elif iteration % 4 == 3:
                     await self.build_missle_upgrades()
 
@@ -579,7 +579,7 @@ class MyBot(AresBot):
 
 
             if "2_Base_Terran" in self.enemy_strategy:
-                pass  # infestation pit já é ordenado via "Late_Game"
+                pass  # infestation pit já é ordenado via "Mid_Game"
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -591,7 +591,7 @@ class MyBot(AresBot):
             await self.defend()
             await self.search_proxy_vs_protoss()
             await self.is_worker_rush()
-            await self.is_late_game_vs_protoss()
+            await self.is_mid_game_vs_protoss()
             
 
             if "Protoss_Agressive" in self.enemy_strategy:
@@ -612,8 +612,8 @@ class MyBot(AresBot):
                 await self.research_burrow()
                 #await self.make_macro_hatch()
 
-            if "Late_Game" in self.enemy_strategy:
-                await self.late_game_vs_protoss_protocol()
+            if "Mid_Game" in self.enemy_strategy:
+                await self.mid_game_vs_protoss_protocol()
                 await self.build_lair()
                 await self.make_ravagers()
 
@@ -2044,17 +2044,17 @@ class MyBot(AresBot):
             self._begin_attack_at_supply = 90
 
 
-    async def is_late_game(self):
+    async def is_mid_game(self):
         if self.time > 440:
-            if self.late_game == False:
-                await self.chat_send("Tag: Late_Game")
-                self.enemy_strategy.append("Late_Game")
-                self.late_game = True
+            if self.mid_game == False:
+                await self.chat_send("Tag: Mid_Game")
+                self.enemy_strategy.append("Mid_Game")
+                self.mid_game = True
                 self._begin_attack_at_supply = 50
 
 
-    async def late_game_protocol(self):
-        if not self.late_game:
+    async def mid_game_protocol(self):
+        if not self.mid_game:
             return
 
         drone_count = self.units(UnitID.DRONE).amount
@@ -2064,16 +2064,16 @@ class MyBot(AresBot):
         bases_started = self.townhalls.ready.amount + math.ceil(self.already_pending(UnitID.HATCHERY))
 
         if bases_started >= 4 and drone_count >= 57:
-            self.spawn_inhibitors.discard("late_game_expanding")
-            self.late_game_expansion_done = True
-        elif not self.late_game_expansion_done:
-            self.spawn_inhibitors.add("late_game_expanding")
+            self.spawn_inhibitors.discard("mid_game_expanding")
+            self.mid_game_expansion_done = True
+        elif not self.mid_game_expansion_done:
+            self.spawn_inhibitors.add("mid_game_expanding")
 
         macro_plan: MacroPlan = MacroPlan()
 
         macro_plan.add(ExpansionController(to_count=4, max_pending=2))
         macro_plan.add(BuildWorkers(to_count=57))
-        macro_plan.add(GasBuildingController(to_count=7, max_pending=2))
+        macro_plan.add(GasBuildingController(to_count=8, max_pending=2))
         self.register_behavior(macro_plan)
 
     async def make_roach_speed(self):
@@ -2435,25 +2435,25 @@ class MyBot(AresBot):
 
 
 
-    async def is_late_game_vs_protoss(self):
+    async def is_mid_game_vs_protoss(self):
         if "2_Base_Protoss" in self.enemy_strategy:
              if self.time > 360:
-                if self.late_game == False:
-                    await self.chat_send("Tag: Late_Game")
-                    self.enemy_strategy.append("Late_Game")
-                    self.late_game = True
+                if self.mid_game == False:
+                    await self.chat_send("Tag: Mid_Game")
+                    self.enemy_strategy.append("Mid_Game")
+                    self.mid_game = True
 
         if "Protoss_Agressive" in self.enemy_strategy:
             if self.time > 480:
-                if self.late_game == False:
-                    await self.chat_send("Tag: Late_Game")
-                    self.enemy_strategy.append("Late_Game")
-                    self.late_game = True
+                if self.mid_game == False:
+                    await self.chat_send("Tag: Mid_Game")
+                    self.enemy_strategy.append("Mid_Game")
+                    self.mid_game = True
 
 
 
-    async def late_game_vs_protoss_protocol(self):
-        if self.late_game:
+    async def mid_game_vs_protoss_protocol(self):
+        if self.mid_game:
             if "Protoss_Agressive" in self.enemy_strategy:
                 #bases = self.townhalls.ready
                 #if self.workers.amount < 54:
@@ -2466,79 +2466,98 @@ class MyBot(AresBot):
             if "2_Base_Protoss" in self.enemy_strategy:
 
                 if self.workers.amount < 55:
-                    self.spawn_inhibitors.add("late_game_vs_protoss_workers")
+                    self.spawn_inhibitors.add("mid_game_vs_protoss_workers")
                     self.register_behavior(ExpansionController(to_count=5, max_pending=3))
                     self.register_behavior(BuildWorkers(to_count=55))           
 
                 else:
-                    self.spawn_inhibitors.discard("late_game_vs_protoss_workers")
+                    self.spawn_inhibitors.discard("mid_game_vs_protoss_workers")
 
 
     async def build_missle_upgrades(self):
-        if not (self.structures(UnitID.EVOLUTIONCHAMBER).ready and self.structures(UnitID.SPAWNINGPOOL).ready):
+        chambers = self.structures(UnitID.EVOLUTIONCHAMBER).ready
+        if not (chambers and self.structures(UnitID.SPAWNINGPOOL).ready):
             return
 
-        # --- Missile Weapons Level 1 ---
-        if UpgradeId.ZERGMISSILEWEAPONSLEVEL1 not in self.state.upgrades:
+        # --- Level 1: missile + armor in parallel (one chamber each) ---
+        missile1_done = UpgradeId.ZERGMISSILEWEAPONSLEVEL1 in self.state.upgrades
+        armor1_done   = UpgradeId.ZERGGROUNDARMORSLEVEL1 in self.state.upgrades
+
+        if not missile1_done:
             if self.already_pending_upgrade(UpgradeId.ZERGMISSILEWEAPONSLEVEL1):
                 self.spawn_inhibitors.discard("researching_missle_level_1")
             else:
                 self.spawn_inhibitors.add("researching_missle_level_1")
                 if self.can_afford(UpgradeId.ZERGMISSILEWEAPONSLEVEL1):
                     self.research(UpgradeId.ZERGMISSILEWEAPONSLEVEL1)
-            return
+        else:
+            self.spawn_inhibitors.discard("researching_missle_level_1")
 
-        self.spawn_inhibitors.discard("researching_missle_level_1")
-
-        # --- Ground Armor Level 1 ---
-        if UpgradeId.ZERGGROUNDARMORSLEVEL1 not in self.state.upgrades:
+        if not armor1_done:
             if self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL1):
                 self.spawn_inhibitors.discard("researching_armor_level_1")
             else:
                 self.spawn_inhibitors.add("researching_armor_level_1")
                 if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL1):
                     self.research(UpgradeId.ZERGGROUNDARMORSLEVEL1)
-            return
+        else:
+            self.spawn_inhibitors.discard("researching_armor_level_1")
 
-        self.spawn_inhibitors.discard("researching_armor_level_1")
+        if not missile1_done or not armor1_done:
+            return
 
         # --- Level 2 upgrades require Lair ---
         if not self.structures(UnitID.LAIR).ready:
             return
 
-        # --- Missile Weapons Level 2 ---
-        if UpgradeId.ZERGMISSILEWEAPONSLEVEL2 not in self.state.upgrades:
+        # --- Level 2: missile + armor in parallel ---
+        missile2_done = UpgradeId.ZERGMISSILEWEAPONSLEVEL2 in self.state.upgrades
+        armor2_done   = UpgradeId.ZERGGROUNDARMORSLEVEL2 in self.state.upgrades
+
+        if not missile2_done:
             if self.already_pending_upgrade(UpgradeId.ZERGMISSILEWEAPONSLEVEL2):
                 self.spawn_inhibitors.discard("researching_missle_level_2")
             else:
                 self.spawn_inhibitors.add("researching_missle_level_2")
                 if self.can_afford(UpgradeId.ZERGMISSILEWEAPONSLEVEL2):
                     self.research(UpgradeId.ZERGMISSILEWEAPONSLEVEL2)
-            return
+        else:
+            self.spawn_inhibitors.discard("researching_missle_level_2")
 
-        self.spawn_inhibitors.discard("researching_missle_level_2")
-
-        # --- Ground Armor Level 2 ---
-        if UpgradeId.ZERGGROUNDARMORSLEVEL2 not in self.state.upgrades:
+        if not armor2_done:
             if self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL2):
                 self.spawn_inhibitors.discard("researching_armor_level_2")
             else:
                 self.spawn_inhibitors.add("researching_armor_level_2")
                 if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL2):
                     self.research(UpgradeId.ZERGGROUNDARMORSLEVEL2)
-            return
+        else:
+            self.spawn_inhibitors.discard("researching_armor_level_2")
 
-        self.spawn_inhibitors.discard("researching_armor_level_2")
 
-
-    async def build_evolution_chamber(self):
+    async def build_evolution_chambers(self):
         if not self.structures(UnitID.SPAWNINGPOOL).ready:
             return
 
-        if self.structures(UnitID.EVOLUTIONCHAMBER) or self.already_pending(UnitID.EVOLUTIONCHAMBER):
-            self.evolution_chamber_ordered = False
+        current = self.structures(UnitID.EVOLUTIONCHAMBER).amount
+
+        if current >= 2:
             return
 
+        # Se já temos 1 (em construção ou pronta), continua pedindo to_count=2
+        # a cada chamada até a 2ª ser construída
+        if current == 1:
+            self.macro_plan.add(
+                BuildStructure(
+                    base_location=self.first_base.position,
+                    structure_id=UnitID.EVOLUTIONCHAMBER,
+                    to_count=2,
+                )
+            )
+            self.register_behavior(self.macro_plan)
+            return
+
+        # Se temos 0, ordena a 1ª (flag evita spam)
         if self.evolution_chamber_ordered:
             return
 
@@ -2551,7 +2570,7 @@ class MyBot(AresBot):
         )
         self.register_behavior(self.macro_plan)
         self.evolution_chamber_ordered = True
-        await self.chat_send("Tag: Evolution_Chamber_Ordered")
+        await self.chat_send("Tag: Evo_Chambers_Ordered")
 
 
     async def build_spores_vs_bc(self):
@@ -2798,7 +2817,7 @@ class MyBot(AresBot):
                 my_base_location = self.mediator.get_own_nat
                 target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260414")
+            await self.chat_send("Tag: Version_260417")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
