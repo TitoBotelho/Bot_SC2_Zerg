@@ -2817,7 +2817,7 @@ class MyBot(AresBot):
                 my_base_location = self.mediator.get_own_nat
                 target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260417")
+            await self.chat_send("Tag: Version_260422")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -3189,22 +3189,22 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
             if unit.type_id in [UnitID.RAVAGER]:
-                # Bile direta com controle manual de cooldown (7s)
-                # unit.abilities é vazio por padrão no python-sc2 sem chamada async,
-                # por isso UseAbility nunca funciona para habilidades com cooldown.
+                # Controle manual de cooldown (7s = ~157 frames).
+                # unit.abilities não é populado de forma síncrona no python-sc2,
+                # por isso rastreamos o cooldown manualmente.
                 if not hasattr(self, "_bile_cd"):
                     self._bile_cd: dict[int, int] = {}
+
+                BILE_RANGE: int = 9
+                BILE_AIR_TYPES: set[UnitID] = {UnitID.LIBERATORAG, UnitID.MEDIVAC}
+
                 if self._bile_cd.get(unit.tag, 0) <= self.state.game_loop:
-                    BILE_RANGE: int = 9
-                    # Unidades aéreas paradas/lentas que a bile consegue acertar
-                    BILE_AIR_TYPES: set[UnitID] = {UnitID.LIBERATORAG, UnitID.MEDIVAC}
                     air_bile: list[Unit] = [
                         u for u in self.enemy_units
                         if u.type_id in BILE_AIR_TYPES
                         and not u.is_memory
                         and cy_distance_to(unit.position, u.position) <= BILE_RANGE
                     ]
-                    # Candidatos terrestres (sem Banshee)
                     ground_bile: list[Unit] = [
                         u for u in all_close
                         if u.type_id != UnitID.BANSHEE
@@ -3217,7 +3217,7 @@ class MyBot(AresBot):
                         if t == UnitID.MEDIVAC:         return 2
                         if t in WORKER_TYPES:           return 4
                         if t in ALL_STRUCTURES:         return 5
-                        return 3  # unidades de exército
+                        return 3
 
                     all_bile_candidates: list[Unit] = air_bile + ground_bile
                     if all_bile_candidates:
@@ -3225,11 +3225,13 @@ class MyBot(AresBot):
                             all_bile_candidates,
                             key=lambda u: (_bile_tier(u), cy_distance_to(unit.position, u.position)),
                         )
-                        # Bile é instantânea; o comando de movimento a seguir
-                        # não cancela o projétil já lançado
                         unit(AbilityId.EFFECT_CORROSIVEBILE, best_bile.position)
-                        self._bile_cd[unit.tag] = self.state.game_loop + int(22.4 * 7.0)
+                        self._bile_cd[unit.tag] = self.state.game_loop + int(22.4 * 7.0) + 6
+                        # Bile disparada: não registrar mais nada neste frame
+                        # para evitar que outro comando sobrescreva a habilidade.
+                        continue
 
+                # Bile em cooldown: comportamento normal de ataque/movimento
                 if all_close:
                     if in_attack_range := cy_in_attack_range(unit, only_enemy_units):
                         attacking_maneuver.add(
