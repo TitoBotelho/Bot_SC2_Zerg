@@ -592,7 +592,7 @@ class MyBot(AresBot):
             await self.search_proxy_vs_protoss()
             await self.is_worker_rush()
             await self.is_mid_game_vs_protoss()
-            
+            await self.is_cannon_rush()
 
             if "Protoss_Agressive" in self.enemy_strategy:
                 #await self.build_spine_crawlers()
@@ -1385,28 +1385,38 @@ class MyBot(AresBot):
 
     async def search_proxy_vs_protoss(self):
         if self.time < 120:
+            enemy_main = self.enemy_start_locations[0]
             enemy_natural_location = self.mediator.get_enemy_nat
+
+            def is_proxy(unit) -> bool:
+                """Returns True if the structure is far from both enemy main and enemy natural."""
+                return (
+                    unit.distance_to(enemy_main) > 20
+                    and unit.distance_to(enemy_natural_location) > 20
+                )
+
             if self.proxy_pylon_found == False:
                 for unit in self.enemy_structures:
-                    if unit.name == 'Pylon':
-                        if unit.distance_to(enemy_natural_location) > 20:
-                            self.proxy_pylon_found = True
-                            await self.chat_send("Tag: Proxy_Pylon")
-                            self.enemy_strategy.append("Proxy_Pylon")
-                            break
+                    if unit.name == 'Pylon' and is_proxy(unit):
+                        self.proxy_pylon_found = True
+                        await self.chat_send("Tag: Proxy_Pylon")
+                        self.enemy_strategy.append("Proxy_Pylon")
+                        break
 
             if self.one_proxy_gateWay_found == False:
                 for unit in self.enemy_structures:
-                    if unit.name == 'Gateway':
-                        if unit.distance_to(enemy_natural_location) > 20:
-                            self.one_proxy_gateWay_found = True
-                            await self.chat_send("Tag: Proxy_Gateway")
-                            self.enemy_strategy.append("Proxy_Gateway")
-                            break
+                    if unit.name == 'Gateway' and is_proxy(unit):
+                        self.one_proxy_gateWay_found = True
+                        await self.chat_send("Tag: Proxy_Gateway")
+                        self.enemy_strategy.append("Proxy_Gateway")
+                        break
 
             if self.two_proxy_gateWay_found == False:
-                gateWays_count = sum(1 for structure in self.enemy_structures if structure.name == "Gateway")
-                if gateWays_count > 1:
+                proxy_gateways_count = sum(
+                    1 for structure in self.enemy_structures
+                    if structure.name == "Gateway" and is_proxy(structure)
+                )
+                if proxy_gateways_count > 1:
                     if "Proxy_Gateway" in self.enemy_strategy:
                         await self.chat_send("Tag: 2_Proxy_Gateway")
                         self.enemy_strategy.append("2_Proxy_Gateway")
@@ -2683,6 +2693,21 @@ class MyBot(AresBot):
         else:
             await self.make_spines_on_main()
 
+
+
+    async def is_cannon_rush(self):
+        if "Cannon_Rush" in self.enemy_strategy:
+            return
+
+        for structure in self.enemy_structures:
+            if structure.type_id == UnitID.PHOTONCANNON:
+                await self.chat_send("Tag: Cannon_Rush")
+                self.enemy_strategy.append("Cannon_Rush")
+                break
+            if structure.type_id == UnitID.FORGE and self.time < 75:
+                await self.chat_send("Tag: Cannon_Rush")
+                self.enemy_strategy.append("Cannon_Rush")
+                break
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -2817,7 +2842,7 @@ class MyBot(AresBot):
                 my_base_location = self.mediator.get_own_nat
                 target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260422")
+            await self.chat_send("Tag: Version_260423")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:

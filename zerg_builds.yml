@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - LingRoachMacroVsTerran
+            - PoolFirst
 
     Protoss:
         BotName: ProtossRace
@@ -371,9 +371,8 @@ Builds:
         ConstantWorkerProductionTill: 0
         ShouldHandleGasSteal: False
         OpeningBuildOrder:
+            - 12 worker_scout
             - 12 drone
-            - 12 worker_scout:
-                [nat, third, fourth, fifth, sixth, map_center, third, fourth]
             - 13 drone
             - 13 spawningpool
             - 13 overlord
