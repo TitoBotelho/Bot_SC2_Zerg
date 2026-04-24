@@ -617,6 +617,10 @@ class MyBot(AresBot):
                 await self.build_lair()
                 await self.make_ravagers()
 
+            if "Cannon_Rush" in self.enemy_strategy:
+                await self.cancel_second_base()
+                await self.research_burrow()
+                await self.change_to_bo_CannonRush()
 
         if self.EnemyRace == Race.Zerg:
             if iteration % 8 == 0:
@@ -2708,6 +2712,12 @@ class MyBot(AresBot):
                 await self.chat_send("Tag: Cannon_Rush")
                 self.enemy_strategy.append("Cannon_Rush")
                 break
+
+    async def change_to_bo_CannonRush(self):
+        if self.bo_changed == False:
+            self.build_order_runner.switch_opening("CannonRush")
+            self.bo_changed = True
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -2842,7 +2852,7 @@ class MyBot(AresBot):
                 my_base_location = self.mediator.get_own_nat
                 target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260423")
+            await self.chat_send("Tag: Version_260424")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:

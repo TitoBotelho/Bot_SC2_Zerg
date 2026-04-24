@@ -1125,3 +1125,32 @@ Builds:
             - 26 overlord
             - 26 overlord
             - 26 gas
+
+    CannonRush:
+        # Build constant workers till x supply
+        # Turning this off here for a bit more precision in build
+        ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
+        OpeningBuildOrder:
+            - 12 worker_scout
+            - 12 drone
+            - 13 drone
+            - 13 spawningpool
+            - 13 overlord
+            - 13 drone
+            - 13 drone
+            - 14 drone
+            - 14 gas
+            - 14 drone
+            - 15 drone
+            - 16 overlord
+            - 16 drone
+            - 16 roachwarren
+            - 16 drone
+            - 16 drone
+            - 16 gas
+            - 16 drone
+            - 17 drone
+            - 17 drone
+            - 17 overlord
+            - 17 overlord
