@@ -212,6 +212,7 @@ class MyBot(AresBot):
         self.mid_game_expansion_done = False
         self.tag_worker_infestation_pit = 0
         self.taf_worker_build_macro_hatch = 0
+        self.macro_hatch_pos: Optional[Point2] = None
         self.second_base_canceled = False
         self.enemy_battlecruisers = {}
         self.enemy_banshees = {}
@@ -593,6 +594,7 @@ class MyBot(AresBot):
             await self.is_worker_rush()
             await self.is_mid_game_vs_protoss()
             await self.is_cannon_rush()
+            await self.make_ravagers()
 
             if "Protoss_Agressive" in self.enemy_strategy:
                 #await self.build_spine_crawlers()
@@ -615,12 +617,14 @@ class MyBot(AresBot):
             if "Mid_Game" in self.enemy_strategy:
                 await self.mid_game_vs_protoss_protocol()
                 await self.build_lair()
-                await self.make_ravagers()
+
 
             if "Cannon_Rush" in self.enemy_strategy:
                 await self.cancel_second_base()
                 await self.research_burrow()
                 await self.change_to_bo_CannonRush()
+                await self.make_macro_hatch()
+                await self.emergency_supply_block()
 
         if self.EnemyRace == Race.Zerg:
             if iteration % 8 == 0:
@@ -1113,11 +1117,17 @@ class MyBot(AresBot):
 
 
     async def cancel_second_base(self):
+        if self.time > 180:
+            return
         hatcheries = self.structures(UnitID.HATCHERY)
         if self.second_base_canceled == False:
             if hatcheries:
                 for hatchery in hatcheries:
                     if not hatchery.is_ready:
+                        # Não cancela se for a macro hatch
+                        if self.macro_hatch_pos is not None:
+                            if hatchery.position.distance_to(self.macro_hatch_pos) < 5:
+                                continue
                         self.mediator.cancel_structure(structure=hatchery)
                         self.second_base_canceled = True
 
@@ -2278,44 +2288,63 @@ class MyBot(AresBot):
 
 
     async def make_macro_hatch(self):
-       # Usa a posição do Nydus da main aliada como alvo
-       # Pode vir como Point2 ou tupla com np.int64, então convertemos com segurança
-       nydus_pos = self.mediator.get_primary_nydus_own_main
-       
-       if not nydus_pos:
-           return
+        # Só constrói se tiver mais de 275 de minério e o worker ainda não foi alocado
+        if self.minerals < 275:
+            return
 
-       try:
-           if hasattr(nydus_pos, "x") and hasattr(nydus_pos, "y"):
-               target = Point2((float(nydus_pos.x), float(nydus_pos.y)))
-           else:
-               x, y = nydus_pos
-               target = Point2((float(x), float(y)))
-       except Exception:
-           return
+        if self.taf_worker_build_macro_hatch != 0:
+            return
 
-       # Ajuste: desloca 3 unidades MAIS PERTO da primeira base
-       try:
-           if getattr(self, "first_base", None):
-               target = target.towards(self.first_base, 3)
-       except Exception:
-           pass
+        if not self.can_afford(UnitID.HATCHERY):
+            return
 
-       if self.taf_worker_build_macro_hatch == 0:
-           if self.can_afford(UnitID.HATCHERY):
-               # Refinar a posição com find_placement para evitar colisões
-               final_target = target
-               try:
-                   placed = await self.find_placement(UnitID.HATCHERY, near=target, placement_step=1)
-                   if placed is not None:
-                       final_target = placed
-               except Exception:
-                   pass
+        # O rally point fica ~6 tiles em direção ao centro, então candidatos em
+        # outras direções: atrás dos minerais e lateral à base.
+        candidates: list[Point2] = []
 
-               if worker := self.mediator.select_worker(target_position=final_target):                
-                   self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                   self.taf_worker_build_macro_hatch = worker
-                   self.mediator.build_with_specific_worker(worker=self.taf_worker_build_macro_hatch, structure_type=UnitID.HATCHERY, pos=final_target, building_purpose=BuildingPurpose.NORMAL_BUILDING)
+        # 1) Atrás da linha de minerais (direção oposta ao mapa)
+        mineral_positions = self.mediator.get_behind_mineral_positions(
+            th_pos=self.first_base.position
+        )
+        if mineral_positions:
+            candidates.append(mineral_positions[0])
+
+        # 2) Lateral esquerda / direita em relação à direção do mapa
+        to_center = self.game_info.map_center - self.first_base.position
+        mag = (to_center.x ** 2 + to_center.y ** 2) ** 0.5 or 1.0
+        perp = Point2((-to_center.y / mag, to_center.x / mag))
+        for sign in (1, -1):
+            candidates.append(Point2((
+                self.first_base.position.x + perp.x * sign * 8,
+                self.first_base.position.y + perp.y * sign * 8,
+            )))
+
+        # 3) Fallback: mais perto da base em direção ao mapa (evita o rally point exato)
+        candidates.append(self.first_base.position.towards(self.game_info.map_center, 10))
+
+        placed_pos: Optional[Point2] = None
+        for candidate in candidates:
+            try:
+                placed = await self.find_placement(UnitID.HATCHERY, near=candidate, placement_step=3)
+                if placed is not None:
+                    placed_pos = placed
+                    break
+            except Exception:
+                continue
+
+        if placed_pos is None:
+            return  # tenta de novo no próximo step
+
+        if worker := self.mediator.select_worker(target_position=placed_pos):
+            self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+            self.taf_worker_build_macro_hatch = worker
+            self.macro_hatch_pos = placed_pos
+            self.mediator.build_with_specific_worker(
+                worker=self.taf_worker_build_macro_hatch,
+                structure_type=UnitID.HATCHERY,
+                pos=placed_pos,
+                building_purpose=BuildingPurpose.NORMAL_BUILDING,
+            )
         
 
     async def is_bc(self):
@@ -2483,9 +2512,20 @@ class MyBot(AresBot):
                     self.spawn_inhibitors.add("mid_game_vs_protoss_workers")
                     self.register_behavior(ExpansionController(to_count=5, max_pending=3))
                     self.register_behavior(BuildWorkers(to_count=55))           
-
                 else:
                     self.spawn_inhibitors.discard("mid_game_vs_protoss_workers")
+
+            if "Cannon_Rush" in self.enemy_strategy:
+
+                if self.workers.amount < 55:
+                    self.spawn_inhibitors.add("mid_game_vs_protoss_workers")
+                    self.register_behavior(ExpansionController(to_count=5, max_pending=3))
+                    self.register_behavior(BuildWorkers(to_count=55))           
+
+                      
+            
+            
+
 
 
     async def build_missle_upgrades(self):
@@ -2718,6 +2758,18 @@ class MyBot(AresBot):
             self.build_order_runner.switch_opening("CannonRush")
             self.bo_changed = True
 
+    async def emergency_supply_block(self):
+        """Treina overlords diretamente via larva quando o supply está crítico.
+        Usado como fallback quando o build order runner está travado esperando
+        recursos e o AutoSupply não consegue agir."""
+        if self.supply_left > 2 or self.supply_cap >= 200:
+            return
+        if not self.can_afford(UnitID.OVERLORD):
+            return
+        for larva in self.units(UnitID.LARVA):
+            larva.train(UnitID.OVERLORD)
+            break
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -2911,8 +2963,9 @@ class MyBot(AresBot):
         # MAKE SUPPLY
         # ares-sc2 AutoSupply
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/macro_behaviors.html#ares.behaviors.macro.auto_supply.AutoSupply
-        if self.build_order_runner.build_completed:
-            self.register_behavior(AutoSupply(base_location=self.start_location))
+        # Always register AutoSupply so overlords are made even if the build order
+        # is blocked mid-execution (e.g. waiting for RoachWarren during CannonRush).
+        self.register_behavior(AutoSupply(base_location=self.start_location))
 
 
 

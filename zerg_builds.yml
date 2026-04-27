@@ -1144,13 +1144,15 @@ Builds:
             - 14 drone
             - 15 drone
             - 16 overlord
+            - 16 overlord
+            - 16 drone
+            - 16 drone
             - 16 drone
             - 16 roachwarren
-            - 16 drone
-            - 16 drone
             - 16 gas
             - 16 drone
             - 17 drone
             - 17 drone
-            - 17 overlord
-            - 17 overlord
+            - 18 overlord
+            - 20 overlord
+            - 20 drone
