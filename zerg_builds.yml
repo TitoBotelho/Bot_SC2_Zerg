@@ -22,7 +22,7 @@ BuildChoices:
     Random:
         BotName: RandomRace
         Cycle:
-            - Standard
+            - PoolFirst
 
     Terran:
         BotName: TerranRace
