@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - PoolFirst
+            - MacroVsTerran
 
     Protoss:
         BotName: ProtossRace
@@ -27,7 +27,7 @@ BuildChoices:
     Terran:
         BotName: TerranRace
         Cycle:
-            - LingRoachMacroVsTerran
+            - MacroVsTerran
 
     Zerg:
         BotName: ZergRace
@@ -491,59 +491,84 @@ Builds:
         # Turning this off here for a bit more precision in build
         ConstantWorkerProductionTill: 50
         OpeningBuildOrder:
-            - 12 overlord
-            - 12 worker_scout:
-                [nat, third, fourth, fifth, third, fourth, sixth, map_center]
             - 12 drone
             - 13 drone
+            - 13 hatchery
+            - 12 drone
+            - 13 spawningpool
+            - 13 worker_scout:
+                [third, fourth, fifth, third, fourth, sixth, map_center]
+            - 13 overlord
+            - 13 drone
+            - 13 drone
+            - 15 gas
             - 14 drone
             - 15 drone
-            - 15 hatchery
-            - 14 drone
-            - 15 spawningpool
-            - 14 gas
-            - 14 drone
-            - 15 drone
+            - 15 queen
+            - 15 queen
             - 16 drone
             - 17 drone
-            - 18 overlord
+            - 18 drone
+            - 17 drone
             - 18 drone
             - 19 drone
-            - 20 hatchery
-            - 20 overlord
-            - 19 drone
-            - 20 drone
+            - 20 queen
+            - 20 lair
+            - 21 hatchery
+            - 21 overlord
             - 21 drone
-            - 22 drone
-            - 22 overlord
-            - 23 drone
-            - 24 drone
-            - 25 drone
-            - 26 overlord
-            - 26 drone
-            - 27 drone
-            - 28 drone
+            - 20 drone
+            - 20 overlord
+            - 21 drone
+            - 21 extractor
+            - 27 roachwarren
+            - 27 overlord
+            - 30 extractor
+            - 27 queen
+            - 30 drone
             - 29 drone
+            - 30 overlord
             - 30 drone
             - 31 drone
             - 32 drone
+            - 32 overlord
+            - 32 overlord
             - 33 drone
-            - 34 overlord
             - 34 drone
             - 35 drone
-            - 36 drone
-            - 37 drone
-            - 37 hatchery
+            - 29 drone
+            - 30 drone
+            - 31 overlord
+            - 31 drone
+            - 31 overlord
+            - 32 drone
+            - 33 drone
+            - 34 drone
             - 38 overlord
             - 38 drone
             - 39 drone
+            - 30 extractor
             - 40 overlord
             - 40 drone
             - 41 drone
-            - 42 evolutionchamber
-            - 42 hatchery
-            - 43 gas
-            - 44 gas
+            - 41 gas
+            - 41 drone
+            - 42 drone
+            - 42 drone
+            - 42 drone
+            - 42 drone
+            - 42 queen
+            - 42 drone
+            - 42 gas
+            - 42 overlord
+            - 42 drone
+            - 42 drone
+            - 42 drone
+            - 42 overlord
+            - 42 gas
+            - 42 drone
+            - 42 drone
+            - 42 queen
 
 
     OppeningVs4gatewayZealotRush:
@@ -967,6 +992,7 @@ Builds:
             - 35 drone
             - 25 gas
             - 25 gas
+            - 25 overlord
 
 
 

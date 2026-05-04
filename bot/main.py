@@ -222,6 +222,7 @@ class MyBot(AresBot):
         self.nydus_spot_set = False
         self.tag_third_overlord = 0
         self.enemy_nat_cc_found = False
+        self.scout_changeling_spawned = False
         self.infestation_pit_ordered = False
         self.evolution_chamber_ordered = False
         self.spire_ordered = False
@@ -398,7 +399,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        await self.debug_tool()
+        #await self.debug_tool()
 
 
 
@@ -451,6 +452,7 @@ class MyBot(AresBot):
                 await self.findReaper()
                 await self.burrow_roaches()
                 await self.burrow_infestors()
+                await self.scout_enemy_base_with_changeling()
 
             # --- % 4 == 1: building / construction ---
             elif iteration % 4 == 1:
@@ -529,6 +531,7 @@ class MyBot(AresBot):
                 elif iteration % 4 == 2:
                     #await self.build_second_gas()
                     await self.build_four_gas()
+                    await self.build_more_queens()
                 if iteration % 32 == 0:
                     await self.spread_overlords()
 
@@ -542,6 +545,7 @@ class MyBot(AresBot):
                 elif iteration % 4 == 2:
                     #await self.build_second_gas()
                     await self.build_four_gas()
+                    await self.build_more_queens()
 
             if "Terran_Agressive" in self.enemy_strategy:
                 #await self.build_roach_warren()
@@ -2962,6 +2966,53 @@ class MyBot(AresBot):
             larva.train(UnitID.OVERLORD)
             break
 
+    async def scout_enemy_base_with_changeling(self):
+        second_ol_tag = self.tag_second_overlord
+        if not second_ol_tag:
+            return
+
+        # Posição onde o overseer vai ficar para spawnar o changeling (nydus spot da base inimiga)
+        try:
+            nydus_spot = self.mediator.get_primary_nydus_enemy_main
+            if hasattr(nydus_spot, "x") and hasattr(nydus_spot, "y"):
+                spawn_pos: Point2 = Point2((float(nydus_spot.x), float(nydus_spot.y)))
+            else:
+                spawn_pos = Point2((float(nydus_spot[0]), float(nydus_spot[1])))
+        except Exception:
+            spawn_pos = self.enemy_start_locations[0]
+
+        # Frente da base inimiga: destino do changeling
+        enemy_base: Point2 = self.enemy_start_locations[0]
+        enemy_front: Point2 = enemy_base.towards(self.game_info.map_center, 8)
+
+        # --- Etapa 2: morfar o segundo overlord em overseer quando o Lair estiver pronto ---
+        if not self.structures(UnitID.LAIR).ready:
+            return
+
+        # O overlord ainda não morfou
+        overlord: Optional[Unit] = self.units(UnitID.OVERLORD).find_by_tag(second_ol_tag)
+        if overlord and not self.scout_changeling_spawned:
+            if self.can_afford(UnitID.OVERSEER):
+                overlord(AbilityId.MORPH_OVERSEER)
+            return
+
+        # --- Etapa 3: spawnar changeling sempre que o overseer tiver energia suficiente ---
+        overseer: Optional[Unit] = self.units(UnitID.OVERSEER).find_by_tag(second_ol_tag)
+        if overseer:
+            if overseer.is_ready and overseer.energy >= 50:
+                if overseer.distance_to(spawn_pos) <= 5:
+                    # Está no nydus spot: spawna o changeling
+                    overseer(AbilityId.SPAWNCHANGELING_SPAWNCHANGELING)
+                    self.scout_changeling_spawned = True
+                else:
+                    # Move até o nydus spot antes de spawnar
+                    overseer.move(spawn_pos)
+
+        # --- Etapa 4: mover todos os changelings para a frente da base inimiga ---
+        for changeling in self.units(UnitID.CHANGELING):
+            if changeling.distance_to(enemy_front) > 3:
+                changeling.move(enemy_front)
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -3090,13 +3141,16 @@ class MyBot(AresBot):
         # Exemplo para a segunda base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 2:
             self.tag_second_overlord = unit.tag
-            if self.EnemyRace == Race.Terran:
+            try:
+                nydus_spot = self.mediator.get_primary_nydus_enemy_main
+                if hasattr(nydus_spot, "x") and hasattr(nydus_spot, "y"):
+                    target = Point2((float(nydus_spot.x), float(nydus_spot.y)))
+                else:
+                    target = Point2((float(nydus_spot[0]), float(nydus_spot[1])))
+            except Exception:
                 target = self.enemy_start_locations[0]
-            else:
-                my_base_location = self.mediator.get_own_nat
-                target = my_base_location.position.towards(self.game_info.map_center, 5)
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260424")
+            await self.chat_send("Tag: Version_260504")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -3189,9 +3243,9 @@ class MyBot(AresBot):
 
             if self.EnemyRace == Race.Terran:
                 if "Flying_Structures" in self.enemy_strategy:
-                    self.register_behavior(SpawnController(ARMY_COMP_MUTAlLISK[self.race]))
+                    self.register_behavior(SpawnController(ARMY_COMP_MUTAROACH[self.race]))
                 elif "Mass_Banshee" in self.enemy_strategy:
-                    self.register_behavior(SpawnController(ARMY_COMP_MUTAlLISK[self.race]))    
+                    self.register_behavior(SpawnController(ARMY_COMP_MUTAROACH[self.race]))    
                 elif "Battlecruiser" in self.enemy_strategy:
                     self.register_behavior(SpawnController(ARMY_COMP_ROACHCORRUPTOR[self.race]))
                 else:
