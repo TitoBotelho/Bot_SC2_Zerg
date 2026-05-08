@@ -480,6 +480,11 @@ class MyBot(AresBot):
                 await self.is_bc()
                 await self.is_mass_tank()
 
+            if "Worker_Rush" in self.enemy_strategy:
+                await self.change_to_bo_TwelvePool()
+                await self.build_roach_warren()
+                await self.defend_worker_rush()    
+
 
             if "Bunker_Rush" in self.enemy_strategy:
                 if iteration % 4 == 0:
@@ -599,6 +604,12 @@ class MyBot(AresBot):
             await self.is_mid_game_vs_protoss()
             await self.is_cannon_rush()
             await self.make_ravagers()
+            await self.is_worker_rush()
+
+            if "Worker_Rush" in self.enemy_strategy:
+                await self.change_to_bo_TwelvePool()
+                await self.build_roach_warren()
+                await self.defend_worker_rush()    
 
             if "Protoss_Agressive" in self.enemy_strategy:
                 #await self.build_spine_crawlers()
@@ -652,7 +663,14 @@ class MyBot(AresBot):
             await self.check_nydus_spot()
             await self.build_missle_upgrades()
             await self.make_ravagers()
+            await self.is_worker_rush()
 
+
+
+            if "Worker_Rush" in self.enemy_strategy:
+                await self.change_to_bo_TwelvePool()
+                await self.build_roach_warren()
+                await self.defend_worker_rush()    
 
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
@@ -662,9 +680,6 @@ class MyBot(AresBot):
                 await self.worker_defense()
                 await self.turnOnSpeedMiningAtTimeX(95)
 
-            if "Worker_Rush" in self.enemy_strategy:
-                await self.change_to_bo_TwelvePool()
-                await self.build_roach_warren()
 
             if "Ling_Rush" in self.enemy_strategy or "12_Pool" in self.enemy_strategy:
                 await self.build_roach_warren()
@@ -684,7 +699,11 @@ class MyBot(AresBot):
                 await self.burrow_roaches()
             await self.defend()
             await self.is_worker_rush()
-            
+
+            if "Worker_Rush" in self.enemy_strategy:
+                await self.change_to_bo_TwelvePool()
+                await self.build_roach_warren()
+                await self.defend_worker_rush()    
 
             if "Random_Protoss" in self.enemy_strategy:
                 await self.build_queens()
@@ -2306,134 +2325,6 @@ class MyBot(AresBot):
         self.spawn_inhibitors.discard("researching_roach_speed")
 
 
-
-    # async def use_fungal_growth(self):
-
-    #     """
-    #     Lança Fungal Growth apenas se conseguir atingir pelo menos 3 inimigos com o mesmo lançamento.
-    #     - Custo: 75 energia
-    #     - Alcance: ~10
-    #     - Só lança se pelo menos 3 inimigos estiverem dentro do raio de efeito (~2.0) do ponto alvo
-    #     - Cooldown global: 3s compartilhado entre todos os Infestors
-    #     """
-    #     ENERGY_COST = 75
-    #     CAST_RANGE = 9.9  # alcance máximo para lançar
-    #     EFFECT_RADIUS = 2.0  # raio de efeito do Fungal Growth
-    #     MIN_TARGETS = 3      # mínimo de inimigos atingidos
-    #     GLOBAL_COOLDOWN = 3.0  # segundos
-
-    #     cooldown_until: float = getattr(self, "fungal_cooldown_until", 0.0)
-    #     if cooldown_until and self.time < cooldown_until:
-    #         return
-
-    #     if not self.enemy_units:
-    #         return
-
-    #     for infestor in self.units(UnitID.INFESTOR).ready:
-    #         if infestor.energy < ENERGY_COST:
-    #             continue
-
-    #         try:
-    #             abilities = await self.get_available_abilities(infestor)
-    #             if AbilityId.FUNGALGROWTH_FUNGALGROWTH not in abilities:
-    #                 continue
-    #         except Exception:
-    #             pass
-
-    #         # Filtra inimigos em alcance, ignorando Raven
-    #         in_range: Units = self.enemy_units.filter(
-    #             lambda u: cy_distance_to(infestor.position, u.position) <= CAST_RANGE and u.type_id != UnitID.RAVEN
-    #         )
-    #         if not in_range:
-    #             continue
-
-    #         # Para cada inimigo em alcance, verifica quantos outros inimigos estão no raio de efeito se lançar nele
-    #         best_target = None
-    #         best_count = 0
-    #         for candidate in in_range:
-    #             # Conta quantos inimigos ficariam dentro do raio de efeito se lançar no candidate
-    #             count = sum(
-    #                 1 for u in self.enemy_units
-    #                 if cy_distance_to(candidate.position, u.position) <= EFFECT_RADIUS and u.type_id != UnitID.RAVEN
-    #             )
-    #             if count > best_count:
-    #                 best_count = count
-    #                 best_target = candidate
-
-    #         if best_target and best_count >= MIN_TARGETS:
-    #             infestor(AbilityId.FUNGALGROWTH_FUNGALGROWTH, best_target.position)
-    #             self.fungal_cooldown_until = self.time + GLOBAL_COOLDOWN
-    #             return  # Apenas um lançamento por chamada
-
-
-    # async def throw_bile(self):
-    #     CAST_RANGE = 9
-    #     ravagers: Units = self.units(UnitID.RAVAGER).ready
-
-    #     PRIORITY_BILE_TARGETS: set[UnitID] = {
-    #         UnitID.SIEGETANKSIEGED,
-    #         UnitID.BUNKER,
-    #         UnitID.PHOTONCANNON,
-    #         UnitID.SHIELDBATTERY,
-    #         UnitID.SPINECRAWLER,
-    #         UnitID.SUPPLYDEPOTLOWERED,
-    #         UnitID.SUPPLYDEPOT,
-    #         UnitID.PYLON,
-    #     }
-
-    #     for ravager in ravagers:
-    #         # Verifica se o Ravager pode lançar bile agora
-    #         abilities = await self.get_available_abilities(ravager)
-    #         if AbilityId.EFFECT_CORROSIVEBILE not in abilities:
-    #             continue
-
-    #         # 1) Prioriza alvos da lista em alcance (exceto Banshee)
-    #         priority_targets = [
-    #             unit
-    #             for unit in self.enemy_units
-    #             if unit.type_id in PRIORITY_BILE_TARGETS
-    #             and unit.type_id != UnitID.BANSHEE
-    #             and cy_distance_to(ravager.position, unit.position) <= CAST_RANGE
-    #         ]
-    #         priority_targets += [
-    #             structure
-    #             for structure in self.enemy_structures
-    #             if structure.type_id in PRIORITY_BILE_TARGETS
-    #             and structure.type_id != UnitID.BANSHEE
-    #             and cy_distance_to(ravager.position, structure.position) <= CAST_RANGE
-    #         ]
-
-    #         if priority_targets:
-    #             target = min(
-    #                 priority_targets,
-    #                 key=lambda t: cy_distance_to(ravager.position, t.position),
-    #             )
-    #             ravager(AbilityId.EFFECT_CORROSIVEBILE, target.position)
-    #             continue
-
-    #         # 2) Caso contrário, alvo inimigo mais próximo em alcance (exceto Banshee)
-    #         enemies_in_range = [
-    #             unit
-    #             for unit in self.enemy_units
-    #             if unit.type_id != UnitID.BANSHEE
-    #             and cy_distance_to(ravager.position, unit.position) <= CAST_RANGE
-    #         ]
-    #         enemies_in_range += [
-    #             structure
-    #             for structure in self.enemy_structures
-    #             if structure.type_id != UnitID.BANSHEE
-    #             and cy_distance_to(ravager.position, structure.position) <= CAST_RANGE
-    #         ]
-    #         if not enemies_in_range:
-    #             continue
-
-    #         nearest_target = min(
-    #             enemies_in_range,
-    #             key=lambda u: cy_distance_to(ravager.position, u.position),
-    #         )
-    #         ravager(AbilityId.EFFECT_CORROSIVEBILE, nearest_target.position)
-
-
     async def is_mass_banshee(self):
         if "Mass_Banshee" not in self.enemy_strategy:
             for unit in self.enemy_units:
@@ -3012,6 +2903,59 @@ class MyBot(AresBot):
         for changeling in self.units(UnitID.CHANGELING):
             if changeling.distance_to(enemy_front) > 3:
                 changeling.move(enemy_front)
+
+
+    async def defend_worker_rush(self):
+        """Pull drones to fight back against an enemy worker rush."""
+        if "Worker_Rush" not in self.enemy_strategy:
+            return
+
+        # Scan a 25-tile radius around our main for enemy workers
+        defense_point = self.first_base.position
+        enemy_near: Units = self.mediator.get_units_in_range(
+            start_points=[defense_point],
+            distances=25,
+            query_tree=UnitTreeQueryType.AllEnemy,
+        )[0]
+        enemy_workers: Units = enemy_near.filter(lambda u: u.type_id in WORKER_TYPES)
+
+        defending: Units = self.mediator.get_units_from_role(
+            role=UnitRole.DEFENDING,
+            unit_type=self.worker_type,
+        )
+
+        # No enemy workers visible → release all defenders back to mining
+        if not enemy_workers:
+            for drone in defending:
+                self.mediator.assign_role(tag=drone.tag, role=UnitRole.GATHERING)
+            return
+
+        # Pull 1.5× as many drones as enemy workers (between 4 and 16)
+        workers_needed: int = min(16, max(4, int(len(enemy_workers) * 1.5)))
+
+        if len(defending) < workers_needed:
+            defending_tags = {d.tag for d in defending}
+            available: Units = self.workers.filter(lambda w: w.tag not in defending_tags)
+            to_pull = workers_needed - len(defending)
+            for drone in available[:to_pull]:
+                self.mediator.assign_role(tag=drone.tag, role=UnitRole.DEFENDING)
+
+        # Refresh list after potential new assignments
+        defending = self.mediator.get_units_from_role(
+            role=UnitRole.DEFENDING,
+            unit_type=self.worker_type,
+        )
+
+        # Command each defending drone to attack the closest enemy worker
+        for drone in defending:
+            if drone.is_carrying_resource and self.townhalls:
+                drone.return_resource()
+                continue
+            target: Unit = cy_closest_to(drone.position, enemy_workers)
+            maneuver = CombatManeuver()
+            maneuver.add(ShootTargetInRange(unit=drone, targets=enemy_workers))
+            maneuver.add(AttackTarget(unit=drone, target=target))
+            self.register_behavior(maneuver)
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
