@@ -399,7 +399,7 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        #await self.debug_tool()
+        await self.debug_tool()
 
 
 
@@ -3085,16 +3085,9 @@ class MyBot(AresBot):
         # Exemplo para a segunda base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 2:
             self.tag_second_overlord = unit.tag
-            try:
-                nydus_spot = self.mediator.get_primary_nydus_enemy_main
-                if hasattr(nydus_spot, "x") and hasattr(nydus_spot, "y"):
-                    target = Point2((float(nydus_spot.x), float(nydus_spot.y)))
-                else:
-                    target = Point2((float(nydus_spot[0]), float(nydus_spot[1])))
-            except Exception:
-                target = self.enemy_start_locations[0]
+            target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260504")
+            await self.chat_send("Tag: Version_260511")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
