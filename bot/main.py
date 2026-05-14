@@ -227,6 +227,7 @@ class MyBot(AresBot):
         self.evolution_chamber_ordered = False
         self.spire_ordered = False
         self.first_overlord = 0
+        self._retreat_issued: bool = False
 
         self._commenced_attack: bool = False
 
@@ -640,6 +641,8 @@ class MyBot(AresBot):
                 await self.change_to_bo_CannonRush()
                 await self.make_macro_hatch()
                 await self.emergency_supply_block()
+                await self.bile_ravagers_cannon_rush()
+
 
         if self.EnemyRace == Race.Zerg:
             if iteration % 8 == 0:
@@ -675,10 +678,8 @@ class MyBot(AresBot):
             if "Mutalisk" in self.enemy_strategy:
                 await self.make_spores()
         
-            if "Cheese_Spine_Crawler" in self.enemy_strategy:
-                await self.turnOffSpeedMining()
-                await self.worker_defense()
-                await self.turnOnSpeedMiningAtTimeX(95)
+            #if "Cheese_Spine_Crawler" in self.enemy_strategy:
+                #await self.turnOffSpeedMining()
 
 
             if "Ling_Rush" in self.enemy_strategy or "12_Pool" in self.enemy_strategy:
@@ -727,6 +728,7 @@ class MyBot(AresBot):
                     await self.change_to_bo_CannonRush()
                     await self.make_macro_hatch()
                     await self.emergency_supply_block()
+                    await self.bile_ravagers_cannon_rush()
 
                 else:
                     if "Protoss_Agressive" in self.enemy_strategy:  
@@ -1356,15 +1358,6 @@ class MyBot(AresBot):
                     self.overlord_retreated = True
 
 
-    async def worker_defense(self):
-        spine_crawler_amount = 0
-        for spinecrawler in self.enemy_structures(UnitID.SPINECRAWLER):
-            if spinecrawler.distance_to(self.first_base) < 20:
-                spine_crawler_amount = spine_crawler_amount+1
-                for drone in self.workers:
-                    self.mediator.switch_roles(from_role=UnitRole.GATHERING, to_role=UnitRole.DEFENDING)
-                    drone.attack(spinecrawler.position)
-
 
         #if spine_crawler_amount == 0 and self.spineCrawlerCheeseDetected:
             #self.spineCrawlerCheeseDetected = False
@@ -1378,7 +1371,7 @@ class MyBot(AresBot):
         if self.time < 180:
             if self.spineCrawlerCheeseDetected == False:
                 for spinecrawler in self.enemy_structures(UnitID.SPINECRAWLER):
-                    if spinecrawler.distance_to(self.first_base) < 20:
+                    if spinecrawler.distance_to(self.first_base.position) < 20:
                         if spinecrawler.distance_to(self.mediator.get_enemy_nat) > 30:
                             self.spineCrawlerCheeseDetected = True
                             await self.chat_send("Tag: Cheese Spine Crawler")
@@ -1590,15 +1583,17 @@ class MyBot(AresBot):
             if self.get_total_supply(forces) < self._begin_attack_at_supply:
                 self._commenced_attack = False
                 self.defending = False
-                # Somente unidades terrestres recebem a ordem de recuar.
-                # Air forces (corruptors, mutalisks) são gerenciadas separadamente no on_step.
-                for unit in ground_forces:
-                    if self.second_base is not None:         
-                        unit.move(self.second_base.position.towards(self.game_info.map_center, 4))                        
-                    else:
-                        unit.move(self.first_base.position.towards(self.game_info.map_center, 6))
+                # Somente envia o comando de recuo uma vez por transição de ataque → recuo.
+                if not self._retreat_issued:
+                    self._retreat_issued = True
+                    for unit in ground_forces:
+                        if self.second_base is not None:
+                            unit.move(self.second_base.position.towards(self.game_info.map_center, 4))
+                        else:
+                            unit.move(self.first_base.position.towards(self.game_info.map_center, 6))
             else:
                 self._commenced_attack = True
+                self._retreat_issued = False  # reseta quando o ataque é retomado
 
 
     async def find_mutalisks(self):
@@ -1735,14 +1730,6 @@ class MyBot(AresBot):
     async def turnOffSpeedMining(self):
         if self.speedMiningOn == True:
             self.speedMiningOn = False
-
-
-    async def turnOnSpeedMiningAtTimeX(self, x: int):
-        if self.time > x:
-            self.spineCrawlerCheeseDetected = False
-            for drone in self.workers:
-                self.mediator.assign_role(tag = drone.tag, role = UnitRole.GATHERING)
-            self.speedMiningOn = True
 
 
     async def harass_worker_proxy_barracks(self):
@@ -2203,9 +2190,9 @@ class MyBot(AresBot):
 
     async def make_ravagers(self):
         # Mesmos gates que você já tinha
-        if self.vespene > 300 and self.structures(UnitID.ROACHWARREN).ready:
+        if self.vespene > 275 and self.structures(UnitID.ROACHWARREN).ready:
             roaches: Units = self.units(UnitID.ROACH).ready
-            if roaches.amount < 10:
+            if roaches.amount < 9:
                 return
             if "Flying_Structures" in self.enemy_strategy:
                 return
@@ -2957,6 +2944,42 @@ class MyBot(AresBot):
             maneuver.add(AttackTarget(unit=drone, target=target))
             self.register_behavior(maneuver)
 
+
+    async def bile_ravagers_cannon_rush(self):
+        BILE_RANGE = 9.0
+        SAFE_RANGE = 9.0  # distância alvo ao se aproximar: dentro do bile mas fora do cannon
+        CANNON_RUSH_TYPES = {UnitID.PHOTONCANNON, UnitID.PYLON, UnitID.SHIELDBATTERY}
+
+        cannon_structures = self.enemy_structures.of_type(CANNON_RUSH_TYPES)
+        if not cannon_structures:
+            return
+
+        for ravager in self.units(UnitID.RAVAGER):
+            # Não interrupe um bile que já está sendo lançado
+            if any(o.ability.id == AbilityId.EFFECT_CORROSIVEBILE for o in ravager.orders):
+                continue
+
+            nearest_structure = cannon_structures.closest_to(ravager)
+            in_range = cannon_structures.closer_than(BILE_RANGE, ravager.position)
+
+            abilities = await self.get_available_abilities(ravager)
+
+            if not in_range or AbilityId.EFFECT_CORROSIVEBILE not in abilities:
+                # Calcula ponto a SAFE_RANGE tiles da estrutura, na direção do ravager
+                # (o ravager para exatamente dentro do bile range sem se aproximar mais)
+                dx = ravager.position.x - nearest_structure.position.x
+                dy = ravager.position.y - nearest_structure.position.y
+                mag = (dx * dx + dy * dy) ** 0.5 or 1.0
+                approach_pos = Point2((
+                    nearest_structure.position.x + dx / mag * SAFE_RANGE,
+                    nearest_structure.position.y + dy / mag * SAFE_RANGE,
+                ))
+                ravager.move(approach_pos)
+                continue
+
+            # Dentro do range com bile disponível: atirar
+            target = in_range.closest_to(ravager)
+            ravager(AbilityId.EFFECT_CORROSIVEBILE, target.position)
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -3085,9 +3108,12 @@ class MyBot(AresBot):
         # Exemplo para a segunda base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 2:
             self.tag_second_overlord = unit.tag
-            target = self.mediator.get_primary_nydus_enemy_main
+            if "Cannon_Rush" in self.enemy_strategy:
+                target = self.mediator.get_own_nat
+            else:
+                target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260511")
+            await self.chat_send("Tag: Version_260514")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
