@@ -616,10 +616,11 @@ class MyBot(AresBot):
                 #await self.build_spine_crawlers()
                 if self.opponent_id != "c033a97a-667d-42e3-91e8-13528ac191ed":
                     self._begin_attack_at_supply = 40
-                await self.build_2_spine_crawlers()
+                if "Cannon_Rush" not in self.enemy_strategy:
+                    await self.build_2_spine_crawlers()
                 await self.change_to_bo_Protoss_Agressive()
 
-            if "2_Base_Protoss" in self.enemy_strategy:
+            if "2_Base_Protoss" in self.enemy_strategy and "Cannon_Rush" not in self.enemy_strategy:
                 await self.stop_collecting_gas()
 
             if "2_Proxy_Gateway" in self.enemy_strategy:
@@ -642,6 +643,7 @@ class MyBot(AresBot):
                 await self.make_macro_hatch()
                 await self.emergency_supply_block()
                 await self.bile_ravagers_cannon_rush()
+                self._begin_attack_at_supply = 40
 
 
         if self.EnemyRace == Race.Zerg:
@@ -729,13 +731,15 @@ class MyBot(AresBot):
                     await self.make_macro_hatch()
                     await self.emergency_supply_block()
                     await self.bile_ravagers_cannon_rush()
+                    self._begin_attack_at_supply = 40
 
                 else:
                     if "Protoss_Agressive" in self.enemy_strategy:  
                         #await self.change_to_bo_VsOneBaseRandomProtoss()
                         await self.build_2_spine_crawlers()
                         await self.change_to_bo_Protoss_Agressive()
-                
+                        self._begin_attack_at_supply = 40
+
             if "Random_Terran" in self.enemy_strategy:
                 # --- Vital (every frame) ---
                 await self.attack_reaper()
@@ -3110,10 +3114,13 @@ class MyBot(AresBot):
             self.tag_second_overlord = unit.tag
             if "Cannon_Rush" in self.enemy_strategy:
                 target = self.mediator.get_own_nat
+            elif "Magannatha AIE" in self.game_info.map_name:
+                enemy_third = self.mediator.get_enemy_third
+                target = enemy_third.towards(self.enemy_start_locations[0], 13)
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260514")
+            await self.chat_send("Tag: Version_260515")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
