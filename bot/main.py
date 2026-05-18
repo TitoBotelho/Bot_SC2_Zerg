@@ -400,6 +400,10 @@ class MyBot(AresBot):
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
+        # Always clear building_lair inhibitor if Lair or Hive already exists
+        if self.structures(UnitID.LAIR) or self.structures(UnitID.HIVE):
+            self.spawn_inhibitors.discard("building_lair")
+
         await self.debug_tool()
 
 
@@ -643,6 +647,7 @@ class MyBot(AresBot):
                 await self.make_macro_hatch()
                 await self.emergency_supply_block()
                 await self.bile_ravagers_cannon_rush()
+                await self.worker_attack_cannon_rush()
                 self._begin_attack_at_supply = 40
 
 
@@ -731,6 +736,7 @@ class MyBot(AresBot):
                     await self.make_macro_hatch()
                     await self.emergency_supply_block()
                     await self.bile_ravagers_cannon_rush()
+                    await self.worker_attack_cannon_rush()
                     self._begin_attack_at_supply = 40
 
                 else:
@@ -1678,30 +1684,83 @@ class MyBot(AresBot):
                     self.terran_flying_structures = True
 
     async def build_spire(self):
-        if self.structures(UnitID.SPIRE).amount == 0 and not self.already_pending(UnitID.SPIRE):
-            if self.structures(UnitID.LAIR).ready:
-                self.spawn_inhibitors.add("building_spire")
+        # Manage spawn inhibitor
+        spire_exists = self.structures(UnitID.SPIRE) or self.already_pending(UnitID.SPIRE)
+        if not spire_exists and self.structures(UnitID.LAIR).ready:
+            self.spawn_inhibitors.add("building_spire")
         else:
             self.spawn_inhibitors.discard("building_spire")
 
         if not self.structures(UnitID.LAIR).ready:
             return
 
-        if self.structures(UnitID.SPIRE) or self.already_pending(UnitID.SPIRE):
+        if spire_exists:
             self.spire_ordered = False
+            self._spire_worker_tag = 0
             return
+
+        # If a worker is already on the way, do nothing
+        if getattr(self, "_spire_worker_tag", 0):
+            worker = self.workers.find_by_tag(self._spire_worker_tag)
+            if worker:
+                return
+            # Worker died — reset so we try again
+            self._spire_worker_tag = 0
+            self.spire_ordered = False
 
         if self.spire_ordered:
             return
 
-        self.macro_plan.add(
-            BuildStructure(
-                base_location=self.first_base.position,
-                structure_id=UnitID.SPIRE,
-                to_count=1,
-            )
+        if not self.can_afford(UnitID.SPIRE):
+            return
+
+        # Try candidate positions around the first base until one is placeable
+        base = self.first_base.position
+        center = self.game_info.map_center
+        to_center = center - base
+        mag = (to_center.x ** 2 + to_center.y ** 2) ** 0.5 or 1.0
+        fwd = Point2((to_center.x / mag, to_center.y / mag))
+        perp = Point2((-fwd.y, fwd.x))
+
+        candidates: list[Point2] = [
+            # Behind minerals (away from map center)
+            Point2((base.x - fwd.x * 7, base.y - fwd.y * 7)),
+            # Lateral left
+            Point2((base.x + perp.x * 7, base.y + perp.y * 7)),
+            # Lateral right
+            Point2((base.x - perp.x * 7, base.y - perp.y * 7)),
+            # Diagonals
+            Point2((base.x - fwd.x * 5 + perp.x * 5, base.y - fwd.y * 5 + perp.y * 5)),
+            Point2((base.x - fwd.x * 5 - perp.x * 5, base.y - fwd.y * 5 - perp.y * 5)),
+            # Fallback: close behind base
+            Point2((base.x - fwd.x * 4, base.y - fwd.y * 4)),
+        ]
+
+        placed_pos: Optional[Point2] = None
+        for candidate in candidates:
+            try:
+                pos = await self.find_placement(UnitID.SPIRE, near=candidate, placement_step=2)
+                if pos is not None:
+                    placed_pos = pos
+                    break
+            except Exception:
+                continue
+
+        if placed_pos is None:
+            return  # retry next step
+
+        worker = self.mediator.select_worker(target_position=placed_pos)
+        if not worker:
+            return
+
+        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+        self._spire_worker_tag = worker.tag
+        self.mediator.build_with_specific_worker(
+            worker=worker,
+            structure_type=UnitID.SPIRE,
+            pos=placed_pos,
+            building_purpose=BuildingPurpose.NORMAL_BUILDING,
         )
-        self.register_behavior(self.macro_plan)
         self.spire_ordered = True
         await self.chat_send("Tag: Spire_Ordered")
 
@@ -2822,7 +2881,7 @@ class MyBot(AresBot):
             return
 
         for structure in self.enemy_structures:
-            if structure.type_id == UnitID.PHOTONCANNON:
+            if structure.type_id == UnitID.PHOTONCANNON and self.time < 100:
                 await self.chat_send("Tag: Cannon_Rush")
                 self.enemy_strategy.append("Cannon_Rush")
                 break
@@ -2881,17 +2940,26 @@ class MyBot(AresBot):
         # --- Etapa 3: spawnar changeling sempre que o overseer tiver energia suficiente ---
         overseer: Optional[Unit] = self.units(UnitID.OVERSEER).find_by_tag(second_ol_tag)
         if overseer:
-            if overseer.is_ready and overseer.energy >= 50:
-                if overseer.distance_to(spawn_pos) <= 5:
-                    # Está no nydus spot: spawna o changeling
-                    overseer(AbilityId.SPAWNCHANGELING_SPAWNCHANGELING)
-                    self.scout_changeling_spawned = True
-                else:
-                    # Move até o nydus spot antes de spawnar
-                    overseer.move(spawn_pos)
+            at_spawn = overseer.distance_to(spawn_pos) <= 5
+            if not at_spawn:
+                # Sempre retorna à posição de spawn — mesmo sem energia suficiente ainda,
+                # para garantir que estará no lugar certo quando a energia chegar a 50.
+                overseer.move(spawn_pos)
+            elif overseer.is_ready and overseer.energy >= 50:
+                # Está no nydus spot e com energia: spawna o changeling
+                overseer(AbilityId.SPAWNCHANGELING_SPAWNCHANGELING)
+                self.scout_changeling_spawned = True
 
         # --- Etapa 4: mover todos os changelings para a frente da base inimiga ---
-        for changeling in self.units(UnitID.CHANGELING):
+        CHANGELING_TYPES = {
+            UnitID.CHANGELING,
+            UnitID.CHANGELINGMARINE,
+            UnitID.CHANGELINGMARINESHIELD,
+            UnitID.CHANGELINGZERGLING,
+            UnitID.CHANGELINGZERGLINGWINGS,
+            UnitID.CHANGELINGZEALOT,
+        }
+        for changeling in self.units.of_type(CHANGELING_TYPES):
             if changeling.distance_to(enemy_front) > 3:
                 changeling.move(enemy_front)
 
@@ -2984,6 +3052,89 @@ class MyBot(AresBot):
             # Dentro do range com bile disponível: atirar
             target = in_range.closest_to(ravager)
             ravager(AbilityId.EFFECT_CORROSIVEBILE, target.position)
+
+    async def worker_attack_cannon_rush(self):
+        """Worker micro to fight back against a cannon rush.
+
+        Selects 4 workers per photon cannon still under construction within 15
+        tiles of the second base. Workers assigned to a completed cannon are
+        released back to mining. Only targets cannons under construction.
+        """
+        if "Cannon_Rush" not in self.enemy_strategy:
+            return
+
+        # Reference point: natural expansion position (where the second base would be),
+        # regardless of whether it has actually been built yet.
+        nat = self.mediator.get_own_nat
+        base_pos: Point2 = Point2((float(nat.x), float(nat.y))) if hasattr(nat, "x") else Point2((float(nat[0]), float(nat[1])))
+
+        # Find photon cannons still under construction within 15 tiles of the natural
+        cannons_under_construction = [
+            s for s in self.enemy_structures.of_type(UnitID.PHOTONCANNON)
+            if not s.is_ready and s.distance_to(base_pos) <= 15
+        ]
+
+        # Workers currently assigned to attack cannons (stored by target cannon tag)
+        if not hasattr(self, "_cannon_rush_assignments"):
+            self._cannon_rush_assignments: dict[int, list[int]] = {}  # cannon_tag -> [worker_tags]
+
+        # Release workers whose target cannon is now complete or gone
+        active_cannon_tags = {c.tag for c in cannons_under_construction}
+        stale_cannon_tags = [tag for tag in self._cannon_rush_assignments if tag not in active_cannon_tags]
+        for tag in stale_cannon_tags:
+            for worker_tag in self._cannon_rush_assignments.pop(tag):
+                worker = self.workers.find_by_tag(worker_tag)
+                if worker:
+                    self.mediator.assign_role(tag=worker_tag, role=UnitRole.GATHERING)
+
+        # Remove dead workers from assignments
+        alive_worker_tags = {w.tag for w in self.workers}
+        for cannon_tag in list(self._cannon_rush_assignments):
+            self._cannon_rush_assignments[cannon_tag] = [
+                wt for wt in self._cannon_rush_assignments[cannon_tag]
+                if wt in alive_worker_tags
+            ]
+
+        # Assign up to 4 workers per cannon under construction
+        already_assigned: set[int] = {
+            wt for wts in self._cannon_rush_assignments.values() for wt in wts
+        }
+
+        for cannon in cannons_under_construction:
+            assigned = self._cannon_rush_assignments.setdefault(cannon.tag, [])
+            needed = 4 - len(assigned)
+            if needed <= 0:
+                continue
+
+            available = self.workers.filter(
+                lambda w: w.tag not in already_assigned
+            )
+            # Pick workers closest to the cannon
+            sorted_workers = sorted(available, key=lambda w: w.distance_to(cannon.position))
+            for worker in sorted_workers[:needed]:
+                self.mediator.assign_role(tag=worker.tag, role=UnitRole.DEFENDING)
+                assigned.append(worker.tag)
+                already_assigned.add(worker.tag)
+
+        # Micro: attack assigned cannon for each worker
+        cannon_by_tag = {c.tag: c for c in cannons_under_construction}
+        for cannon_tag, worker_tags in self._cannon_rush_assignments.items():
+            cannon = cannon_by_tag.get(cannon_tag)
+            if cannon is None:
+                continue
+            cannon_units = Units([cannon], self)
+            for worker_tag in worker_tags:
+                worker = self.workers.find_by_tag(worker_tag)
+                if not worker:
+                    continue
+                if worker.is_carrying_resource and self.townhalls:
+                    worker.return_resource()
+                    continue
+                maneuver = CombatManeuver()
+                maneuver.add(ShootTargetInRange(unit=worker, targets=cannon_units))
+                maneuver.add(AttackTarget(unit=worker, target=cannon))
+                self.register_behavior(maneuver)
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
