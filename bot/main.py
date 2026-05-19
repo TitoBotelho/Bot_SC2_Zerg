@@ -699,10 +699,8 @@ class MyBot(AresBot):
 
 
         if self.EnemyRace == Race.Random:
-            await self.emergency_supply_block()
             await self.build_queens()
             await self.discover_race()
-            await self.build_spine_crawlers()
             if iteration % 4 == 0:
                 await self.burrow_roaches()
             await self.defend()
@@ -724,6 +722,9 @@ class MyBot(AresBot):
                 await self.is_mid_game_vs_protoss()
                 await self.is_cannon_rush()
                 await self.make_ravagers()
+
+                if "2_Base_Protoss" in self.enemy_strategy and "Cannon_Rush" not in self.enemy_strategy:
+                    await self.stop_collecting_gas()
 
                 if "Mid_Game" in self.enemy_strategy:
                     await self.mid_game_vs_protoss_protocol()
@@ -2965,8 +2966,9 @@ class MyBot(AresBot):
 
 
     async def defend_worker_rush(self):
-        """Pull drones to fight back against an enemy worker rush."""
+        """Pull ALL drones to fight back against an enemy worker rush."""
         if "Worker_Rush" not in self.enemy_strategy:
+            self.spawn_inhibitors.discard("worker_rush_defense")
             return
 
         # Scan a 25-tile radius around our main for enemy workers
@@ -2985,30 +2987,33 @@ class MyBot(AresBot):
 
         # No enemy workers visible → release all defenders back to mining
         if not enemy_workers:
+            self.spawn_inhibitors.discard("worker_rush_defense")
             for drone in defending:
                 self.mediator.assign_role(tag=drone.tag, role=UnitRole.GATHERING)
             return
 
-        # Pull 1.5× as many drones as enemy workers (between 4 and 16)
-        workers_needed: int = min(16, max(4, int(len(enemy_workers) * 1.5)))
+        # Pause build order while defending
+        self.spawn_inhibitors.add("worker_rush_defense")
 
-        if len(defending) < workers_needed:
-            defending_tags = {d.tag for d in defending}
-            available: Units = self.workers.filter(lambda w: w.tag not in defending_tags)
-            to_pull = workers_needed - len(defending)
-            for drone in available[:to_pull]:
-                self.mediator.assign_role(tag=drone.tag, role=UnitRole.DEFENDING)
+        # Pull ALL available workers
+        defending_tags = {d.tag for d in defending}
+        available: Units = self.workers.filter(lambda w: w.tag not in defending_tags)
+        for drone in available:
+            self.mediator.assign_role(tag=drone.tag, role=UnitRole.DEFENDING)
 
-        # Refresh list after potential new assignments
+        # Refresh list after new assignments
         defending = self.mediator.get_units_from_role(
             role=UnitRole.DEFENDING,
             unit_type=self.worker_type,
         )
 
-        # Command each defending drone to attack the closest enemy worker
+        # Command each defending drone — only issue a new order when idle to avoid
+        # conflicting orders every frame causing back-and-forth oscillation.
         for drone in defending:
             if drone.is_carrying_resource and self.townhalls:
                 drone.return_resource()
+                continue
+            if not drone.is_idle:
                 continue
             target: Unit = cy_closest_to(drone.position, enemy_workers)
             maneuver = CombatManeuver()
@@ -3056,9 +3061,9 @@ class MyBot(AresBot):
     async def worker_attack_cannon_rush(self):
         """Worker micro to fight back against a cannon rush.
 
-        Selects 4 workers per photon cannon still under construction within 15
-        tiles of the second base. Workers assigned to a completed cannon are
-        released back to mining. Only targets cannons under construction.
+        Selects 5 workers per photon cannon still under construction within 15
+        tiles of the natural. As soon as at least 1 photon cannon is completed,
+        ALL workers stop attacking and return to mining.
         """
         if "Cannon_Rush" not in self.enemy_strategy:
             return
@@ -3068,17 +3073,31 @@ class MyBot(AresBot):
         nat = self.mediator.get_own_nat
         base_pos: Point2 = Point2((float(nat.x), float(nat.y))) if hasattr(nat, "x") else Point2((float(nat[0]), float(nat[1])))
 
+        # Workers currently assigned to attack cannons (stored by target cannon tag)
+        if not hasattr(self, "_cannon_rush_assignments"):
+            self._cannon_rush_assignments: dict[int, list[int]] = {}  # cannon_tag -> [worker_tags]
+
+        # If any photon cannon near the natural is completed, release ALL workers immediately
+        any_cannon_complete = any(
+            s.is_ready and s.distance_to(base_pos) <= 15
+            for s in self.enemy_structures.of_type(UnitID.PHOTONCANNON)
+        )
+        if any_cannon_complete:
+            for worker_tags in self._cannon_rush_assignments.values():
+                for worker_tag in worker_tags:
+                    worker = self.workers.find_by_tag(worker_tag)
+                    if worker:
+                        self.mediator.assign_role(tag=worker_tag, role=UnitRole.GATHERING)
+            self._cannon_rush_assignments.clear()
+            return
+
         # Find photon cannons still under construction within 15 tiles of the natural
         cannons_under_construction = [
             s for s in self.enemy_structures.of_type(UnitID.PHOTONCANNON)
             if not s.is_ready and s.distance_to(base_pos) <= 15
         ]
 
-        # Workers currently assigned to attack cannons (stored by target cannon tag)
-        if not hasattr(self, "_cannon_rush_assignments"):
-            self._cannon_rush_assignments: dict[int, list[int]] = {}  # cannon_tag -> [worker_tags]
-
-        # Release workers whose target cannon is now complete or gone
+        # Release workers whose target cannon is now gone (destroyed)
         active_cannon_tags = {c.tag for c in cannons_under_construction}
         stale_cannon_tags = [tag for tag in self._cannon_rush_assignments if tag not in active_cannon_tags]
         for tag in stale_cannon_tags:
@@ -3095,14 +3114,14 @@ class MyBot(AresBot):
                 if wt in alive_worker_tags
             ]
 
-        # Assign up to 4 workers per cannon under construction
+        # Assign up to 5 workers per cannon under construction
         already_assigned: set[int] = {
             wt for wts in self._cannon_rush_assignments.values() for wt in wts
         }
 
         for cannon in cannons_under_construction:
             assigned = self._cannon_rush_assignments.setdefault(cannon.tag, [])
-            needed = 4 - len(assigned)
+            needed = 5 - len(assigned)
             if needed <= 0:
                 continue
 
@@ -3146,7 +3165,8 @@ class MyBot(AresBot):
             #print(self.mediator.get_all_enemy)
             #print("Enemy Race: ", self.EnemyRace)
             #print("Second Base: ", self.second_base)
-            #print("Enemy Strategy: ", self.enemy_strategy)
+            print("Enemy Strategy: ", self.enemy_strategy)
+            #print("Random Race Discovered: ", self.random_race_discovered)
             #print("Creep Queen Policy: ", self.creep_queen_policy)
             #print("RallyPointSet: ", self.rally_point_set)
             #print("nydus_position: ", self.mediator.get_primary_nydus_own_main)
@@ -3271,7 +3291,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260515")
+            await self.chat_send("Tag: Version_260519")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
