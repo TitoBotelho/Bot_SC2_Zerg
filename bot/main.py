@@ -186,10 +186,7 @@ class MyBot(AresBot):
         self.photon_cannon_found = False
         self.terran_flying_structures = False
         self.tag_worker_build_spire = 0
-        self.tag_worker_spore_bc_0 = 0  # 1ª base, lado mineral
-        self.tag_worker_spore_bc_1 = 0  # 1ª base, lado oposto
-        self.tag_worker_spore_bc_2 = 0  # 2ª base, lado mineral
-        self.tag_worker_spore_bc_3 = 0  # 2ª base, lado oposto
+        self._spore_bc_last_dispatch: dict[int, float] = {}  # base_tag -> game_time of last dispatch
         self.is_roach_attacking = False
         self.defending = False
         self.liberatorFound = False
@@ -2671,7 +2668,9 @@ class MyBot(AresBot):
         if not (chambers and self.structures(UnitID.SPAWNINGPOOL).ready):
             return
 
-        # --- Level 1: missile + armor in parallel (one chamber each) ---
+        chambers_count = chambers.amount
+
+        # --- Level 1: missile + armor in parallel (need 2 chambers for both) ---
         missile1_done = UpgradeId.ZERGMISSILEWEAPONSLEVEL1 in self.state.upgrades
         armor1_done   = UpgradeId.ZERGGROUNDARMORSLEVEL1 in self.state.upgrades
 
@@ -2688,10 +2687,14 @@ class MyBot(AresBot):
         if not armor1_done:
             if self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL1):
                 self.spawn_inhibitors.discard("researching_armor_level_1")
-            else:
+            elif chambers_count >= 2:
+                # Only block spawn for armor if we have a second chamber to use
                 self.spawn_inhibitors.add("researching_armor_level_1")
                 if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL1):
                     self.research(UpgradeId.ZERGGROUNDARMORSLEVEL1)
+            else:
+                # Single chamber: missile takes priority, don't block spawn for armor
+                self.spawn_inhibitors.discard("researching_armor_level_1")
         else:
             self.spawn_inhibitors.discard("researching_armor_level_1")
 
@@ -2702,7 +2705,7 @@ class MyBot(AresBot):
         if not self.structures(UnitID.LAIR).ready:
             return
 
-        # --- Level 2: missile + armor in parallel ---
+        # --- Level 2: missile + armor in parallel (need 2 chambers for both) ---
         missile2_done = UpgradeId.ZERGMISSILEWEAPONSLEVEL2 in self.state.upgrades
         armor2_done   = UpgradeId.ZERGGROUNDARMORSLEVEL2 in self.state.upgrades
 
@@ -2719,10 +2722,12 @@ class MyBot(AresBot):
         if not armor2_done:
             if self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL2):
                 self.spawn_inhibitors.discard("researching_armor_level_2")
-            else:
+            elif chambers_count >= 2:
                 self.spawn_inhibitors.add("researching_armor_level_2")
                 if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL2):
                     self.research(UpgradeId.ZERGGROUNDARMORSLEVEL2)
+            else:
+                self.spawn_inhibitors.discard("researching_armor_level_2")
         else:
             self.spawn_inhibitors.discard("researching_armor_level_2")
 
@@ -2766,94 +2771,119 @@ class MyBot(AresBot):
 
 
     async def build_spores_vs_bc(self):
-        """Constrói 2 Spore Crawlers na 1ª base e 2 na 2ª base (um perto dos minerais e
-        um no lado diametralmente oposto). Pausa spawn de unidades até que os 4 comecem
-        a ser construídos.
+        """3 Spore Crawlers on the main base, 2 on each other base.
+
+        Maximum priority: blocks unit spawn and force-completes the build order
+        while any required spore is missing (not built yet or destroyed).
+        Automatically dispatches workers to rebuild destroyed spores.
         """
-        MINERAL_DIST = 3    # distância da base em direção aos minerais
-        OPPOSITE_DIST = 4   # distância da base no sentido oposto aos minerais
-        NEAR_RADIUS = 5.0   # raio para detectar spore já existente
+        MAIN_TARGET = 3    # spores required at first base
+        OTHER_TARGET = 2   # spores required at each other base
+        NEAR_RADIUS = 7.0  # tiles radius to associate a spore with a base
+        DISPATCH_COOLDOWN = 8.0  # seconds between dispatches to the same base
 
-        # (atributo da base, atributo do worker, True=lado mineral / False=lado oposto)
-        SLOTS = [
-            ("first_base",  "tag_worker_spore_bc_0", True),
-            ("first_base",  "tag_worker_spore_bc_1", False),
-            ("second_base", "tag_worker_spore_bc_2", True),
-            ("second_base", "tag_worker_spore_bc_3", False),
-        ]
+        all_spores = self.structures(UnitID.SPORECRAWLER)  # includes under construction
 
-        def spore_near(pos: Point2) -> bool:
-            return any(
-                s.distance_to(pos) < NEAR_RADIUS
-                for s in self.structures(UnitID.SPORECRAWLER)
-            )
+        def spores_at(base_pos: Point2) -> int:
+            return sum(1 for s in all_spores if s.distance_to(base_pos) < NEAR_RADIUS)
 
-        async def find_spore_pos(base_unit, towards_minerals: bool):
-            positions = self.mediator.get_behind_mineral_positions(th_pos=base_unit.position)
-            if not positions:
-                return None
-            mineral_ref = positions[0]
-            dist = MINERAL_DIST if towards_minerals else -OPPOSITE_DIST
-            target = base_unit.position.towards(mineral_ref, dist)
+        first_base = self.first_base
+        other_bases = [th for th in self.townhalls.ready if th.tag != first_base.tag]
 
-            # Ajusta se não houver creep tentando distâncias levemente diferentes
-            if not self.has_creep(target):
-                found = None
-                for delta in [0.5, 1.0, 1.5, 2.0, 2.5]:
-                    adj = base_unit.position.towards(mineral_ref, dist + (delta if towards_minerals else -delta))
-                    if self.has_creep(adj):
-                        found = adj
-                        break
-                if not found:
-                    return None
-                target = found
+        first_need = max(0, MAIN_TARGET - spores_at(first_base.position))
+        other_needs = [(th, max(0, OTHER_TARGET - spores_at(th.position))) for th in other_bases]
+        total_needed = first_need + sum(n for _, n in other_needs)
 
-            try:
-                placed = await self.find_placement(UnitID.SPORECRAWLER, near=target, placement_step=1)
-            except Exception:
-                placed = None
-
-            result = placed if placed else target
-            return result if self.has_creep(result) else None
-
-        # Conta slots já tratados (worker atribuído ou posição já ocupada por spore)
-        ordered = sum(1 for _, attr, _ in SLOTS if getattr(self, attr, 0) != 0)
-
-        if ordered < len(SLOTS):
-            self.spawn_inhibitors.add("building_spores_vs_bc")
-        else:
+        if total_needed == 0:
             self.spawn_inhibitors.discard("building_spores_vs_bc")
             return
 
-        for base_attr, worker_attr, towards_minerals in SLOTS:
-            if getattr(self, worker_attr, 0) != 0:
-                continue
+        # Maximum priority: block unit spawn and build order
+        self.spawn_inhibitors.add("building_spores_vs_bc")
+        if not self.build_order_runner.build_completed:
+            self.build_order_runner.set_build_completed()
 
-            base = getattr(self, base_attr, None)
-            if base is None:
-                continue
+        async def place_spore(base: Unit, slot: int) -> Optional[Point2]:
+            """Return a valid creep placement for spore slot `slot` near `base`."""
+            positions = self.mediator.get_behind_mineral_positions(th_pos=base.position)
+            mineral_ref = positions[0] if positions else None
 
-            if not self.can_afford(UnitID.SPORECRAWLER):
-                break
+            if mineral_ref:
+                to_min = mineral_ref - base.position
+                mag = (to_min.x ** 2 + to_min.y ** 2) ** 0.5 or 1.0
+                fwd = Point2((to_min.x / mag, to_min.y / mag))
+                perp = Point2((-fwd.y, fwd.x))
+                # (forward offset, perpendicular offset) per slot
+                # fwd points base → minerals; negative fwd = towards map center
+                # Main base: slots 0,1 between minerals and base; slot 2 towards center
+                # Other bases: slots 0,1 (one each side of mineral line)
+                offsets = [
+                    (3.0,  2.0),   # slot 0: mineral side, perpendicular left
+                    (3.0, -2.0),   # slot 1: mineral side, perpendicular right
+                    (-5.0, 0.0),   # slot 2: opposite side of base, towards map center
+                    (3.0,  0.0),   # slot 3: mineral side, centered (fallback)
+                    (-3.5, 2.5),   # slot 4: center side + perp (fallback)
+                ]
+                fx, py = offsets[slot % len(offsets)]
+                center = Point2((
+                    base.position.x + fwd.x * fx + perp.x * py,
+                    base.position.y + fwd.y * fx + perp.y * py,
+                ))
+            else:
+                center = base.position.towards(self.game_info.map_center, -3 - slot)
 
-            build_pos = await find_spore_pos(base, towards_minerals)
-            if build_pos is None:
-                continue
+            if not self.has_creep(center):
+                found = None
+                for delta in [1.0, -1.0, 2.0, -2.0, 3.0, -3.0]:
+                    for adj in [
+                        Point2((center.x + delta, center.y)),
+                        Point2((center.x, center.y + delta)),
+                    ]:
+                        if self.has_creep(adj):
+                            found = adj
+                            break
+                    if found:
+                        break
+                if found is None:
+                    return None
+                center = found
 
-            # Se já existe um spore nessa posição, marca como concluído
-            if spore_near(build_pos):
-                setattr(self, worker_attr, -1)
-                continue
+            try:
+                placed = await self.find_placement(UnitID.SPORECRAWLER, near=center, placement_step=1)
+            except Exception:
+                placed = None
 
-            if worker := self.mediator.select_worker(target_position=build_pos):
-                self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
-                setattr(self, worker_attr, worker)
-                self.mediator.build_with_specific_worker(
-                    worker=worker,
-                    structure_type=UnitID.SPORECRAWLER,
-                    pos=build_pos,
-                    building_purpose=BuildingPurpose.NORMAL_BUILDING,
-                )
+            result = placed if placed else center
+            return result if self.has_creep(result) else None
+
+        async def dispatch_spores(base: Unit, needed: int, existing: int) -> None:
+            """Send workers to build `needed` spores at `base`."""
+            # Throttle: avoid spamming workers to the same base every frame
+            last = self._spore_bc_last_dispatch.get(base.tag, 0.0)
+            if self.time - last < DISPATCH_COOLDOWN:
+                return
+            sent = 0
+            for i in range(needed):
+                if not self.can_afford(UnitID.SPORECRAWLER):
+                    break
+                build_pos = await place_spore(base, existing + i)
+                if build_pos is None:
+                    continue
+                if worker := self.mediator.select_worker(target_position=build_pos):
+                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                    self.mediator.build_with_specific_worker(
+                        worker=worker,
+                        structure_type=UnitID.SPORECRAWLER,
+                        pos=build_pos,
+                        building_purpose=BuildingPurpose.NORMAL_BUILDING,
+                    )
+                    sent += 1
+            if sent:
+                self._spore_bc_last_dispatch[base.tag] = self.time
+
+        await dispatch_spores(first_base, first_need, spores_at(first_base.position))
+        for th, needed in other_needs:
+            await dispatch_spores(th, needed, spores_at(th.position))
 
 
     async def build_more_queens(self):
@@ -2980,41 +3010,16 @@ class MyBot(AresBot):
         )[0]
         enemy_workers: Units = enemy_near.filter(lambda u: u.type_id in WORKER_TYPES)
 
-        defending: Units = self.mediator.get_units_from_role(
-            role=UnitRole.DEFENDING,
-            unit_type=self.worker_type,
-        )
-
-        # No enemy workers visible → release all defenders back to mining
-        if not enemy_workers:
+        # Need at least 2 enemy workers nearby to trigger the defense
+        if enemy_workers.amount < 2:
             self.spawn_inhibitors.discard("worker_rush_defense")
-            for drone in defending:
-                self.mediator.assign_role(tag=drone.tag, role=UnitRole.GATHERING)
             return
 
-        # Pause build order while defending
+        # Pause other activities while defending
         self.spawn_inhibitors.add("worker_rush_defense")
 
-        # Pull ALL available workers
-        defending_tags = {d.tag for d in defending}
-        available: Units = self.workers.filter(lambda w: w.tag not in defending_tags)
-        for drone in available:
-            self.mediator.assign_role(tag=drone.tag, role=UnitRole.DEFENDING)
-
-        # Refresh list after new assignments
-        defending = self.mediator.get_units_from_role(
-            role=UnitRole.DEFENDING,
-            unit_type=self.worker_type,
-        )
-
-        # Command each defending drone — only issue a new order when idle to avoid
-        # conflicting orders every frame causing back-and-forth oscillation.
-        for drone in defending:
-            if drone.is_carrying_resource and self.townhalls:
-                drone.return_resource()
-                continue
-            if not drone.is_idle:
-                continue
+        # Command ALL workers to attack the closest enemy worker each frame
+        for drone in self.workers:
             target: Unit = cy_closest_to(drone.position, enemy_workers)
             maneuver = CombatManeuver()
             maneuver.add(ShootTargetInRange(unit=drone, targets=enemy_workers))
