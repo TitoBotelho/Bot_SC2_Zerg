@@ -176,6 +176,7 @@ class MyBot(AresBot):
         self.reaperFound = False
         self.bansheeFound = False
         self.spore_workers: dict = {}  # base_tag -> worker_tag
+        self._spore_extra_drones_done: set[int] = set()  # base tags where 2 extra drones were already trained
         self.random_race_discovered = False
         self.one_proxy_barracks_found = False
         self.two_proxy_barracks_found = False
@@ -187,6 +188,7 @@ class MyBot(AresBot):
         self.terran_flying_structures = False
         self.tag_worker_build_spire = 0
         self._spore_bc_last_dispatch: dict[int, float] = {}  # base_tag -> game_time of last dispatch
+        self._spore_bc_extra_drones_done: set[int] = set()  # base tags where 2 extra drones were already trained
         self.is_roach_attacking = False
         self.defending = False
         self.liberatorFound = False
@@ -1450,6 +1452,17 @@ class MyBot(AresBot):
             if spore_near:
                 # Spore exists — clear worker tracking so we can react if it's destroyed later
                 self.spore_workers.pop(base.tag, None)
+                # Train 2 extra drones for this base (once only)
+                if base.tag not in self._spore_extra_drones_done:
+                    drones_trained = 0
+                    for larva in self.units(UnitID.LARVA):
+                        if drones_trained >= 2:
+                            break
+                        if self.can_afford(UnitID.DRONE):
+                            larva.train(UnitID.DRONE)
+                            drones_trained += 1
+                    if drones_trained >= 2:
+                        self._spore_extra_drones_done.add(base.tag)
                 continue
 
             # No spore near this base — check if we have a worker already heading there
@@ -2794,6 +2807,26 @@ class MyBot(AresBot):
         other_needs = [(th, max(0, OTHER_TARGET - spores_at(th.position))) for th in other_bases]
         total_needed = first_need + sum(n for _, n in other_needs)
 
+        # Train 2 extra drones for each base whose spore quota is already met (once only)
+        def train_extra_drones_for(base_tag: int) -> None:
+            if base_tag in self._spore_bc_extra_drones_done:
+                return
+            trained = 0
+            for larva in self.units(UnitID.LARVA):
+                if trained >= 2:
+                    break
+                if self.can_afford(UnitID.DRONE):
+                    larva.train(UnitID.DRONE)
+                    trained += 1
+            if trained >= 2:
+                self._spore_bc_extra_drones_done.add(base_tag)
+
+        if first_need == 0:
+            train_extra_drones_for(first_base.tag)
+        for th, needed in other_needs:
+            if needed == 0:
+                train_extra_drones_for(th.tag)
+
         if total_needed == 0:
             self.spawn_inhibitors.discard("building_spores_vs_bc")
             return
@@ -2972,14 +3005,20 @@ class MyBot(AresBot):
         overseer: Optional[Unit] = self.units(UnitID.OVERSEER).find_by_tag(second_ol_tag)
         if overseer:
             at_spawn = overseer.distance_to(spawn_pos) <= 5
-            if not at_spawn:
-                # Sempre retorna à posição de spawn — mesmo sem energia suficiente ainda,
-                # para garantir que estará no lugar certo quando a energia chegar a 50.
+            has_energy = overseer.is_ready and overseer.energy >= 50
+            approaching_energy = overseer.is_ready and overseer.energy >= 45
+
+            if has_energy:
+                if at_spawn:
+                    # Na posição correta e com energia: spawna o changeling
+                    overseer(AbilityId.SPAWNCHANGELING_SPAWNCHANGELING)
+                    self.scout_changeling_spawned = True
+                else:
+                    # Tem energia mas foi empurrado para fora (ex: marines): volta à posição
+                    overseer.move(spawn_pos)
+            elif approaching_energy and not at_spawn:
+                # Energia quase suficiente (45+): volta à posição para estar pronto quando chegar a 50
                 overseer.move(spawn_pos)
-            elif overseer.is_ready and overseer.energy >= 50:
-                # Está no nydus spot e com energia: spawna o changeling
-                overseer(AbilityId.SPAWNCHANGELING_SPAWNCHANGELING)
-                self.scout_changeling_spawned = True
 
         # --- Etapa 4: mover todos os changelings para a frente da base inimiga ---
         CHANGELING_TYPES = {
@@ -2996,9 +3035,8 @@ class MyBot(AresBot):
 
 
     async def defend_worker_rush(self):
-        """Pull ALL drones to fight back against an enemy worker rush."""
+        """Pull drones to fight back against an enemy worker rush."""
         if "Worker_Rush" not in self.enemy_strategy:
-            self.spawn_inhibitors.discard("worker_rush_defense")
             return
 
         # Scan a 25-tile radius around our main for enemy workers
@@ -3010,16 +3048,38 @@ class MyBot(AresBot):
         )[0]
         enemy_workers: Units = enemy_near.filter(lambda u: u.type_id in WORKER_TYPES)
 
-        # Need at least 2 enemy workers nearby to trigger the defense
-        if enemy_workers.amount < 2:
-            self.spawn_inhibitors.discard("worker_rush_defense")
+        defending: Units = self.mediator.get_units_from_role(
+            role=UnitRole.DEFENDING,
+            unit_type=self.worker_type,
+        )
+
+        # No enemy workers visible → release all defenders back to mining
+        if not enemy_workers:
+            for drone in defending:
+                self.mediator.assign_role(tag=drone.tag, role=UnitRole.GATHERING)
             return
 
-        # Pause other activities while defending
-        self.spawn_inhibitors.add("worker_rush_defense")
+        # Pull 2× as many drones as enemy workers (between 4 and 20)
+        workers_needed: int = min(20, max(4, int(len(enemy_workers) * 2)))
 
-        # Command ALL workers to attack the closest enemy worker each frame
-        for drone in self.workers:
+        if len(defending) < workers_needed:
+            defending_tags = {d.tag for d in defending}
+            available: Units = self.workers.filter(lambda w: w.tag not in defending_tags)
+            to_pull = workers_needed - len(defending)
+            for drone in available[:to_pull]:
+                self.mediator.assign_role(tag=drone.tag, role=UnitRole.DEFENDING)
+
+        # Refresh list after potential new assignments
+        defending = self.mediator.get_units_from_role(
+            role=UnitRole.DEFENDING,
+            unit_type=self.worker_type,
+        )
+
+        # Command each defending drone to attack the closest enemy worker
+        for drone in defending:
+            if drone.is_carrying_resource and self.townhalls:
+                drone.return_resource()
+                continue
             target: Unit = cy_closest_to(drone.position, enemy_workers)
             maneuver = CombatManeuver()
             maneuver.add(ShootTargetInRange(unit=drone, targets=enemy_workers))
