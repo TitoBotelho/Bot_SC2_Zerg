@@ -609,6 +609,7 @@ class MyBot(AresBot):
             await self.is_cannon_rush()
             await self.make_ravagers()
             await self.is_worker_rush()
+            await self.check_invisible_units()
 
             if "Worker_Rush" in self.enemy_strategy:
                 await self.change_to_bo_TwelvePool()
@@ -721,6 +722,7 @@ class MyBot(AresBot):
                 await self.is_mid_game_vs_protoss()
                 await self.is_cannon_rush()
                 await self.make_ravagers()
+                await self.check_invisible_units()
 
                 if "2_Base_Protoss" in self.enemy_strategy and "Cannon_Rush" not in self.enemy_strategy:
                     await self.stop_collecting_gas()
@@ -1951,9 +1953,11 @@ class MyBot(AresBot):
             return
 
         # Morph any overlord that is not the first (scouting) overlord
+        # and not the second overlord reserved for changeling scouting
         first_overlord_tag = getattr(self.first_overlord, 'tag', self.first_overlord)
+        second_overlord_tag = self.tag_second_overlord
         for overlord in self.units(UnitID.OVERLORD):
-            if overlord.tag != first_overlord_tag:
+            if overlord.tag != first_overlord_tag and overlord.tag != second_overlord_tag:
                 overlord(AbilityId.MORPH_OVERSEER)
                 break
 
@@ -2000,7 +2004,12 @@ class MyBot(AresBot):
             assigned_banshee_tags = set(self.overseer_banshee_assignments.values())
 
             # Atribui overseers sem banshee a banshees ainda não atribuídas
-            unassigned_overseers = [o for o in overseers if o.tag not in self.overseer_banshee_assignments]
+            # Exclui o overseer reservado para o scouting com changeling
+            scout_overseer_tag = self.tag_second_overlord
+            unassigned_overseers = [
+                o for o in overseers
+                if o.tag not in self.overseer_banshee_assignments and o.tag != scout_overseer_tag
+            ]
             unassigned_banshees = [b for b in banshees if b.tag not in assigned_banshee_tags]
 
             for overseer in unassigned_overseers:
@@ -3039,11 +3048,11 @@ class MyBot(AresBot):
         if "Worker_Rush" not in self.enemy_strategy:
             return
 
-        # Scan a 25-tile radius around our main for enemy workers
+        # Scan a 20-tile radius around our main for enemy workers
         defense_point = self.first_base.position
         enemy_near: Units = self.mediator.get_units_in_range(
             start_points=[defense_point],
-            distances=25,
+            distances=20,
             query_tree=UnitTreeQueryType.AllEnemy,
         )[0]
         enemy_workers: Units = enemy_near.filter(lambda u: u.type_id in WORKER_TYPES)
@@ -3219,6 +3228,29 @@ class MyBot(AresBot):
                 maneuver.add(AttackTarget(unit=worker, target=cannon))
                 self.register_behavior(maneuver)
 
+
+    async def check_invisible_units(self):
+        """Detect cloaked/invisible enemy units (e.g. Dark Templars) and react by
+        building Spore Crawlers (static detectors) and an Overseer (mobile detector).
+
+        Uses `is_cloaked and not is_revealed` — the unit is in a cloaked state and
+        has not been detected yet, so our units cannot attack it.
+        """
+        # Once detected, keep building detection every call
+        if "Dark_Templar" in self.enemy_strategy:
+            await self.make_spores()
+            await self.make_overseer()
+            return
+
+        # Scan all visible enemy units for any that are cloaked and undetected
+        for enemy in self.enemy_units:
+            if enemy.is_cloaked and not enemy.is_revealed:
+                await self.chat_send("Tag: Dark_Templar")
+                self.enemy_strategy.append("Dark_Templar")
+                if not self.build_order_runner.build_completed:
+                    self.build_order_runner.set_build_completed()
+                return
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -3356,7 +3388,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260519")
+            await self.chat_send("Tag: Version_260526")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -3471,18 +3503,21 @@ class MyBot(AresBot):
                 self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
             
             elif self.EnemyRace == Race.Random:
-                if "Random_Protoss" in self.enemy_strategy:
-                    if "2_Proxy_Gateway" in self.enemy_strategy:
-                        self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
-                    elif "Cannon_Rush" in self.enemy_strategy:
-                        self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
-                    elif "Protoss_Agressive" in self.enemy_strategy:
-                        self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
-                    else:
-                        self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
-
+                if "Worker_Rush" in self.enemy_strategy:
+                    self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
                 else:
-                    self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+                    if "Random_Protoss" in self.enemy_strategy:
+                        if "2_Proxy_Gateway" in self.enemy_strategy:
+                            self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+                        elif "Cannon_Rush" in self.enemy_strategy:
+                            self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+                        elif "Protoss_Agressive" in self.enemy_strategy:
+                            self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+                        else:
+                            self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
+
+                    else:
+                        self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
 
         # see also `ProductionController` for ongoing generic production, not needed here
         # https://aressc2.github.io/ares-sc2/api_reference/behaviors/macro_behaviors.html#ares.behaviors.macro.spawn_controller.ProductionController
