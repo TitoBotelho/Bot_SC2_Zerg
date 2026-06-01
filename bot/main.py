@@ -1081,22 +1081,27 @@ class MyBot(AresBot):
     async def discover_race(self):
         if self.random_race_discovered == False:
             if self.time < 60:
-                for unit in self.enemy_structures:
-                    if unit.name == 'Nexus':
-                        await self.chat_send("Tag: Random_Protoss")
-                        self.enemy_strategy.append("Random_Protoss")
-                        self.random_race_discovered = True
-                        break
-                    elif unit.name in ('CommandCenter', 'SupplyDepot', 'Barracks'):
+                _TERRAN = frozenset({'CommandCenter', 'SupplyDepot', 'Barracks', 'SCV'})
+                _ZERG   = frozenset({'Hatchery', 'SpawningPool', 'Drone', 'Overlord'})
+                _PROTOSS = frozenset({'Nexus', 'Gateway', 'Pylon', 'Probe'})
+
+                for unit in list(self.enemy_units) + list(self.enemy_structures):
+                    if unit.name in _TERRAN:
                         await self.chat_send("Tag: Random_Terran")
                         self.enemy_strategy.append("Random_Terran")
                         self.random_race_discovered = True
                         break
-                    elif unit.name == 'Hatchery':
+                    elif unit.name in _ZERG:
                         await self.chat_send("Tag: Random_Zerg")
                         self.enemy_strategy.append("Random_Zerg")
                         self.random_race_discovered = True
                         break
+                    elif unit.name in _PROTOSS:
+                        await self.chat_send("Tag: Random_Protoss")
+                        self.enemy_strategy.append("Random_Protoss")
+                        self.random_race_discovered = True
+                        break
+
 
     async def build_spine_crawlers(self):
         if not self.rally_point_set:
@@ -3388,7 +3393,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260526")
+            await self.chat_send("Tag: Version_260601")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -3500,7 +3505,10 @@ class MyBot(AresBot):
                     self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
             
             elif self.EnemyRace == Race.Zerg:
-                self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+                if "Worker_Rush" in self.enemy_strategy:
+                    self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
+                else:    
+                    self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
             
             elif self.EnemyRace == Race.Random:
                 if "Worker_Rush" in self.enemy_strategy:
