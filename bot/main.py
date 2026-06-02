@@ -227,6 +227,8 @@ class MyBot(AresBot):
         self.spire_ordered = False
         self.first_overlord = 0
         self._retreat_issued: bool = False
+        self._retreating: bool = False
+        self._evo_worker_tag: int = 0
 
         self._commenced_attack: bool = False
 
@@ -579,7 +581,7 @@ class MyBot(AresBot):
                 elif iteration % 4 == 1:
                     await self.build_lair()
                 elif iteration % 4 == 2:
-                    await self.build_evolution_chambers()
+                    await self.build_evolution_chamber()
                 elif iteration % 4 == 3:
                     await self.build_missle_upgrades()
 
@@ -878,7 +880,7 @@ class MyBot(AresBot):
                     elif iteration % 4 == 1:
                         await self.build_lair()
                     elif iteration % 4 == 2:
-                        await self.build_evolution_chambers()
+                        await self.build_evolution_chamber()
                     elif iteration % 4 == 3:
                         await self.build_missle_upgrades()
 
@@ -964,17 +966,19 @@ class MyBot(AresBot):
 
 
     async def return_to_base(self, forces: Units) -> None:
-        if self._commenced_attack == True:
+        # Helper: escolhe a base de referência
+        def _get_base_ref():
+            bases = self.structures(UnitID.HATCHERY).ready
+            if bases.amount >= 2 and self.second_base is not None:
+                return self.second_base
+            return self.first_base
+
+        if self._commenced_attack:
             # If we don't have enough army, stop attacking and build more units
 
             # RETURN TO BASE
             if self.get_total_supply(forces) < 0.5 * self._begin_attack_at_supply:
-                # Escolhe a base de referência: se houver 2 ou mais hatcheries, usa a segunda base; senão, usa a primeira
-                bases = self.structures(UnitID.HATCHERY).ready
-                if bases.amount >= 2 and self.second_base is not None:
-                    base_ref = self.second_base
-                else:
-                    base_ref = self.first_base
+                base_ref = _get_base_ref()
 
                 # Verifica se há inimigos próximos da base de referência ou na creep
                 base_under_attack = False
@@ -984,15 +988,36 @@ class MyBot(AresBot):
                         break
 
                 if base_under_attack:
-                    # Atacar o inimigo mais próximo da base de referência
-                    self._commenced_attack = True
+                    self._retreating = False  # cancela retreat: base precisa ser defendida
                     # Mantém o modo ataque
                 else:
                     self._commenced_attack = False
                     self.is_roach_attacking = False
+                    self._retreating = True
+                    retreat_pos = base_ref.position.towards(self.game_info.map_center, 6)
                     for unit in forces:
-                        # Move para a base de referência
-                        unit.move(base_ref.position.towards(self.game_info.map_center, 6))
+                        unit.move(retreat_pos)
+
+        # Enquanto retirando, re-envia ordem a cada ~32 frames para unidades ainda longe da base
+        elif self._retreating:
+            base_ref = _get_base_ref()
+            retreat_pos = base_ref.position.towards(self.game_info.map_center, 6)
+
+            # Verifica se algum inimigo invadiu durante a retirada — retoma o ataque
+            for enemy in self.enemy_units:
+                if enemy.distance_to(base_ref.position) < 18 or self.has_creep(enemy.position):
+                    self._retreating = False
+                    self._commenced_attack = True
+                    return
+
+            stragglers = [u for u in forces if u.distance_to(retreat_pos) > 12]
+            if stragglers:
+                # Throttle: reemite ordem a cada ~32 game loops (~1.4 s em realtime)
+                if self.state.game_loop % 32 == 0:
+                    for unit in stragglers:
+                        unit.move(retreat_pos)
+            else:
+                self._retreating = False
 
     async def build_queens(self):
         for th in self.townhalls.ready:
@@ -2714,13 +2739,13 @@ class MyBot(AresBot):
         if not armor1_done:
             if self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL1):
                 self.spawn_inhibitors.discard("researching_armor_level_1")
-            elif chambers_count >= 2:
-                # Only block spawn for armor if we have a second chamber to use
+            elif missile1_done or chambers_count >= 2:
+                # Chamber is free (missile done) or we have a spare chamber — order armor
                 self.spawn_inhibitors.add("researching_armor_level_1")
                 if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL1):
                     self.research(UpgradeId.ZERGGROUNDARMORSLEVEL1)
             else:
-                # Single chamber: missile takes priority, don't block spawn for armor
+                # Single chamber still busy with missile: wait, don't block spawn yet
                 self.spawn_inhibitors.discard("researching_armor_level_1")
         else:
             self.spawn_inhibitors.discard("researching_armor_level_1")
@@ -2749,52 +2774,88 @@ class MyBot(AresBot):
         if not armor2_done:
             if self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL2):
                 self.spawn_inhibitors.discard("researching_armor_level_2")
-            elif chambers_count >= 2:
+            elif missile2_done or chambers_count >= 2:
+                # Chamber is free (missile done) or we have a spare chamber — order armor
                 self.spawn_inhibitors.add("researching_armor_level_2")
                 if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL2):
                     self.research(UpgradeId.ZERGGROUNDARMORSLEVEL2)
             else:
+                # Single chamber still busy with missile: wait
                 self.spawn_inhibitors.discard("researching_armor_level_2")
         else:
             self.spawn_inhibitors.discard("researching_armor_level_2")
 
 
-    async def build_evolution_chambers(self):
+    async def build_evolution_chamber(self):
         if not self.structures(UnitID.SPAWNINGPOOL).ready:
             return
 
-        current = self.structures(UnitID.EVOLUTIONCHAMBER).amount
-
-        if current >= 2:
+        # Already exists or fully built — clear state and exit
+        if self.structures(UnitID.EVOLUTIONCHAMBER):
+            self.evolution_chamber_ordered = False
+            self._evo_worker_tag = 0
             return
 
-        # Se já temos 1 (em construção ou pronta), continua pedindo to_count=2
-        # a cada chamada até a 2ª ser construída
-        if current == 1:
-            self.macro_plan.add(
-                BuildStructure(
-                    base_location=self.first_base.position,
-                    structure_id=UnitID.EVOLUTIONCHAMBER,
-                    to_count=2,
-                )
-            )
-            self.register_behavior(self.macro_plan)
+        # Already pending (under construction via ares or direct build)
+        if self.already_pending(UnitID.EVOLUTIONCHAMBER):
             return
 
-        # Se temos 0, ordena a 1ª (flag evita spam)
-        if self.evolution_chamber_ordered:
+        # Track the dispatched worker; reset if it died so we can retry
+        if self._evo_worker_tag:
+            worker = self.workers.find_by_tag(self._evo_worker_tag)
+            if worker:
+                return  # worker is alive and on the way
+            # Worker died or was reassigned — reset and try again
+            self._evo_worker_tag = 0
+            self.evolution_chamber_ordered = False
+
+        if not self.can_afford(UnitID.EVOLUTIONCHAMBER):
             return
 
-        self.macro_plan.add(
-            BuildStructure(
-                base_location=self.first_base.position,
-                structure_id=UnitID.EVOLUTIONCHAMBER,
-                to_count=1,
-            )
+        # Build candidate positions around the main base
+        base = self.first_base.position
+        center = self.game_info.map_center
+        to_center = center - base
+        mag = (to_center.x ** 2 + to_center.y ** 2) ** 0.5 or 1.0
+        fwd = Point2((to_center.x / mag, to_center.y / mag))
+        perp = Point2((-fwd.y, fwd.x))
+
+        candidates: list[Point2] = [
+            Point2((base.x - fwd.x * 6, base.y - fwd.y * 6)),           # behind base
+            Point2((base.x + perp.x * 6, base.y + perp.y * 6)),          # lateral left
+            Point2((base.x - perp.x * 6, base.y - perp.y * 6)),          # lateral right
+            Point2((base.x - fwd.x * 4 + perp.x * 4, base.y - fwd.y * 4 + perp.y * 4)),
+            Point2((base.x - fwd.x * 4 - perp.x * 4, base.y - fwd.y * 4 - perp.y * 4)),
+            Point2((base.x - fwd.x * 3, base.y - fwd.y * 3)),            # close fallback
+        ]
+
+        placed_pos: Optional[Point2] = None
+        for candidate in candidates:
+            try:
+                pos = await self.find_placement(UnitID.EVOLUTIONCHAMBER, near=candidate, placement_step=2)
+                if pos is not None:
+                    placed_pos = pos
+                    break
+            except Exception:
+                continue
+
+        if placed_pos is None:
+            return  # retry next step
+
+        worker = self.mediator.select_worker(target_position=placed_pos)
+        if not worker:
+            return
+
+        self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+        self._evo_worker_tag = worker.tag
+        self.mediator.build_with_specific_worker(
+            worker=worker,
+            structure_type=UnitID.EVOLUTIONCHAMBER,
+            pos=placed_pos,
+            building_purpose=BuildingPurpose.NORMAL_BUILDING,
         )
-        self.register_behavior(self.macro_plan)
         self.evolution_chamber_ordered = True
-        await self.chat_send("Tag: Evo_Chambers_Ordered")
+        await self.chat_send("Tag: Evo_Chamber_Ordered")
 
 
     async def build_spores_vs_bc(self):
