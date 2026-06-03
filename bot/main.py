@@ -208,6 +208,7 @@ class MyBot(AresBot):
         self.my_roaches = {}
         self.enemy_widow_mines = {}
         self.mid_game = False
+        self.late_game = False
         self.mid_game_expansion_done = False
         self.tag_worker_infestation_pit = 0
         self.taf_worker_build_macro_hatch = 0
@@ -485,6 +486,7 @@ class MyBot(AresBot):
                 # await self.throw_bile()
                 await self.is_bc()
                 await self.is_mass_tank()
+                await self.is_late_game_vs_terran()
 
             if "Worker_Rush" in self.enemy_strategy:
                 await self.change_to_bo_TwelvePool()
@@ -791,6 +793,7 @@ class MyBot(AresBot):
                     # await self.throw_bile()
                     await self.is_bc()
                     await self.is_mass_tank()
+                    await self.is_late_game_vs_terran()
 
 
                 if "Bunker_Rush" in self.enemy_strategy:
@@ -3317,6 +3320,17 @@ class MyBot(AresBot):
                     self.build_order_runner.set_build_completed()
                 return
 
+    async def is_late_game_vs_terran(self):
+        if self.time > 720:
+            if self.late_game == False:
+                await self.chat_send("Tag: Late_Game")
+                self.enemy_strategy.append("Late_Game")
+                self.late_game = True
+
+
+
+
+
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -3454,7 +3468,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260601")
+            await self.chat_send("Tag: Version_260603")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
