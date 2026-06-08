@@ -680,6 +680,8 @@ class MyBot(AresBot):
             await self.is_worker_rush()
 
 
+            if not any(tag in self.enemy_strategy for tag in ("Worker_Rush", "Ling_Rush", "12_Pool")):
+                await self.build_2_spine_crawlers()
 
             if "Worker_Rush" in self.enemy_strategy:
                 await self.change_to_bo_TwelvePool()
@@ -3468,7 +3470,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260603")
+            await self.chat_send("Tag: Version_260608")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:

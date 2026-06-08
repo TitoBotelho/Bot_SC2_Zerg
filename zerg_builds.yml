@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - MacroVsTerran
+            - OneOneRoaches
 
     Protoss:
         BotName: ProtossRace
@@ -417,11 +417,11 @@ Builds:
             - 14 drone
             - 14 drone
             - 14 drone
+            - 14 gas
             - 14 drone
             - 14 overlord
             - 16 drone
             - 16 queen
-            - 15 gas
             - 17 drone
             - 17 queen
             - 17 drone
