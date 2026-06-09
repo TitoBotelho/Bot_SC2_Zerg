@@ -681,7 +681,7 @@ class MyBot(AresBot):
 
 
             if not any(tag in self.enemy_strategy for tag in ("Worker_Rush", "Ling_Rush", "12_Pool")):
-                await self.build_2_spine_crawlers()
+                await self.build_one_spine_crawler()
 
             if "Worker_Rush" in self.enemy_strategy:
                 await self.change_to_bo_TwelvePool()
@@ -2086,7 +2086,7 @@ class MyBot(AresBot):
                     if self.can_afford(UnitID.SPINECRAWLER):
                         my_base_location = self.mediator.get_own_nat
                         # Send the second Overlord in front of second base to scout
-                        target = my_base_location.position.towards(self.game_info.map_center, 8)                   
+                        target = my_base_location.position.towards(self.game_info.map_center, 4)                   
                         #await self.build(UnitID.HYDRALISKDEN, near=target)
                         if worker := self.mediator.select_worker(target_position=target):                
                             self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
@@ -3470,7 +3470,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260608")
+            await self.chat_send("Tag: Version_260609")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
