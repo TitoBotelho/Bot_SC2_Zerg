@@ -53,6 +53,26 @@ from queens_sc2.queens import Queens
 #          ARMY COMPOSITION
 #_______________________________________________________________________________________________________________________
 
+
+# Wrapper to prevent training workers while an expansion/hive is being planned
+# Keeps logic local to this bot so we don't modify ares internals.
+class BuildWorkersNoExpand(BuildWorkers):
+    """Variant of BuildWorkers that doesn't execute when expansion-related
+    spawn inhibitors are present.
+
+    It checks `ai.spawn_inhibitors` for expansion-related flags (contains
+    'expand') or hive/lair construction and returns False to allow other
+    macro behaviors (expansion) to run first.
+    """
+
+    def execute(self, ai: "AresBot", config: dict, mediator) -> bool:
+        inhibitors = getattr(ai, "spawn_inhibitors", set())
+        # Only block worker training for explicit building actions or late-game expansion.
+        # Allow training during mid-game expansion planning (e.g. 'mid_game_expanding').
+        if any(s.startswith("building_") for s in inhibitors) or "late_game_expanding" in inhibitors:
+            return False
+        return super().execute(ai, config, mediator)
+
 # this will be used for ares SpawnController behavior
 
 # against Terran
@@ -230,6 +250,7 @@ class MyBot(AresBot):
         self._retreat_issued: bool = False
         self._retreating: bool = False
         self._evo_worker_tag: int = 0
+        self.late_game_expansion_done = False
 
         self._commenced_attack: bool = False
 
@@ -598,6 +619,13 @@ class MyBot(AresBot):
 
             if "2_Base_Terran" in self.enemy_strategy:
                 pass  # infestation pit já é ordenado via "Mid_Game"
+
+
+            if "Late_Game" in self.enemy_strategy:
+                await self.late_game_vs_terran_protocol()
+                if iteration % 4 == 1:
+                    await self.build_hive()
+
 
         if self.EnemyRace == Race.Protoss:
             await self.build_queens()
@@ -2308,7 +2336,8 @@ class MyBot(AresBot):
 
     async def make_ravagers(self):
         # Mesmos gates que você já tinha
-        if self.vespene > 275 and self.structures(UnitID.ROACHWARREN).ready:
+        # Só morfar se não houver spawn inhibitors ativos
+        if self.vespene > 275 and self.structures(UnitID.ROACHWARREN).ready and not self.spawn_inhibitors:
             roaches: Units = self.units(UnitID.ROACH).ready
             if roaches.amount < 9:
                 return
@@ -2401,6 +2430,8 @@ class MyBot(AresBot):
         if not self.mid_game:
             return
 
+        if "Late_Game" in self.enemy_strategy:
+            return
         drone_count = self.units(UnitID.DRONE).amount
         # self.townhalls counts HATCHERY+LAIR+HIVE whether ready or under construction,
         # as a plain integer — unlike already_pending() which returns a float (sum of
@@ -2416,8 +2447,8 @@ class MyBot(AresBot):
         macro_plan: MacroPlan = MacroPlan()
 
         macro_plan.add(ExpansionController(to_count=4, max_pending=2))
-        macro_plan.add(BuildWorkers(to_count=57))
-        macro_plan.add(GasBuildingController(to_count=8, max_pending=2))
+        macro_plan.add(BuildWorkersNoExpand(to_count=57))
+        macro_plan.add(GasBuildingController(to_count=6, max_pending=2))
         self.register_behavior(macro_plan)
 
     async def make_roach_speed(self):
@@ -2695,7 +2726,7 @@ class MyBot(AresBot):
                     #if not self.already_pending(UnitID.HATCHERY):
                         #self.SapwnControllerOn = False
                 self.register_behavior(ExpansionController(to_count=4, max_pending=2))
-                self.register_behavior(BuildWorkers(to_count=55))           
+                self.register_behavior(BuildWorkersNoExpand(to_count=55))           
                 self.register_behavior(GasBuildingController(to_count=5, max_pending=2))
 
             if "2_Base_Protoss" in self.enemy_strategy:
@@ -2703,7 +2734,7 @@ class MyBot(AresBot):
                 if self.workers.amount < 55:
                     self.spawn_inhibitors.add("mid_game_vs_protoss_workers")
                     self.register_behavior(ExpansionController(to_count=5, max_pending=3))
-                    self.register_behavior(BuildWorkers(to_count=55))           
+                    self.register_behavior(BuildWorkersNoExpand(to_count=55))           
                 else:
                     self.spawn_inhibitors.discard("mid_game_vs_protoss_workers")
 
@@ -2712,7 +2743,7 @@ class MyBot(AresBot):
                 if self.workers.amount < 55:
                     self.spawn_inhibitors.add("mid_game_vs_protoss_workers")
                     self.register_behavior(ExpansionController(to_count=5, max_pending=3))
-                    self.register_behavior(BuildWorkers(to_count=55))           
+                    self.register_behavior(BuildWorkersNoExpand(to_count=55))           
 
                       
             
@@ -3308,7 +3339,7 @@ class MyBot(AresBot):
         has not been detected yet, so our units cannot attack it.
         """
         # Once detected, keep building detection every call
-        if "Dark_Templar" in self.enemy_strategy:
+        if "Invisible_Unit" in self.enemy_strategy:
             await self.make_spores()
             await self.make_overseer()
             return
@@ -3316,8 +3347,8 @@ class MyBot(AresBot):
         # Scan all visible enemy units for any that are cloaked and undetected
         for enemy in self.enemy_units:
             if enemy.is_cloaked and not enemy.is_revealed:
-                await self.chat_send("Tag: Dark_Templar")
-                self.enemy_strategy.append("Dark_Templar")
+                await self.chat_send("Tag: Invisible_Unit")
+                self.enemy_strategy.append("Invisible_Unit")
                 if not self.build_order_runner.build_completed:
                     self.build_order_runner.set_build_completed()
                 return
@@ -3330,6 +3361,35 @@ class MyBot(AresBot):
                 self.late_game = True
 
 
+    async def late_game_vs_terran_protocol(self):
+        if not self.late_game:
+            return
+
+        drone_count = self.units(UnitID.DRONE).amount
+        # self.townhalls counts HATCHERY+LAIR+HIVE whether ready or under construction,
+        # as a plain integer — unlike already_pending() which returns a float (sum of
+        # build_progress), causing 3 + 0.7 = 3.7 < 4 and permanently locking the inhibitor.
+        bases_started = self.townhalls.ready.amount + math.ceil(self.already_pending(UnitID.HATCHERY))
+
+        if bases_started >= 6:
+            self.spawn_inhibitors.discard("late_game_expanding")
+            self.late_game_expansion_done = True
+        elif not self.late_game_expansion_done:
+            self.spawn_inhibitors.add("late_game_expanding")
+
+        macro_plan: MacroPlan = MacroPlan()
+
+        macro_plan.add(ExpansionController(to_count=6, max_pending=2))
+        self.register_behavior(macro_plan)
+
+    async def build_hive(self):
+        if not self.structures(UnitID.HIVE) and not self.already_pending(UnitID.HIVE):
+            self.spawn_inhibitors.add("building_hive")
+            if self.can_afford(UnitID.HIVE):
+                th: Unit = self.first_base
+                th(AbilityId.UPGRADETOHIVE_HIVE)
+        else:
+            self.spawn_inhibitors.discard("building_hive")
 
 
 
@@ -3470,7 +3530,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260609")
+            await self.chat_send("Tag: Version_260612")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
