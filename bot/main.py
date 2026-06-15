@@ -241,6 +241,9 @@ class MyBot(AresBot):
         self.overseer_banshee_assignments = {}  # overseer_tag -> banshee_tag
         self.nydus_spot_set = False
         self.tag_third_overlord = 0
+        self.tag_fourth_overlord = 0
+        self.third_overlord_retreated = False
+        self.fourth_overlord_retreated = False
         self.enemy_nat_cc_found = False
         self.scout_changeling_spawned = False
         self.infestation_pit_ordered = False
@@ -461,6 +464,7 @@ class MyBot(AresBot):
 
 
         await self.return_to_base(forces)
+        await self.retreat_3rd_and_4rd_overlord()
 
 
 
@@ -3392,6 +3396,52 @@ class MyBot(AresBot):
             self.spawn_inhibitors.discard("building_hive")
 
 
+    async def retreat_3rd_and_4rd_overlord(self):
+        # The third and fourth overlords are sent to scout whether the enemy has
+        # taken their third and fourth bases. Once those bases start construction,
+        # the enemy gains vision and these overlords become vulnerable. This
+        # function retreats those overlords so they do not die.
+        if not self.first_base:
+            return
+
+        overlords: Units = self.units(UnitID.OVERLORD)
+        if not overlords:
+            return
+
+        enemy_townhall_types = {
+            UnitID.COMMANDCENTER,
+            UnitID.ORBITALCOMMAND,
+            UnitID.PLANETARYFORTRESS,
+            UnitID.NEXUS,
+            UnitID.HATCHERY,
+            UnitID.LAIR,
+            UnitID.HIVE,
+        }
+        enemy_townhalls: Units = self.enemy_structures.of_type(enemy_townhall_types)
+        if not enemy_townhalls:
+            return
+
+        retreat_pos = self.first_base.position.towards(self.game_info.map_center, -15)
+
+        third_overlord: Optional[Unit] = None
+        fourth_overlord: Optional[Unit] = None
+
+        if self.tag_third_overlord:
+            third_overlord = overlords.find_by_tag(self.tag_third_overlord)
+
+        if self.tag_fourth_overlord:
+            fourth_overlord = overlords.find_by_tag(self.tag_fourth_overlord)
+
+        for overlord in (third_overlord, fourth_overlord):
+            if overlord is None:
+                continue
+
+            should_retreat = any(
+                base.distance_to(overlord.position) < 10
+                for base in enemy_townhalls
+            )
+            if should_retreat:
+                self.do(overlord.move(retreat_pos))
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
@@ -3530,7 +3580,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260612")
+            await self.chat_send("Tag: Version_260613")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -3541,6 +3591,7 @@ class MyBot(AresBot):
         
         # Exemplo para a quarta base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 4:
+            self.tag_fourth_overlord = unit.tag
             enemy_fourth = self.mediator.get_enemy_fourth
             target = enemy_fourth.position.towards(self.game_info.map_center, 9)
             self.do(unit.move(target))
