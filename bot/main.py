@@ -423,12 +423,20 @@ class MyBot(AresBot):
 #          ON STEP
 #_______________________________________________________________________________________________________________________
 
+    def _sync_tech_spawn_inhibitors(self) -> None:
+        ready_lair = self.townhalls.of_type({UnitID.LAIR}).ready
+        ready_hive = self.townhalls.of_type({UnitID.HIVE}).ready
+
+        if ready_hive:
+            self.spawn_inhibitors.discard("building_hive")
+            self.spawn_inhibitors.discard("building_lair")
+        elif ready_lair:
+            self.spawn_inhibitors.discard("building_lair")
+
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
-        # Always clear building_lair inhibitor if Lair or Hive already exists
-        if self.structures(UnitID.LAIR) or self.structures(UnitID.HIVE):
-            self.spawn_inhibitors.discard("building_lair")
+        self._sync_tech_spawn_inhibitors()
 
         await self.debug_tool()
 
@@ -1113,6 +1121,14 @@ class MyBot(AresBot):
 
 
     async def build_lair(self):
+        has_ready_lair = bool(self.townhalls.of_type({UnitID.LAIR}).ready)
+        has_ready_hive = bool(self.townhalls.of_type({UnitID.HIVE}).ready)
+
+        # Hive replaces Lair as townhall tech; both satisfy lair-tech requirements.
+        if has_ready_lair or has_ready_hive:
+            self.spawn_inhibitors.discard("building_lair")
+            return
+
         if not self.structures(UnitID.LAIR) and not self.already_pending(UnitID.LAIR):
             self.spawn_inhibitors.add("building_lair")
             if self.can_afford(UnitID.LAIR):
@@ -3387,13 +3403,29 @@ class MyBot(AresBot):
         self.register_behavior(macro_plan)
 
     async def build_hive(self):
-        if not self.structures(UnitID.HIVE) and not self.already_pending(UnitID.HIVE):
-            self.spawn_inhibitors.add("building_hive")
-            if self.can_afford(UnitID.HIVE):
-                th: Unit = self.first_base
-                th(AbilityId.UPGRADETOHIVE_HIVE)
-        else:
+        if self.townhalls.of_type({UnitID.HIVE}).ready:
             self.spawn_inhibitors.discard("building_hive")
+            return
+
+        # Hive must evolve from a ready Lair and requires a ready Infestation Pit.
+        ready_lairs: Units = self.townhalls.of_type({UnitID.LAIR}).ready
+        if not ready_lairs or not self.structures(UnitID.INFESTATIONPIT).ready:
+            self.spawn_inhibitors.discard("building_hive")
+            return
+
+        if self.already_pending(UnitID.HIVE):
+            self.spawn_inhibitors.discard("building_hive")
+            return
+
+        self.spawn_inhibitors.add("building_hive")
+
+        target_lair: Unit = ready_lairs.closest_to(self.start_location)
+        abilities = await self.get_available_abilities(target_lair)
+        if AbilityId.UPGRADETOHIVE_HIVE not in abilities:
+            return
+
+        if self.can_afford(UnitID.HIVE):
+            target_lair(AbilityId.UPGRADETOHIVE_HIVE)
 
 
     async def retreat_3rd_and_4rd_overlord(self):
@@ -3580,7 +3612,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260613")
+            await self.chat_send("Tag: Version_260618")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
