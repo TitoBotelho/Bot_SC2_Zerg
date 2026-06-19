@@ -503,6 +503,7 @@ class MyBot(AresBot):
                 #await self.build_hydra_den()
                 await self.force_complete_build_order()
                 await self.create_queens_after_build_order()
+                await self.build_evolution_chamber()
 
             # --- % 4 == 2: composition checks ---
             elif iteration % 4 == 2:
@@ -520,6 +521,7 @@ class MyBot(AresBot):
                 await self.is_bc()
                 await self.is_mass_tank()
                 await self.is_late_game_vs_terran()
+                await self.build_missle_upgrades()
 
             if "Worker_Rush" in self.enemy_strategy:
                 await self.change_to_bo_TwelvePool()
@@ -600,6 +602,8 @@ class MyBot(AresBot):
                 elif iteration % 4 == 2:
                     await self.change_to_bo_Terran_Agressive()
 
+
+
             if "Mass_Widow_Mine" in self.enemy_strategy:
                 if iteration % 4 == 0:
                     await self.make_overseer()
@@ -617,8 +621,7 @@ class MyBot(AresBot):
                     await self.build_lair()
                 elif iteration % 4 == 2:
                     await self.build_evolution_chamber()
-                elif iteration % 4 == 3:
-                    await self.build_missle_upgrades()
+
 
             if "Battlecruiser" in self.enemy_strategy:
                 if iteration % 4 == 0:
@@ -3612,7 +3615,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260618")
+            await self.chat_send("Tag: Version_260619")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:

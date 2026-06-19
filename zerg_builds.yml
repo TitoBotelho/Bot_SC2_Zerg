@@ -508,26 +508,28 @@ Builds:
             - 15 queen
             - 16 drone
             - 17 drone
-            - 18 drone
+            - 17 hatchery
+            - 17 extractor
+            - 17 drone
             - 17 drone
             - 18 drone
             - 19 drone
             - 20 queen
             - 20 lair
-            - 21 hatchery
             - 21 overlord
             - 21 drone
             - 20 drone
             - 20 overlord
             - 21 drone
             - 21 extractor
-            - 27 roachwarren
+            - 21 roachwarren
             - 27 overlord
             - 30 extractor
             - 27 queen
             - 30 drone
             - 29 drone
             - 30 overlord
+            - 30 extractor
             - 30 drone
             - 31 drone
             - 32 drone
@@ -569,6 +571,7 @@ Builds:
             - 42 drone
             - 42 drone
             - 42 queen
+            - 42 gas
 
 
     OppeningVs4gatewayZealotRush:
@@ -993,6 +996,10 @@ Builds:
             - 25 gas
             - 25 gas
             - 25 overlord
+            - 25 gas
+            - 25 drone
+            - 25 drone
+            - 25 drone
 
 
 
