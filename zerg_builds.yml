@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - MacroVsTerran
+            - PoolFirst
 
     Protoss:
         BotName: ProtossRace
@@ -1000,6 +1000,7 @@ Builds:
             - 25 drone
             - 25 drone
             - 25 drone
+            - 25 lair
 
 
 

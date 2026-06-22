@@ -721,6 +721,7 @@ class MyBot(AresBot):
             await self.build_missle_upgrades()
             await self.make_ravagers()
             await self.is_worker_rush()
+            
 
 
             if not any(tag in self.enemy_strategy for tag in ("Worker_Rush", "Ling_Rush", "12_Pool")):
@@ -803,6 +804,7 @@ class MyBot(AresBot):
                 await self.attack_banshee()
                 await self.defend()
                 await self.turnOffSpawningControllerOnEarlyGame()
+                await self.scout_enemy_base_with_changeling()
 
                 # --- % 4 == 0: detection / scouting / burrow ---
                 if iteration % 4 == 0:
