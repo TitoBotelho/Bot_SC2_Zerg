@@ -3080,8 +3080,14 @@ class MyBot(AresBot):
         if "Cannon_Rush" in self.enemy_strategy:
             return
 
+        expansion = self.mediator.get_own_nat
+
         for structure in self.enemy_structures:
-            if structure.type_id == UnitID.PHOTONCANNON and self.time < 100:
+            if (
+                structure.type_id == UnitID.PHOTONCANNON
+                and self.time < 100
+                and structure.distance_to(expansion) < 20
+            ):
                 await self.chat_send("Tag: Cannon_Rush")
                 self.enemy_strategy.append("Cannon_Rush")
                 break
