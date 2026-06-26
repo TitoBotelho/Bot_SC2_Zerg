@@ -493,6 +493,7 @@ class MyBot(AresBot):
                 await self.burrow_roaches()
                 await self.burrow_infestors()
                 await self.scout_enemy_base_with_changeling()
+                await self.is_marine_rush()
 
             # --- % 4 == 1: building / construction ---
             elif iteration % 4 == 1:
@@ -672,7 +673,8 @@ class MyBot(AresBot):
                 await self.change_to_bo_Protoss_Agressive()
 
             if "2_Base_Protoss" in self.enemy_strategy and "Cannon_Rush" not in self.enemy_strategy:
-                await self.stop_collecting_gas()
+                if not self.mid_game:
+                    await self.stop_collecting_gas()
 
             if "2_Proxy_Gateway" in self.enemy_strategy:
                 await self.cancel_second_base()
@@ -3485,6 +3487,12 @@ class MyBot(AresBot):
             )
             if should_retreat:
                 self.do(overlord.move(retreat_pos))
+
+    async def is_marine_rush(self):
+        if "Marine_Rush" not in self.enemy_strategy:
+            if self.mediator.get_enemy_marine_rush == True:
+                await self.chat_send("marine rush")
+                self.enemy_strategy.append("Marine_Rush")
 
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
