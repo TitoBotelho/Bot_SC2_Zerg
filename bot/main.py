@@ -309,9 +309,10 @@ class MyBot(AresBot):
     
         self.EnemyRace = self.enemy_race  
         self.rally_point_set = False
-        self.first_base = self.townhalls.first
+        self.first_base = self.townhalls.first if self.townhalls else None
         self.second_base = None
-        self.first_overlord = self.units(UnitID.OVERLORD).first
+        overlords: Units = self.units(UnitID.OVERLORD)
+        self.first_overlord = overlords.first if overlords else 0
         self.worker_scout_tag = 0
         self.enemy_strategy = []
 
@@ -401,7 +402,11 @@ class MyBot(AresBot):
 
     async def send_overlord_to_scout(self):
         # Select the first Overlord
-        overlord = self.units(UnitID.OVERLORD).first
+        overlords: Units = self.units(UnitID.OVERLORD)
+        if not overlords:
+            return
+
+        overlord = overlords.first
         self.first_overlord = overlord
     
         enemy_natural_location = self.mediator.get_enemy_nat
@@ -435,6 +440,13 @@ class MyBot(AresBot):
 
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
+
+        # Some game starts can call on_start before townhalls are populated.
+        # Recover safely on the first step where a townhall is visible.
+        if self.first_base is None and self.townhalls:
+            self.first_base = self.townhalls.first
+        if self.first_base is None:
+            return
 
         self._sync_tech_spawn_inhibitors()
 
@@ -652,12 +664,16 @@ class MyBot(AresBot):
                 await self.burrow_roaches()
             await self.defend()
             await self.search_proxy_vs_protoss()
+            await self.is_proxy_stargate()
             await self.is_worker_rush()
             await self.is_mid_game_vs_protoss()
             await self.is_cannon_rush()
             await self.make_ravagers()
             await self.is_worker_rush()
             await self.check_invisible_units()
+
+            if "Proxy_Stargate" in self.enemy_strategy:
+                await self.build_spores_vs_proxy_stargate()
 
             if "Worker_Rush" in self.enemy_strategy:
                 await self.change_to_bo_TwelvePool()
@@ -770,11 +786,15 @@ class MyBot(AresBot):
                     await self.burrow_roaches()
                 await self.defend()
                 await self.search_proxy_vs_protoss()
+                await self.is_proxy_stargate()
                 await self.is_worker_rush()
                 await self.is_mid_game_vs_protoss()
                 await self.is_cannon_rush()
                 await self.make_ravagers()
                 await self.check_invisible_units()
+
+                if "Proxy_Stargate" in self.enemy_strategy:
+                    await self.build_spores_vs_proxy_stargate()
 
                 if "2_Base_Protoss" in self.enemy_strategy and "Cannon_Rush" not in self.enemy_strategy:
                     await self.stop_collecting_gas()
@@ -3494,6 +3514,95 @@ class MyBot(AresBot):
                 await self.chat_send("marine rush")
                 self.enemy_strategy.append("Marine_Rush")
 
+    async def is_proxy_stargate(self):
+        if "Proxy_Stargate" in self.enemy_strategy:
+            return
+
+        enemy_main = self.enemy_start_locations[0]
+
+        for unit in self.enemy_structures:
+            if (
+                (unit.name == "Stargate" or unit.type_id == UnitID.STARGATE)
+                and unit.distance_to(enemy_main) > 20
+            ):
+                await self.chat_send("Tag: Proxy_Stargate")
+                self.enemy_strategy.append("Proxy_Stargate")
+                break
+
+    async def build_spores_vs_proxy_stargate(self):
+        if "Proxy_Stargate" not in self.enemy_strategy:
+            return
+
+        if not self.build_order_runner.build_completed:
+            self.build_order_runner.set_build_completed()
+
+        if not self.structures(UnitID.SPAWNINGPOOL).ready:
+            return
+
+        if self.first_base is None:
+            return
+
+        bases: list[Unit] = [self.first_base]
+        if self.second_base is not None and self.second_base.is_ready:
+            bases.append(self.second_base)
+
+        def _spores_near_slot(pos: Point2, radius: float = 2.5) -> bool:
+            return any(
+                s.distance_to(pos) <= radius
+                for s in self.structures(UnitID.SPORECRAWLER)
+            )
+
+        async def _place_spore_near(slot: Point2) -> Optional[Point2]:
+            candidate = slot
+            if not self.has_creep(candidate):
+                # Pull slightly back toward own base side to find creep nearby.
+                candidate = slot.towards(self.start_location, 2)
+                if not self.has_creep(candidate):
+                    return None
+
+            try:
+                placed = await self.find_placement(
+                    UnitID.SPORECRAWLER,
+                    near=candidate,
+                    placement_step=1,
+                )
+            except Exception:
+                placed = None
+
+            result = placed if placed is not None else candidate
+            return result if self.has_creep(result) else None
+
+        for base in bases:
+            base_pos = base.position
+
+            # Two slots near each base, both facing toward map center.
+            to_center = self.game_info.map_center - base_pos
+            mag = (to_center.x ** 2 + to_center.y ** 2) ** 0.5 or 1.0
+            fwd = Point2((to_center.x / mag, to_center.y / mag))
+            perp = Point2((-fwd.y, fwd.x))
+
+            anchor = Point2((base_pos.x + fwd.x * 3.5, base_pos.y + fwd.y * 3.5))
+            slot_left = Point2((anchor.x + perp.x * 2.25, anchor.y + perp.y * 2.25))
+            slot_right = Point2((anchor.x - perp.x * 2.25, anchor.y - perp.y * 2.25))
+
+            for slot in (slot_left, slot_right):
+                if _spores_near_slot(slot):
+                    continue
+                if not self.can_afford(UnitID.SPORECRAWLER):
+                    return
+
+                build_pos = await _place_spore_near(slot)
+                if build_pos is None:
+                    continue
+
+                if worker := self.mediator.select_worker(target_position=build_pos):
+                    self.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
+                    self.mediator.build_with_specific_worker(
+                        worker=worker,
+                        structure_type=UnitID.SPORECRAWLER,
+                        pos=build_pos,
+                        building_purpose=BuildingPurpose.NORMAL_BUILDING,
+                    )
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -3631,7 +3740,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260619")
+            await self.chat_send("Tag: Version_260629")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
