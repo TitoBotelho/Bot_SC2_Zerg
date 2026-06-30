@@ -429,13 +429,16 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
     def _sync_tech_spawn_inhibitors(self) -> None:
-        ready_lair = self.townhalls.of_type({UnitID.LAIR}).ready
-        ready_hive = self.townhalls.of_type({UnitID.HIVE}).ready
+        has_any_lair = self.townhalls.of_type({UnitID.LAIR}).amount > 0
+        has_any_hive = self.townhalls.of_type({UnitID.HIVE}).amount > 0
+        pending_lair = self.already_pending(UnitID.LAIR) > 0
+        pending_hive = self.already_pending(UnitID.HIVE) > 0
 
-        if ready_hive:
+        # Keep these inhibitors in sync even while tech morphs are in progress.
+        if has_any_hive or pending_hive:
             self.spawn_inhibitors.discard("building_hive")
             self.spawn_inhibitors.discard("building_lair")
-        elif ready_lair:
+        elif has_any_lair or pending_lair:
             self.spawn_inhibitors.discard("building_lair")
 
     async def on_step(self, iteration: int) -> None:
@@ -1150,11 +1153,12 @@ class MyBot(AresBot):
 
 
     async def build_lair(self):
-        has_ready_lair = bool(self.townhalls.of_type({UnitID.LAIR}).ready)
-        has_ready_hive = bool(self.townhalls.of_type({UnitID.HIVE}).ready)
+        has_lair_tech = bool(self.townhalls.of_type({UnitID.LAIR, UnitID.HIVE}))
+        pending_lair = self.already_pending(UnitID.LAIR) > 0
+        pending_hive = self.already_pending(UnitID.HIVE) > 0
 
-        # Hive replaces Lair as townhall tech; both satisfy lair-tech requirements.
-        if has_ready_lair or has_ready_hive:
+        # Hive replaces Lair as townhall tech; a pending morph also satisfies this.
+        if has_lair_tech or pending_lair or pending_hive:
             self.spawn_inhibitors.discard("building_lair")
             return
 
@@ -2482,12 +2486,10 @@ class MyBot(AresBot):
         if "Late_Game" in self.enemy_strategy:
             return
         drone_count = self.units(UnitID.DRONE).amount
-        # self.townhalls counts HATCHERY+LAIR+HIVE whether ready or under construction,
-        # as a plain integer — unlike already_pending() which returns a float (sum of
-        # build_progress), causing 3 + 0.7 = 3.7 < 4 and permanently locking the inhibitor.
         bases_started = self.townhalls.ready.amount + math.ceil(self.already_pending(UnitID.HATCHERY))
 
-        if bases_started >= 4 and drone_count >= 57:
+        # Do not keep army production locked forever if expansions are delayed/denied.
+        if drone_count >= 57 or bases_started >= 4:
             self.spawn_inhibitors.discard("mid_game_expanding")
             self.mid_game_expansion_done = True
         elif not self.mid_game_expansion_done:
@@ -3421,12 +3423,10 @@ class MyBot(AresBot):
             return
 
         drone_count = self.units(UnitID.DRONE).amount
-        # self.townhalls counts HATCHERY+LAIR+HIVE whether ready or under construction,
-        # as a plain integer — unlike already_pending() which returns a float (sum of
-        # build_progress), causing 3 + 0.7 = 3.7 < 4 and permanently locking the inhibitor.
         bases_started = self.townhalls.ready.amount + math.ceil(self.already_pending(UnitID.HATCHERY))
 
-        if bases_started >= 6:
+        # Late game can start before 6th base is feasible; release inhibitor by drone target too.
+        if bases_started >= 6 or drone_count >= 75:
             self.spawn_inhibitors.discard("late_game_expanding")
             self.late_game_expansion_done = True
         elif not self.late_game_expansion_done:
