@@ -674,6 +674,7 @@ class MyBot(AresBot):
 
             if "Proxy_Stargate" in self.enemy_strategy:
                 await self.build_spores_vs_proxy_stargate()
+                await self.stop_collecting_gas()
 
             if "Worker_Rush" in self.enemy_strategy:
                 await self.change_to_bo_TwelvePool()
@@ -795,6 +796,7 @@ class MyBot(AresBot):
 
                 if "Proxy_Stargate" in self.enemy_strategy:
                     await self.build_spores_vs_proxy_stargate()
+                    await self.stop_collecting_gas()
 
                 if "2_Base_Protoss" in self.enemy_strategy and "Cannon_Rush" not in self.enemy_strategy:
                     await self.stop_collecting_gas()
@@ -2003,7 +2005,7 @@ class MyBot(AresBot):
     async def stop_collecting_gas(self):
         if not "2_Proxy_Gateway" in self.enemy_strategy:
             if self.stop_getting_gas == False:
-                if self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED):
+                if self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED) or "Proxy_Stargate" in self.enemy_strategy:
                     print("Chamando set_workers_per_gas com amount=0")
                     self.mediator.set_workers_per_gas(amount=0)
                     self.workers_for_gas = 0
@@ -2495,7 +2497,7 @@ class MyBot(AresBot):
 
         macro_plan.add(ExpansionController(to_count=4, max_pending=2))
         macro_plan.add(BuildWorkersNoExpand(to_count=57))
-        macro_plan.add(GasBuildingController(to_count=6, max_pending=2))
+        macro_plan.add(GasBuildingController(to_count=7, max_pending=2))
         self.register_behavior(macro_plan)
 
     async def make_roach_speed(self):
@@ -3740,7 +3742,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260629")
+            await self.chat_send("Tag: Version_260630")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -3847,6 +3849,8 @@ class MyBot(AresBot):
                     self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
                 elif "Cannon_Rush" in self.enemy_strategy:
                     self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
+                elif "Proxy_Stargate" in self.enemy_strategy:
+                    self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
                 elif "Protoss_Agressive" in self.enemy_strategy:
                     self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
                 else:
