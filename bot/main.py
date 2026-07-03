@@ -17,7 +17,7 @@ https://github.com/raspersc2/queens-sc2
 
 import math
 from itertools import cycle
-from typing import Optional
+from typing import Dict, Optional, Set
 
 import numpy as np
 from ares import AresBot
@@ -254,6 +254,7 @@ class MyBot(AresBot):
         self._retreating: bool = False
         self._evo_worker_tag: int = 0
         self.late_game_expansion_done = False
+        self._proxy_stargate_queen_policy_applied: bool = False
 
         self._commenced_attack: bool = False
 
@@ -267,6 +268,58 @@ class MyBot(AresBot):
         self.macro_plan = MacroPlan()
         self._queen_attack_target: Optional[int] = None
         self._gas_count_registered: int = 0
+
+    def _apply_proxy_stargate_queen_policy(self) -> None:
+        """Switch queens to a defensive policy against Proxy Stargate."""
+        if self._proxy_stargate_queen_policy_applied:
+            return
+
+        anti_proxy_stargate_policy: Dict = {
+            "creep_queens": {
+                "active": False,
+                "priority": 0,
+                "max": 0,
+                "defend_against_air": False,
+                "defend_against_ground": False,
+                "first_tumor_position": self.mediator.get_own_nat.towards(self.game_info.map_center, 9),
+            },
+            "inject_queens": {
+                "active": True,
+                "priority": 1,
+            },
+            "defence_queens": {
+                "active": True,
+            },
+        }
+
+        self.creep_queen_policy = anti_proxy_stargate_policy
+        if hasattr(self, "queens") and self.queens is not None:
+            self.queens.set_new_policy(self.creep_queen_policy, reset_roles=True)
+            self._proxy_stargate_queen_policy_applied = True
+
+    async def _hold_queens_near_hatcheries_vs_proxy_stargate(
+        self, queens: Units, iteration: int
+    ) -> None:
+        """Keep queens close to own hatcheries while defending Proxy Stargate."""
+        if "Proxy_Stargate" not in self.enemy_strategy or not queens:
+            return
+
+        # Throttle movement orders to avoid command spam.
+        if iteration % 8 != 0:
+            return
+
+        ready_bases: Units = self.townhalls.ready
+        for queen in queens:
+            if ready_bases:
+                anchor_base: Unit = ready_bases.closest_to(queen.position)
+                anchor_pos: Point2 = anchor_base.position.towards(self.game_info.map_center, 2)
+            elif self.first_base is not None:
+                anchor_pos = self.first_base.position.towards(self.game_info.map_center, 2)
+            else:
+                anchor_pos = self.start_location
+
+            if queen.distance_to(anchor_pos) > 8:
+                self.do(queen.move(anchor_pos))
 
 
     @property
@@ -676,6 +729,9 @@ class MyBot(AresBot):
             await self.check_invisible_units()
 
             if "Proxy_Stargate" in self.enemy_strategy:
+                self._apply_proxy_stargate_queen_policy()
+
+            if "Proxy_Stargate" in self.enemy_strategy:
                 await self.build_spores_vs_proxy_stargate()
                 await self.stop_collecting_gas()
 
@@ -796,6 +852,9 @@ class MyBot(AresBot):
                 await self.is_cannon_rush()
                 await self.make_ravagers()
                 await self.check_invisible_units()
+
+                if "Proxy_Stargate" in self.enemy_strategy:
+                    self._apply_proxy_stargate_queen_policy()
 
                 if "Proxy_Stargate" in self.enemy_strategy:
                     await self.build_spores_vs_proxy_stargate()
@@ -1007,9 +1066,10 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
         queens: Units = self.units(UnitID.QUEEN)
+        proxy_stargate_mode = "Proxy_Stargate" in self.enemy_strategy
 
         # Se supply > 195, queens largam tudo e atacam qualquer inimigo visível
-        if self.supply_used > 195:
+        if self.supply_used > 195 and not proxy_stargate_mode:
             visible_enemies: Units = self.enemy_units.filter(lambda u: not u.is_memory)
             if visible_enemies:
                 if iteration % 8 == 0:
@@ -1024,9 +1084,10 @@ class MyBot(AresBot):
             # A biblioteca gerencia tudo: 1 inject queen por base (priority=1)
             # e o restante espalha creep (priority=0, max=20)
             await self.queens.manage_queens(iteration, queens)
+            await self._hold_queens_near_hatcheries_vs_proxy_stargate(queens, iteration)
 
             # Se algum inimigo pisar na gosma, reavalia o alvo a cada 8 iterações para não inundar o motor com ordens
-            if iteration % 8 == 0:
+            if iteration % 8 == 0 and not proxy_stargate_mode:
                 enemy_on_creep: Units = self.enemy_units.filter(
                     lambda u: not u.is_memory and self.has_creep(u.position)
                 )
@@ -3529,6 +3590,7 @@ class MyBot(AresBot):
             ):
                 await self.chat_send("Tag: Proxy_Stargate")
                 self.enemy_strategy.append("Proxy_Stargate")
+                self._apply_proxy_stargate_queen_policy()
                 break
 
     async def build_spores_vs_proxy_stargate(self):
@@ -3742,7 +3804,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260630")
+            await self.chat_send("Tag: Version_260703")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
