@@ -2556,11 +2556,17 @@ class MyBot(AresBot):
         elif not self.mid_game_expansion_done:
             self.spawn_inhibitors.add("mid_game_expanding")
 
+        # Vs Terran: once we reach the worker target, force Lair tech first.
+        # build_lair() adds the "building_lair" inhibitor while saving resources,
+        # which pauses worker production through BuildWorkersNoExpand.
+        if self.EnemyRace == Race.Terran and drone_count >= 57:
+            await self.build_lair()
+
         macro_plan: MacroPlan = MacroPlan()
 
         macro_plan.add(ExpansionController(to_count=4, max_pending=2))
         macro_plan.add(BuildWorkersNoExpand(to_count=57))
-        macro_plan.add(GasBuildingController(to_count=7, max_pending=2))
+        macro_plan.add(GasBuildingController(to_count=5, max_pending=2))
         self.register_behavior(macro_plan)
 
     async def make_roach_speed(self):
@@ -3804,7 +3810,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260703")
+            await self.chat_send("Tag: Version_260706")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
