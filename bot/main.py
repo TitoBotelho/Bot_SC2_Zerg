@@ -2566,7 +2566,7 @@ class MyBot(AresBot):
 
         macro_plan.add(ExpansionController(to_count=4, max_pending=2))
         macro_plan.add(BuildWorkersNoExpand(to_count=57))
-        macro_plan.add(GasBuildingController(to_count=5, max_pending=2))
+        macro_plan.add(GasBuildingController(to_count=6, max_pending=2))
         self.register_behavior(macro_plan)
 
     async def make_roach_speed(self):
@@ -2944,6 +2944,9 @@ class MyBot(AresBot):
         if not self.structures(UnitID.SPAWNINGPOOL).ready:
             return
 
+        if self.time < 172:
+            return 
+        
         # Already exists or fully built — clear state and exit
         if self.structures(UnitID.EVOLUTIONCHAMBER):
             self.evolution_chamber_ordered = False
@@ -3810,7 +3813,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260706")
+            await self.chat_send("Tag: Version_260707")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
