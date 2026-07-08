@@ -3538,6 +3538,9 @@ class MyBot(AresBot):
         # taken their third and fourth bases. Once those bases start construction,
         # the enemy gains vision and these overlords become vulnerable. This
         # function retreats those overlords so they do not die.
+        #
+        # The first overlord scouts in front of enemy natural and can also die
+        # there. If it spots an enemy townhall near its position, retreat early.
         if not self.first_base:
             return
 
@@ -3559,6 +3562,20 @@ class MyBot(AresBot):
             return
 
         retreat_pos = self.first_base.position.towards(self.game_info.map_center, -15)
+
+        first_overlord: Optional[Unit] = None
+        first_overlord_tag = getattr(self.first_overlord, "tag", self.first_overlord)
+        if first_overlord_tag:
+            first_overlord = overlords.find_by_tag(first_overlord_tag)
+
+        if first_overlord and not self.overlord_retreated:
+            should_retreat_first = any(
+                base.distance_to(first_overlord.position) < 10
+                for base in enemy_townhalls
+            )
+            if should_retreat_first:
+                self.do(first_overlord.move(retreat_pos))
+                self.overlord_retreated = True
 
         third_overlord: Optional[Unit] = None
         fourth_overlord: Optional[Unit] = None
