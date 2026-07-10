@@ -484,8 +484,17 @@ class MyBot(AresBot):
     def _sync_tech_spawn_inhibitors(self) -> None:
         has_any_lair = self.townhalls.of_type({UnitID.LAIR}).amount > 0
         has_any_hive = self.townhalls.of_type({UnitID.HIVE}).amount > 0
-        pending_lair = self.already_pending(UnitID.LAIR) > 0
-        pending_hive = self.already_pending(UnitID.HIVE) > 0
+        morphing_lair = any(
+            th.type_id == UnitID.HATCHERY
+            and any(order.ability.id == AbilityId.UPGRADETOLAIR_LAIR for order in th.orders)
+            for th in self.townhalls
+        )
+        morphing_hive = any(
+            any(order.ability.id == AbilityId.UPGRADETOHIVE_HIVE for order in th.orders)
+            for th in self.townhalls
+        )
+        pending_lair = self.already_pending(UnitID.LAIR) > 0 or morphing_lair
+        pending_hive = self.already_pending(UnitID.HIVE) > 0 or morphing_hive
 
         # Keep these inhibitors in sync even while tech morphs are in progress.
         if has_any_hive or pending_hive:
@@ -1215,8 +1224,17 @@ class MyBot(AresBot):
 
     async def build_lair(self):
         has_lair_tech = bool(self.townhalls.of_type({UnitID.LAIR, UnitID.HIVE}))
-        pending_lair = self.already_pending(UnitID.LAIR) > 0
-        pending_hive = self.already_pending(UnitID.HIVE) > 0
+        morphing_lair = any(
+            th.type_id == UnitID.HATCHERY
+            and any(order.ability.id == AbilityId.UPGRADETOLAIR_LAIR for order in th.orders)
+            for th in self.townhalls
+        )
+        morphing_hive = any(
+            any(order.ability.id == AbilityId.UPGRADETOHIVE_HIVE for order in th.orders)
+            for th in self.townhalls
+        )
+        pending_lair = self.already_pending(UnitID.LAIR) > 0 or morphing_lair
+        pending_hive = self.already_pending(UnitID.HIVE) > 0 or morphing_hive
 
         # Hive replaces Lair as townhall tech; a pending morph also satisfies this.
         if has_lair_tech or pending_lair or pending_hive:
@@ -3496,7 +3514,7 @@ class MyBot(AresBot):
         bases_started = self.townhalls.ready.amount + math.ceil(self.already_pending(UnitID.HATCHERY))
 
         # Late game can start before 6th base is feasible; release inhibitor by drone target too.
-        if bases_started >= 6 or drone_count >= 75:
+        if bases_started >= 5 or drone_count >= 75:
             self.spawn_inhibitors.discard("late_game_expanding")
             self.late_game_expansion_done = True
         elif not self.late_game_expansion_done:
@@ -3671,7 +3689,8 @@ class MyBot(AresBot):
             fwd = Point2((to_center.x / mag, to_center.y / mag))
             perp = Point2((-fwd.y, fwd.x))
 
-            anchor = Point2((base_pos.x + fwd.x * 3.5, base_pos.y + fwd.y * 3.5))
+            # Slightly farther forward from the hatchery toward map center.
+            anchor = Point2((base_pos.x + fwd.x * 8.0, base_pos.y + fwd.y * 5.0))
             slot_left = Point2((anchor.x + perp.x * 2.25, anchor.y + perp.y * 2.25))
             slot_right = Point2((anchor.x - perp.x * 2.25, anchor.y - perp.y * 2.25))
 
@@ -3939,7 +3958,7 @@ class MyBot(AresBot):
                     self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
                 elif "Proxy_Stargate" in self.enemy_strategy:
                     self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
-                elif "Protoss_Agressive" in self.enemy_strategy:
+                elif "Protoss_Agressive" in self.enemy_strategy and not "Proxy_Stargate" in self.enemy_strategy:
                     self.register_behavior(SpawnController(ARMY_COMP_ROACH[self.race]))
                 else:
                     self.register_behavior(SpawnController(ARMY_COMP_LING[self.race]))
