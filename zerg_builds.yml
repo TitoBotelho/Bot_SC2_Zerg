@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - PoolFirst
+            - MacroVsTerran
 
     Protoss:
         BotName: ProtossRace
@@ -508,21 +508,21 @@ Builds:
             - 15 queen
             - 16 drone
             - 17 drone
-            - 17 hatchery
-            - 17 extractor
             - 17 drone
             - 17 drone
             - 18 drone
             - 19 drone
             - 20 queen
+            - 20 extractor
             - 20 lair
+            - 20 hatchery
             - 21 overlord
             - 21 drone
             - 20 drone
+            - 20 roachwarren
             - 20 overlord
             - 21 drone
             - 21 extractor
-            - 21 roachwarren
             - 27 overlord
             - 30 extractor
             - 27 queen
@@ -990,14 +990,14 @@ Builds:
             - 30 drone
             - 31 drone
             - 32 drone
+            - 32 extractor
             - 33 drone
             - 34 drone
             - 35 drone
-            - 25 gas
-            - 25 gas
             - 25 overlord
-            - 25 gas
             - 25 drone
+            - 25 gas
+            - 25 gas
             - 25 drone
             - 25 drone
             - 25 lair
