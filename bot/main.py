@@ -546,6 +546,9 @@ class MyBot(AresBot):
             if enemy_air_on_creep:
                 self._micro(air_forces)
 
+        # Fallback tosco: tenta lançar bile a cada frame, além do controle no _micro.
+        self._force_ravager_bile_each_frame()
+
 
 
         await self.return_to_base(forces)
@@ -3993,6 +3996,80 @@ class MyBot(AresBot):
 
 
         self._zerg_specific_macro()
+
+#_______________________________________________________________________________________________________________________
+#          RAVAGER BILE FALLBACK
+#_______________________________________________________________________________________________________________________
+
+    def _force_ravager_bile_each_frame(self) -> None:
+        ravagers: Units = self.units(UnitID.RAVAGER)
+        if not ravagers:
+            return
+
+        # Mesmo cooldown manual usado no _micro (7s ~= 157 frames).
+        if not hasattr(self, "_bile_cd"):
+            self._bile_cd: dict[int, int] = {}
+
+        game_loop: int = self.state.game_loop
+        BILE_RANGE: float = 9.0
+        BILE_PRIORITY_TYPES: tuple[UnitID, ...] = (
+            UnitID.SIEGETANKSIEGED,
+            UnitID.LIBERATORAG,
+            UnitID.MEDIVAC,
+        )
+
+        def _priority_tier(u: Unit) -> int:
+            t = u.type_id
+            if t == UnitID.SIEGETANKSIEGED:
+                return 0
+            if t == UnitID.LIBERATORAG:
+                return 1
+            if t == UnitID.MEDIVAC:
+                return 2
+            return 99
+
+        # Visíveis no frame atual: unidades + estruturas.
+        enemy_candidates: Units = (
+            self.enemy_units.filter(lambda u: not u.is_memory)
+            + self.enemy_structures.filter(lambda u: not u.is_memory)
+        )
+        if not enemy_candidates:
+            return
+
+        for ravager in ravagers:
+            # Não sobrescreve um bile já iniciado.
+            if any(order.ability.id == AbilityId.EFFECT_CORROSIVEBILE for order in ravager.orders):
+                continue
+
+            if self._bile_cd.get(ravager.tag, 0) > game_loop:
+                continue
+
+            in_bile_range: list[Unit] = [
+                u
+                for u in enemy_candidates
+                if cy_distance_to(ravager.position, u.position) <= BILE_RANGE
+            ]
+            if not in_bile_range:
+                continue
+
+            priority_targets: list[Unit] = [
+                u for u in in_bile_range if u.type_id in BILE_PRIORITY_TYPES
+            ]
+
+            if priority_targets:
+                best_bile: Unit = min(
+                    priority_targets,
+                    key=lambda u: (_priority_tier(u), cy_distance_to(ravager.position, u.position)),
+                )
+            else:
+                # Fallback: se não houver alvo da lista, bile em qualquer inimigo no range.
+                best_bile = min(
+                    in_bile_range,
+                    key=lambda u: cy_distance_to(ravager.position, u.position),
+                )
+
+            ravager(AbilityId.EFFECT_CORROSIVEBILE, best_bile.position)
+            self._bile_cd[ravager.tag] = game_loop + int(22.4 * 7.0) + 6
 
 #_______________________________________________________________________________________________________________________
 #          DEF _MICRO
