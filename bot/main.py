@@ -547,7 +547,7 @@ class MyBot(AresBot):
                 self._micro(air_forces)
 
         # Fallback tosco: tenta lançar bile a cada frame, além do controle no _micro.
-        self._force_ravager_bile_each_frame()
+        await self._force_ravager_bile_each_frame()
 
 
 
@@ -3852,7 +3852,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260714")
+            await self.chat_send("Tag: Version_260716")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -4001,16 +4001,11 @@ class MyBot(AresBot):
 #          RAVAGER BILE FALLBACK
 #_______________________________________________________________________________________________________________________
 
-    def _force_ravager_bile_each_frame(self) -> None:
+    async def _force_ravager_bile_each_frame(self) -> None:
         ravagers: Units = self.units(UnitID.RAVAGER)
         if not ravagers:
             return
 
-        # Mesmo cooldown manual usado no _micro (7s ~= 157 frames).
-        if not hasattr(self, "_bile_cd"):
-            self._bile_cd: dict[int, int] = {}
-
-        game_loop: int = self.state.game_loop
         BILE_RANGE: float = 9.0
         BILE_PRIORITY_TYPES: tuple[UnitID, ...] = (
             UnitID.SIEGETANKSIEGED,
@@ -4041,9 +4036,6 @@ class MyBot(AresBot):
             if any(order.ability.id == AbilityId.EFFECT_CORROSIVEBILE for order in ravager.orders):
                 continue
 
-            if self._bile_cd.get(ravager.tag, 0) > game_loop:
-                continue
-
             in_bile_range: list[Unit] = [
                 u
                 for u in enemy_candidates
@@ -4068,8 +4060,14 @@ class MyBot(AresBot):
                     key=lambda u: cy_distance_to(ravager.position, u.position),
                 )
 
-            ravager(AbilityId.EFFECT_CORROSIVEBILE, best_bile.position)
-            self._bile_cd[ravager.tag] = game_loop + int(22.4 * 7.0) + 6
+            cached_abilities = await self.get_available_abilities(ravager)
+            if await self.can_cast(
+                ravager,
+                AbilityId.EFFECT_CORROSIVEBILE,
+                target=best_bile.position,
+                cached_abilities_of_unit=cached_abilities,
+            ):
+                ravager(AbilityId.EFFECT_CORROSIVEBILE, best_bile.position)
 
 #_______________________________________________________________________________________________________________________
 #          DEF _MICRO
