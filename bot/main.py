@@ -54,22 +54,19 @@ from queens_sc2.queens import Queens
 #_______________________________________________________________________________________________________________________
 
 
-# Wrapper to prevent training workers while an expansion/hive is being planned
+# Wrapper to prevent training workers while any spawn inhibitor is active
 # Keeps logic local to this bot so we don't modify ares internals.
 class BuildWorkersNoExpand(BuildWorkers):
-    """Variant of BuildWorkers that doesn't execute when expansion-related
-    spawn inhibitors are present.
+    """Variant of BuildWorkers that doesn't execute when any spawn inhibitor
+    is present.
 
-    It checks `ai.spawn_inhibitors` for expansion-related flags (contains
-    'expand') or hive/lair construction and returns False to allow other
-    macro behaviors (expansion) to run first.
+    This ensures drone production is paused whenever the bot is saving
+    resources for tech, upgrades, or any other inhibited macro state.
     """
 
     def execute(self, ai: "AresBot", config: dict, mediator) -> bool:
         inhibitors = getattr(ai, "spawn_inhibitors", set())
-        # Only block worker training for explicit building actions or late-game expansion.
-        # Allow training during mid-game expansion planning (e.g. 'mid_game_expanding').
-        if any(s.startswith("building_") for s in inhibitors) or "late_game_expanding" in inhibitors:
+        if inhibitors:
             return False
         return super().execute(ai, config, mediator)
 
@@ -892,7 +889,7 @@ class MyBot(AresBot):
                 else:
                     if "Protoss_Agressive" in self.enemy_strategy:  
                         #await self.change_to_bo_VsOneBaseRandomProtoss()
-                        await self.build_2_spine_crawlers()
+                        await self.build_spine_crawlers()
                         await self.change_to_bo_Protoss_Agressive()
                         self._begin_attack_at_supply = 40
 
@@ -2928,8 +2925,8 @@ class MyBot(AresBot):
         if not missile1_done or not armor1_done:
             return
 
-        # --- Level 2 upgrades require Lair ---
-        if not self.structures(UnitID.LAIR).ready:
+        # --- Level 2 upgrades require Lair tech; Hive also satisfies this ---
+        if not self.townhalls.of_type({UnitID.LAIR, UnitID.HIVE}).ready:
             return
 
         # --- Level 2: missile + armor in parallel (need 2 chambers for both) ---
@@ -2959,6 +2956,43 @@ class MyBot(AresBot):
                 self.spawn_inhibitors.discard("researching_armor_level_2")
         else:
             self.spawn_inhibitors.discard("researching_armor_level_2")
+
+        if not missile2_done or not armor2_done:
+            return
+
+        # --- Level 3 upgrades require Hive ---
+        if not self.townhalls.of_type({UnitID.HIVE}).ready:
+            self.spawn_inhibitors.discard("researching_missle_level_3")
+            self.spawn_inhibitors.discard("researching_armor_level_3")
+            return
+
+        # --- Level 3: missile + armor in parallel (need 2 chambers for both) ---
+        missile3_done = UpgradeId.ZERGMISSILEWEAPONSLEVEL3 in self.state.upgrades
+        armor3_done   = UpgradeId.ZERGGROUNDARMORSLEVEL3 in self.state.upgrades
+
+        if not missile3_done:
+            if self.already_pending_upgrade(UpgradeId.ZERGMISSILEWEAPONSLEVEL3):
+                self.spawn_inhibitors.discard("researching_missle_level_3")
+            else:
+                self.spawn_inhibitors.add("researching_missle_level_3")
+                if self.can_afford(UpgradeId.ZERGMISSILEWEAPONSLEVEL3):
+                    self.research(UpgradeId.ZERGMISSILEWEAPONSLEVEL3)
+        else:
+            self.spawn_inhibitors.discard("researching_missle_level_3")
+
+        if not armor3_done:
+            if self.already_pending_upgrade(UpgradeId.ZERGGROUNDARMORSLEVEL3):
+                self.spawn_inhibitors.discard("researching_armor_level_3")
+            elif missile3_done or chambers_count >= 2:
+                # Chamber is free (missile done) or we have a spare chamber — order armor
+                self.spawn_inhibitors.add("researching_armor_level_3")
+                if self.can_afford(UpgradeId.ZERGGROUNDARMORSLEVEL3):
+                    self.research(UpgradeId.ZERGGROUNDARMORSLEVEL3)
+            else:
+                # Single chamber still busy with missile: wait
+                self.spawn_inhibitors.discard("researching_armor_level_3")
+        else:
+            self.spawn_inhibitors.discard("researching_armor_level_3")
 
 
     async def build_evolution_chamber(self):
@@ -3852,7 +3886,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260716")
+            await self.chat_send("Tag: Version_260717")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
