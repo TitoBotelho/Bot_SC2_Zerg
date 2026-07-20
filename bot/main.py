@@ -406,9 +406,6 @@ class MyBot(AresBot):
         if self.opponent_id == "da0fe671-3f51-4c48-8ac2-252cb67ee545":
             self._begin_attack_at_supply = 1
     
-        # Apidae
-        elif self.opponent_id == "c033a97a-667d-42e3-91e8-13528ac191ed":
-            self._begin_attack_at_supply = 1
     
         # LiShiMinV2
         elif self.opponent_id == "0d0d9c44-2520-457d-84ba-7f6ffe167a3e":
@@ -718,6 +715,7 @@ class MyBot(AresBot):
                 await self.late_game_vs_terran_protocol()
                 if iteration % 4 == 1:
                     await self.build_hive()
+                    await self.make_one_viper()
 
 
         if self.EnemyRace == Race.Protoss:
@@ -751,8 +749,6 @@ class MyBot(AresBot):
 
             if "Protoss_Agressive" in self.enemy_strategy:
                 #await self.build_spine_crawlers()
-                if self.opponent_id != "c033a97a-667d-42e3-91e8-13528ac191ed":
-                    self._begin_attack_at_supply = 40
                 if "Cannon_Rush" not in self.enemy_strategy:
                     await self.build_2_spine_crawlers()
                 await self.change_to_bo_Protoss_Agressive()
@@ -780,7 +776,6 @@ class MyBot(AresBot):
                 await self.change_to_bo_CannonRush()
                 await self.make_macro_hatch()
                 await self.emergency_supply_block()
-                await self.bile_ravagers_cannon_rush()
                 await self.worker_attack_cannon_rush()
                 self._begin_attack_at_supply = 40
 
@@ -882,7 +877,6 @@ class MyBot(AresBot):
                     await self.change_to_bo_CannonRush()
                     await self.make_macro_hatch()
                     await self.emergency_supply_block()
-                    await self.bile_ravagers_cannon_rush()
                     await self.worker_attack_cannon_rush()
                     self._begin_attack_at_supply = 40
 
@@ -2469,7 +2463,7 @@ class MyBot(AresBot):
     async def make_ravagers(self):
         # Mesmos gates que você já tinha
         # Só morfar se não houver spawn inhibitors ativos
-        if self.vespene > 275 and self.structures(UnitID.ROACHWARREN).ready and not self.spawn_inhibitors:
+        if self.vespene > 250 and self.structures(UnitID.ROACHWARREN).ready and not self.spawn_inhibitors:
             roaches: Units = self.units(UnitID.ROACH).ready
             if roaches.amount < 9:
                 return
@@ -2584,7 +2578,7 @@ class MyBot(AresBot):
 
         macro_plan.add(ExpansionController(to_count=4, max_pending=2))
         macro_plan.add(BuildWorkersNoExpand(to_count=57))
-        macro_plan.add(GasBuildingController(to_count=6, max_pending=2))
+        macro_plan.add(GasBuildingController(to_count=7, max_pending=2))
         self.register_behavior(macro_plan)
 
     async def make_roach_speed(self):
@@ -3380,41 +3374,6 @@ class MyBot(AresBot):
             self.register_behavior(maneuver)
 
 
-    async def bile_ravagers_cannon_rush(self):
-        BILE_RANGE = 9.0
-        SAFE_RANGE = 9.0  # distância alvo ao se aproximar: dentro do bile mas fora do cannon
-        CANNON_RUSH_TYPES = {UnitID.PHOTONCANNON, UnitID.PYLON, UnitID.SHIELDBATTERY}
-
-        cannon_structures = self.enemy_structures.of_type(CANNON_RUSH_TYPES)
-        if not cannon_structures:
-            return
-
-        for ravager in self.units(UnitID.RAVAGER):
-            # Não interrupe um bile que já está sendo lançado
-            if any(o.ability.id == AbilityId.EFFECT_CORROSIVEBILE for o in ravager.orders):
-                continue
-
-            nearest_structure = cannon_structures.closest_to(ravager)
-            in_range = cannon_structures.closer_than(BILE_RANGE, ravager.position)
-
-            abilities = await self.get_available_abilities(ravager)
-
-            if not in_range or AbilityId.EFFECT_CORROSIVEBILE not in abilities:
-                # Calcula ponto a SAFE_RANGE tiles da estrutura, na direção do ravager
-                # (o ravager para exatamente dentro do bile range sem se aproximar mais)
-                dx = ravager.position.x - nearest_structure.position.x
-                dy = ravager.position.y - nearest_structure.position.y
-                mag = (dx * dx + dy * dy) ** 0.5 or 1.0
-                approach_pos = Point2((
-                    nearest_structure.position.x + dx / mag * SAFE_RANGE,
-                    nearest_structure.position.y + dy / mag * SAFE_RANGE,
-                ))
-                ravager.move(approach_pos)
-                continue
-
-            # Dentro do range com bile disponível: atirar
-            target = in_range.closest_to(ravager)
-            ravager(AbilityId.EFFECT_CORROSIVEBILE, target.position)
 
     async def worker_attack_cannon_rush(self):
         """Worker micro to fight back against a cannon rush.
@@ -3749,6 +3708,27 @@ class MyBot(AresBot):
                         pos=build_pos,
                         building_purpose=BuildingPurpose.NORMAL_BUILDING,
                     )
+
+    async def make_one_viper(self):
+        # Se não tem Hive, não faz nada
+        if not self.townhalls.of_type({UnitID.HIVE}).ready:
+            self.spawn_inhibitors.discard("making_viper")
+            return
+
+        # Se já tem viper ou está treinando uma, não precisa fazer mais
+        if self.units(UnitID.VIPER) or self.already_pending(UnitID.VIPER):
+            self.spawn_inhibitors.discard("making_viper")
+            return
+
+        # Se pode gastar recursos para fazer uma viper, faz via larva
+        if self.can_afford(UnitID.VIPER):
+            for larva in self.units(UnitID.LARVA):
+                larva.train(UnitID.VIPER)
+                self.spawn_inhibitors.discard("making_viper")
+                break
+        else:
+            # Se não pode gastar, adiciona o inhibitor para bloquear spawn de outras unidades
+            self.spawn_inhibitors.add("making_viper")
 #_______________________________________________________________________________________________________________________
 #          DEBUG TOOL
 #_______________________________________________________________________________________________________________________
@@ -3886,7 +3866,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260717")
+            await self.chat_send("Tag: Version_260720")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:
@@ -4529,6 +4509,14 @@ class MyBot(AresBot):
                     self.register_behavior(attacking_maneuver)
                     continue
 
+#_______________________________________________________________________________________________________________________
+#          VIPER
+#_______________________________________________________________________________________________________________________
+
+                if unit.type_id in [UnitID.VIPER]:
+                    attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
+                    self.register_behavior(attacking_maneuver)
+                    continue
 #_______________________________________________________________________________________________________________________
 #          OTHER UNITS
 #_______________________________________________________________________________________________________________________
