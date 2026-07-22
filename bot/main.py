@@ -4514,6 +4514,25 @@ class MyBot(AresBot):
 #_______________________________________________________________________________________________________________________
 
                 if unit.type_id in [UnitID.VIPER]:
+                    if unit.energy >= 125:
+                        viper_targets: list[Unit] = [
+                            u for u in self.enemy_units
+                            if u.type_id in {
+                                UnitID.MEDIVAC,
+                                UnitID.RAVEN,
+                                UnitID.LIBERATOR,
+                                UnitID.LIBERATORAG,
+                            }
+                            and not u.is_memory
+                        ]
+                        if viper_targets:
+                            target_unit: Unit = min(
+                                viper_targets,
+                                key=lambda enemy: enemy.distance_to(unit),
+                            )
+                            unit(AbilityId.PARASITICBOMB_PARASITICBOMB, target_unit)
+                            self.register_behavior(attacking_maneuver)
+                            continue
                     attacking_maneuver.add(KeepUnitSafe(unit=unit, grid=grid))
                     self.register_behavior(attacking_maneuver)
                     continue
