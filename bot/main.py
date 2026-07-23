@@ -754,8 +754,7 @@ class MyBot(AresBot):
                 await self.change_to_bo_Protoss_Agressive()
 
             if "2_Base_Protoss" in self.enemy_strategy and "Cannon_Rush" not in self.enemy_strategy:
-                if not self.mid_game:
-                    await self.stop_collecting_gas()
+                await self.stop_collecting_gas()
 
             if "2_Proxy_Gateway" in self.enemy_strategy:
                 await self.cancel_second_base()
@@ -768,6 +767,7 @@ class MyBot(AresBot):
             if "Mid_Game" in self.enemy_strategy:
                 await self.mid_game_vs_protoss_protocol()
                 await self.build_lair()
+                await self.build_roach_warren()
 
 
             if "Cannon_Rush" in self.enemy_strategy:
@@ -2080,6 +2080,13 @@ class MyBot(AresBot):
 
 
     async def stop_collecting_gas(self):
+        if "Mid_Game" in self.enemy_strategy:
+            if self.stop_getting_gas:
+                self.mediator.set_workers_per_gas(amount=3)
+                self.workers_for_gas = 3
+                self.stop_getting_gas = False
+            return
+
         if not "2_Proxy_Gateway" in self.enemy_strategy:
             if self.stop_getting_gas == False:
                 if self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED) or "Proxy_Stargate" in self.enemy_strategy:
@@ -2463,9 +2470,9 @@ class MyBot(AresBot):
     async def make_ravagers(self):
         # Mesmos gates que você já tinha
         # Só morfar se não houver spawn inhibitors ativos
-        if self.vespene > 250 and self.structures(UnitID.ROACHWARREN).ready and not self.spawn_inhibitors:
+        if self.vespene > 245 and self.structures(UnitID.ROACHWARREN).ready and not self.spawn_inhibitors:
             roaches: Units = self.units(UnitID.ROACH).ready
-            if roaches.amount < 9:
+            if roaches.amount < 8:
                 return
             if "Flying_Structures" in self.enemy_strategy:
                 return
@@ -3866,7 +3873,7 @@ class MyBot(AresBot):
             else:
                 target = self.mediator.get_primary_nydus_enemy_main
             self.do(unit.move(target))
-            await self.chat_send("Tag: Version_260720")
+            await self.chat_send("Tag: Version_260723")
         
         # Exemplo para a terceira base:
         if unit.type_id == UnitID.OVERLORD and self.units(UnitID.OVERLORD).amount == 3:

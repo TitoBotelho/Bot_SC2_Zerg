@@ -12,7 +12,7 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - MacroVsTerran
+            - PoolFirst
 
     Protoss:
         BotName: ProtossRace
@@ -125,10 +125,6 @@ BuildChoices:
             - OppeningVsLingRush
 
 
-    c033a97a-667d-42e3-91e8-13528ac191ed:
-        BotName: Apidae
-        Cycle:
-            - TwelvePool
 
 
 
